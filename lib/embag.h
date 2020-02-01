@@ -43,21 +43,51 @@ class Embag {
       return header_t::op(*(fields.at("op").data()));
     }
 
+    const void get_field(const std::string& name, std::string& value) const {
+      value = fields.at(name);
+    }
+
     template <typename T>
     const void get_field(const std::string& name, T& value) const {
       value = *reinterpret_cast<const T*>(fields.at(name).data());
-      return;
+    }
+    const bool check_field(const std::string& name) const {
+      return fields.find(name) != fields.end();
     }
   };
 
-  struct connection_record_t {
-
+  struct chunk_info_t {
+    uint64_t start_time;
+    uint64_t end_time;
+    uint32_t message_count;
   };
 
   struct chunk_t {
+    uint64_t offset = 0;
+    chunk_info_t info;
     chunk_t(record_t r) {
       // TODO
     };
+  };
+
+  struct index_block_t {
+    chunk_t* into_chunk;
+
+  };
+
+  struct connection_data_t {
+    std::string topic;
+    std::string type;
+    std::string md5sum;
+    std::string message_definition;
+    std::string callerid;
+    bool latching = false;
+  };
+
+  struct connection_record_t {
+    std::vector<index_block_t> blocks;
+    std::string topic;
+    connection_data_t data;
   };
 
   record_t read_record();

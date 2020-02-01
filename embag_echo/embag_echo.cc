@@ -14,5 +14,7 @@ int main(int argc, char *argv[]) {
 
   reader.close();
 
+  std::cout << "Done." << std::endl;
+
   return 0;
 }

@@ -70,33 +70,40 @@ Embag::record_t Embag::read_record() {
   return record;
 }
 
-Embag::header_t Embag::read_header(const record_t &record) {
-  header_t header;
+std::map<std::string, std::string> read_fields(const char* p, const uint64_t len) {
+  std::map<std::string, std::string> fields;
+  const char *end = p + len;
 
-  char *p = const_cast<char *>(record.header);
-  const char *header_end = record.header + record.header_len;
-
-  while (p < header_end) {
-    uint32_t field_len = *(reinterpret_cast<uint32_t *>(p));
+  while (p < end) {
+    const uint32_t field_len = *(reinterpret_cast<const uint32_t *>(p));
 
     p += sizeof(uint32_t);
 
     // FIXME: these are copies...
-    std::string buffer(reinterpret_cast<char *>(p), field_len);
+    std::string buffer(p, field_len);
     const auto sep = buffer.find("=");
 
     const auto name = buffer.substr(0, sep);
     const auto value = buffer.substr(sep + 1);
 
-    header.fields[name] = value;
+    fields[name] = value;
 
-    std::cout << "Field: " << name << " -> " << value << std::endl;
+    //std::cout << "Field: " << name << " -> " << value << std::endl;
 
     p += field_len;
   }
 
+  return fields;
+}
+
+Embag::header_t Embag::read_header(const record_t &record) {
+  header_t header;
+
+  header.fields = read_fields(record.header, record.header_len);
+
   return header;
 }
+
 
 bool Embag::read_records() {
   const int64_t file_size = bag_stream_->size();
@@ -112,7 +119,7 @@ bool Embag::read_records() {
     const auto op = header.get_op();
 
     switch(op) {
-      case header_t::op::BAG_HEADER:
+      case header_t::op::BAG_HEADER: {
         uint32_t connection_count;
         uint32_t chunk_count;
         uint64_t index_pos;
@@ -129,17 +136,98 @@ bool Embag::read_records() {
         index_pos_ = index_pos;
 
         break;
-      case header_t::op::CHUNK:
-        chunks_.emplace_back(record);
+      }
+      case header_t::op::CHUNK: {
+        chunk_t chunk(record);
+        chunk.offset = pos;
+
+        chunks_.emplace_back(chunk);
+
         break;
-      case header_t::op::INDEX_DATA:
+      }
+      case header_t::op::INDEX_DATA: {
+        uint32_t version;
+        uint32_t connection_id;
+        uint32_t msg_count;
+
+        // TODO: check these values
+        header.get_field("ver", version);
+        header.get_field("conn", connection_id);
+        header.get_field("count", msg_count);
+
+        index_block_t index_block;
+        index_block.into_chunk = &chunks_.back();
+        // TODO: set memory reference
+
+        connections_[connection_id].blocks.emplace_back(index_block);
+
         break;
-      case header_t::op::CONNECTION:
+      }
+      case header_t::op::CONNECTION: {
+        uint32_t connection_id;
+        std::string topic;
+
+        header.get_field("conn", connection_id);
+        header.get_field("topic", topic);
+
+        // TODO: check these variables along with md5sum
+        connection_data_t connection_data;
+        connection_data.topic = topic;
+        if (!(connection_id > 0 && topic.size() > 0))
+          continue;
+        if (!((connection_id >= 0) && (size_t(connection_id) < connections_.size())))
+          continue;
+
+        const auto fields = read_fields(record.data, record.data_len);
+
+        connection_data.type = fields.at("type");
+        connection_data.md5sum = fields.at("md5sum");
+        connection_data.message_definition = fields.at("message_definition");
+        if (fields.find("callerid") != fields.end()) {
+          connection_data.callerid = fields.at("callerid");
+        }
+        if (fields.find("latching") != fields.end()) {
+          connection_data.latching = fields.at("latching") == "1";
+        }
+
+        connections_[connection_id].topic = topic;
+        connections_[connection_id].data = connection_data;
+
         break;
-      case header_t::op::MESSAGE_DATA:
+      }
+      case header_t::op::MESSAGE_DATA: {
         break;
-      case header_t::op::CHUNK_INFO:
+      }
+      case header_t::op::CHUNK_INFO: {
+        uint32_t ver;
+        uint64_t chunk_pos;
+        uint64_t start_time;
+        uint64_t end_time;
+        uint32_t count;
+
+        header.get_field("ver", ver);
+        header.get_field("chunk_pos", chunk_pos);
+        header.get_field("start_time", start_time);
+        header.get_field("end_time", end_time);
+        header.get_field("count", count);
+
+        // TODO: It might make sense to save this data in a map or reverse the search.
+        // At the moment there are only a few chunks so this doesn't really take long
+        auto chunk_it = std::find_if(chunks_.begin(), chunks_.end(), [this, &chunk_pos] (const chunk_t& c) {
+          return c.offset == chunk_pos;
+        });
+
+        if (chunk_it == chunks_.end()) {
+          std::cout << "ERROR: unable to find chunk for chunk info at pos: " << chunk_pos << std::endl;
+          return false;
+        }
+
+        chunk_it->info.start_time = start_time;
+        chunk_it->info.end_time = end_time;
+        chunk_it->info.message_count = count;
+
         break;
+      }
       case header_t::op::UNSET:
       default:
         std::cout << "ERROR: Unknown record operation: " << uint8_t(op) << std::endl;
