@@ -1,6 +1,19 @@
+#define BOOST_SPIRIT_DEBUG
+#define BOOST_SPIRIT_DEBUG_OUT std::cout
 #include "embag.h"
 
 #include <iostream>
+
+// Boost Magic
+#include <boost/config/warning_disable.hpp>
+#include <boost/spirit/include/qi.hpp>
+#include <boost/spirit/include/phoenix_core.hpp>
+#include <boost/spirit/include/phoenix_operator.hpp>
+#include <boost/spirit/include/phoenix_fusion.hpp>
+#include <boost/spirit/include/phoenix_stl.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+#include <boost/variant/recursive_variant.hpp>
+#include <boost/foreach.hpp>
 
 bool Embag::open() {
   boost::iostreams::mapped_file_source mapped_file_source(filename_);
@@ -65,7 +78,7 @@ Embag::record_t Embag::read_record() {
   record.data = bag_stream_->data() + bag_stream_.tellg();
   bag_stream_.seekg(record.data_len, std::ios_base::cur);
 
-  std::cout << "Record with head len " << record.header_len << " data len " << record.data_len << std::endl;
+  //std::cout << "Record with head len " << record.header_len << " data len " << record.data_len << std::endl;
 
   return record;
 }
@@ -104,6 +117,99 @@ Embag::header_t Embag::read_header(const record_t &record) {
   return header;
 }
 
+// TODO: move this stuff elsewhere?
+// Parser structures and binding
+struct ros_msg_field {
+  std::string type_name;
+  std::string field_name;
+};
+
+struct ros_embedded_msg_def {
+  std::string type_name;
+  std::vector<ros_msg_field> fields;
+};
+
+struct ros_msg_def {
+  std::vector<ros_msg_field> fields;
+  std::vector<ros_embedded_msg_def> embedded_types;
+};
+
+BOOST_FUSION_ADAPT_STRUCT(
+  ros_msg_def,
+  (std::vector<ros_msg_field>, fields)
+  (std::vector<ros_embedded_msg_def>, embedded_types)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+  ros_msg_field,
+  (std::string, type_name)
+  (std::string, field_name)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+  ros_embedded_msg_def,
+  (std::string, type_name)
+  (std::vector<ros_msg_field>, fields)
+)
+
+// Parser
+template <typename Iterator>
+struct ros_msg_skipper : boost::spirit::qi::grammar<Iterator> {
+  ros_msg_skipper() : ros_msg_skipper::base_type(skip) {
+    using boost::spirit::ascii::char_;
+    using boost::spirit::eol;
+    using boost::spirit::eoi;
+    using boost::spirit::qi::repeat;
+
+    comment = '#' >> *(char_ - eol) >> (eol|eoi);
+    separator = repeat(80)['='] >> '\n';
+
+    skip = comment | (eol >> eol) | separator;
+  }
+
+  boost::spirit::qi::rule<Iterator> skip;
+  boost::spirit::qi::rule<Iterator> comment;
+  boost::spirit::qi::rule<Iterator> separator;
+};
+
+template <typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
+struct ros_msg_grammar : boost::spirit::qi::grammar<Iterator, ros_msg_def(), boost::spirit::qi::locals<std::string>, Skipper> {
+  ros_msg_grammar() : ros_msg_grammar::base_type(msg) {
+    using boost::spirit::qi::lit;
+    using boost::spirit::qi::lexeme;
+    using boost::spirit::ascii::char_;
+    using boost::spirit::ascii::space;
+    using boost::spirit::ascii::string;
+    using boost::spirit::eol;
+    using boost::spirit::eoi;
+    using namespace boost::spirit::qi::labels;
+
+    field_type %= lexeme[+(char_ - space)];
+    field_name %= lexeme[+(char_ - '\n')];
+
+    field = field_type >> -(space >> field_name);
+
+    embedded_type_name %= lit("MSG: ") >> lexeme[(char_ - '\n')];
+
+    embedded_type = embedded_type_name >> field >> *(lit('\n') >> field);
+
+    msg =
+        field >> *(lit('\n') >> field)
+        >> *(embedded_type);
+
+    BOOST_SPIRIT_DEBUG_NODE(field);
+    BOOST_SPIRIT_DEBUG_NODE(field_type);
+    BOOST_SPIRIT_DEBUG_NODE(field_name);
+  }
+
+  boost::spirit::qi::rule<Iterator, ros_msg_def(), boost::spirit::qi::locals<std::string>, Skipper> msg;
+  boost::spirit::qi::rule<Iterator, ros_msg_field(), Skipper> field;
+  boost::spirit::qi::rule<Iterator, std::string(), Skipper> field_type;
+  boost::spirit::qi::rule<Iterator, std::string(), Skipper> field_name;
+  boost::spirit::qi::rule<Iterator, ros_embedded_msg_def(), Skipper> embedded_type;
+  boost::spirit::qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
+};
+
 
 bool Embag::read_records() {
   const int64_t file_size = bag_stream_->size();
@@ -128,7 +234,7 @@ bool Embag::read_records() {
         header.get_field("chunk_count", chunk_count);
         header.get_field("index_pos", index_pos);
 
-        std::cout << "conn: " << connection_count << " chunk: " << chunk_count << " index " << index_pos << std::endl;
+        //std::cout << "conn: " << connection_count << " chunk: " << chunk_count << " index " << index_pos << std::endl;
 
         // TODO: check these values are nonzero and index_pos is > 64
         connections_.resize(connection_count);
@@ -140,6 +246,9 @@ bool Embag::read_records() {
       case header_t::op::CHUNK: {
         chunk_t chunk(record);
         chunk.offset = pos;
+
+        header.get_field("compression", chunk.compression);
+        header.get_field("size", chunk.size);
 
         chunks_.emplace_back(chunk);
 
@@ -183,6 +292,7 @@ bool Embag::read_records() {
         connection_data.type = fields.at("type");
         connection_data.md5sum = fields.at("md5sum");
         connection_data.message_definition = fields.at("message_definition");
+        std::cout << "Msg def for topic " << connection_data.topic << ":\n" << connection_data.message_definition << std::endl;
         if (fields.find("callerid") != fields.end()) {
           connection_data.callerid = fields.at("callerid");
         }
@@ -192,6 +302,31 @@ bool Embag::read_records() {
 
         connections_[connection_id].topic = topic;
         connections_[connection_id].data = connection_data;
+
+        // Parse message definition
+        typedef ros_msg_grammar<std::string::const_iterator> ros_msg_grammar;
+        typedef ros_msg_skipper<std::string::const_iterator> ros_msg_skipper;
+        ros_msg_grammar grammar; // Our grammar
+        ros_msg_def ast;         // Our tree
+        ros_msg_skipper skipper;
+
+        std::string::const_iterator iter = connection_data.message_definition.begin();
+        std::string::const_iterator end = connection_data.message_definition.end();
+        bool r = phrase_parse(iter, end, grammar, skipper, ast);
+
+        if (r && iter == end) {
+          std::cout << "-------------------------\n";
+          std::cout << "Parsing succeeded\n";
+          std::cout << ast.fields[0].field_name << std::endl;
+          std::cout << "-------------------------\n";
+        } else {
+            std::string::const_iterator some = iter + std::min(30, int(end - iter));
+            std::string context(iter, (some>end)?end:some);
+            std::cout << "-------------------------\n";
+            std::cout << "Parsing failed\n";
+            std::cout << "stopped at: \"" << context << "...\"\n";
+            std::cout << "-------------------------\n";
+        }
 
         break;
       }

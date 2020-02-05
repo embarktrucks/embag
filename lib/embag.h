@@ -20,6 +20,7 @@ class Embag {
 
  private:
 
+  // TODO: convert these to classes?
   struct record_t {
     uint32_t header_len;
     const char *header;
@@ -65,6 +66,9 @@ class Embag {
   struct chunk_t {
     uint64_t offset = 0;
     chunk_info_t info;
+    std::string compression;
+    uint32_t size;
+
     chunk_t(record_t r) {
       // TODO
     };

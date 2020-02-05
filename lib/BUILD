@@ -7,6 +7,9 @@ cc_library(
     visibility = ["//embag_echo:__pkg__"],
     deps = [
         "@boost//:iostreams",
+        "@boost//:spirit",
+        "@boost//:fusion",
+        "@boost//:variant",
     ],
 )
 
