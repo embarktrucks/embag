@@ -126,7 +126,7 @@ struct ros_msg_field {
 
 struct ros_embedded_msg_def {
   std::string type_name;
-  std::vector<ros_msg_field> fields;
+  //std::vector<ros_msg_field> fields;
 };
 
 struct ros_msg_def {
@@ -135,21 +135,21 @@ struct ros_msg_def {
 };
 
 BOOST_FUSION_ADAPT_STRUCT(
-  ros_msg_def,
-  (std::vector<ros_msg_field>, fields)
-  (std::vector<ros_embedded_msg_def>, embedded_types)
-)
-
-BOOST_FUSION_ADAPT_STRUCT(
   ros_msg_field,
-  (std::string, type_name)
-  (std::string, field_name)
+  type_name,
+  field_name,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
   ros_embedded_msg_def,
-  (std::string, type_name)
-  (std::vector<ros_msg_field>, fields)
+  type_name,
+  //fields
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+  ros_msg_def,
+  fields,
+  embedded_types,
 )
 
 // Parser
@@ -184,22 +184,25 @@ struct ros_msg_grammar : boost::spirit::qi::grammar<Iterator, ros_msg_def(), boo
     using boost::spirit::eoi;
     using namespace boost::spirit::qi::labels;
 
-    field_type %= lexeme[+(char_ - space)];
+    field_type %= +(char_ - space);
     field_name %= lexeme[+(char_ - '\n')];
 
-    field = field_type >> -(space >> field_name);
+    field = field_type >> +lit(' ') >> field_name;
 
-    embedded_type_name %= lit("MSG: ") >> lexeme[(char_ - '\n')];
+    embedded_type_name %= lit("MSG: ") >> lexeme[+(char_ - '\n')];
 
-    embedded_type = embedded_type_name >> field >> *(lit('\n') >> field);
+    embedded_type = embedded_type_name >> *('\n' >> field);
 
     msg =
-        field >> *(lit('\n') >> field)
-        >> *(embedded_type);
+        ((field >> *(lit('\n') >> field)) - lit("\nMSG: "))
+        >> *embedded_type
+        >> *eol;
 
     BOOST_SPIRIT_DEBUG_NODE(field);
     BOOST_SPIRIT_DEBUG_NODE(field_type);
     BOOST_SPIRIT_DEBUG_NODE(field_name);
+    BOOST_SPIRIT_DEBUG_NODE(embedded_type);
+    BOOST_SPIRIT_DEBUG_NODE(embedded_type_name);
   }
 
   boost::spirit::qi::rule<Iterator, ros_msg_def(), boost::spirit::qi::locals<std::string>, Skipper> msg;
@@ -317,7 +320,9 @@ bool Embag::read_records() {
         if (r && iter == end) {
           std::cout << "-------------------------\n";
           std::cout << "Parsing succeeded\n";
-          std::cout << ast.fields[0].field_name << std::endl;
+          std::cout << "name: " << ast.fields[0].field_name << std::endl;
+          std::cout << "type: " << ast.fields[0].type_name << std::endl;
+          std::cout << "embedded: " << ast.embedded_types[0].type_name << std::endl;
           std::cout << "-------------------------\n";
         } else {
             std::string::const_iterator some = iter + std::min(30, int(end - iter));
