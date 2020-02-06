@@ -130,16 +130,16 @@ struct ros_msg_constant {
   std::string value;
 };
 
+typedef boost::variant<ros_msg_field, ros_msg_constant> ros_msg_member;
+
 struct ros_embedded_msg_def {
   std::string type_name;
-  std::vector<ros_msg_field> fields;
-  std::vector<ros_msg_constant> constants;
+  std::vector<ros_msg_member> members;
 };
 
 struct ros_msg_def {
-  std::vector<ros_msg_field> fields;
+  std::vector<ros_msg_member> members;
   std::vector<ros_embedded_msg_def> embedded_types;
-  std::vector<ros_msg_constant> constants;
 };
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -158,32 +158,30 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
   ros_embedded_msg_def,
   type_name,
-  fields,
+  members,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
   ros_msg_def,
-  fields,
+  members,
   embedded_types,
-  constants,
 )
 
-// Parser
+// A parser for all the things we don't care about (aka a skipper)
 template <typename Iterator>
 struct ros_msg_skipper : boost::spirit::qi::grammar<Iterator> {
   ros_msg_skipper() : ros_msg_skipper::base_type(skip) {
     using boost::spirit::ascii::char_;
     using boost::spirit::eol;
-    using boost::spirit::eoi;
     using boost::spirit::qi::repeat;
     using boost::spirit::qi::lit;
-    using boost::spirit::qi::inf;
+    using boost::spirit::ascii::space;
 
-    comment = "#" >> *(char_ - eol);
+    comment = *space >> "#" >> *(char_ - eol);
     separator = repeat(80)['='] - eol;
-    newlines = eol;
+    blank_lines = *lit(' ') >> eol;
 
-    skip = comment | separator | newlines;
+    skip = comment | separator | eol | blank_lines;
 
     //BOOST_SPIRIT_DEBUG_NODE(skip);
     //BOOST_SPIRIT_DEBUG_NODE(newlines);
@@ -192,9 +190,12 @@ struct ros_msg_skipper : boost::spirit::qi::grammar<Iterator> {
   boost::spirit::qi::rule<Iterator> skip;
   boost::spirit::qi::rule<Iterator> comment;
   boost::spirit::qi::rule<Iterator> separator;
-  boost::spirit::qi::rule<Iterator> newlines;
+  boost::spirit::qi::rule<Iterator> blank_lines;
 };
 
+
+// ROS message parsing
+// See http://wiki.ros.org/msg for details on the format
 template <typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
 struct ros_msg_grammar : boost::spirit::qi::grammar<Iterator, ros_msg_def(), boost::spirit::qi::locals<std::string>, Skipper> {
   ros_msg_grammar() : ros_msg_grammar::base_type(msg) {
@@ -203,49 +204,52 @@ struct ros_msg_grammar : boost::spirit::qi::grammar<Iterator, ros_msg_def(), boo
     using boost::spirit::qi::lexeme;
     using boost::spirit::ascii::char_;
     using boost::spirit::ascii::space;
-    using boost::spirit::ascii::string;
     using boost::spirit::eol;
-    using boost::spirit::eoi;
-    using namespace boost::spirit::qi::labels;
 
-    field_type %= +(char_ - space);
+    // Parse a message field in the form: type field_name
+    type %= +(char_ - space);
     field_name %= lexeme[+(char_ - (space|eol|'#'))];
+    field = type >> +lit(' ') >> field_name;
 
+    // Parse a constant in the form: type constant_name=constant_value
     constant_name %= lexeme[+(char_ - (space|lit('=')))];
     constant_value %= lexeme[+(char_ - (space|eol|'#'))];
-    constant = field_type >> +lit(' ') >> constant_name >> *lit(' ') >> lit('=') >> constant_value;
+    constant = type >> +lit(' ') >> constant_name >> *lit(' ') >> lit('=') >> *lit(' ') >> constant_value;
 
-    field = field_type >> +lit(' ') >> field_name;
+    // Each line of a message definition can be a constant or a field declaration
+    member = constant | field;
 
-    //field_or_constant = constant | field;
-    //field_or_constant = field;
-
+    // Embedded types include all the supporting sub types (aka non-primitives) of a top-level message definition
     embedded_type_name %= lit("MSG: ") >> lexeme[+(char_ - eol)];
+    embedded_type = embedded_type_name >> +(member - lit("MSG: "));
 
-    embedded_type = embedded_type_name >> (+field | +constant);
-
+    // Finally, we put all these rules together to parse the full definition
     msg =
-        ((field >> *(field - lit("MSG: "))) - lit("MSG: "))
+        *(member - lit("MSG: "))
         >> *embedded_type
         >> *eol;
 
-    BOOST_SPIRIT_DEBUG_NODE(field);
-    BOOST_SPIRIT_DEBUG_NODE(field_type);
-    BOOST_SPIRIT_DEBUG_NODE(field_name);
-    BOOST_SPIRIT_DEBUG_NODE(embedded_type);
-    BOOST_SPIRIT_DEBUG_NODE(embedded_type_name);
+    //BOOST_SPIRIT_DEBUG_NODE(field);
+    //BOOST_SPIRIT_DEBUG_NODE(type);
+    //BOOST_SPIRIT_DEBUG_NODE(field_name);
+    //BOOST_SPIRIT_DEBUG_NODE(embedded_type);
+    //BOOST_SPIRIT_DEBUG_NODE(embedded_type_name);
+    //BOOST_SPIRIT_DEBUG_NODE(member);
+    //BOOST_SPIRIT_DEBUG_NODE(constant);
+    //BOOST_SPIRIT_DEBUG_NODE(constant_name);
+    //BOOST_SPIRIT_DEBUG_NODE(constant_value);
   }
 
   boost::spirit::qi::rule<Iterator, ros_msg_def(), boost::spirit::qi::locals<std::string>, Skipper> msg;
   boost::spirit::qi::rule<Iterator, ros_msg_field(), Skipper> field;
-  boost::spirit::qi::rule<Iterator, std::string(), Skipper> field_type;
+  boost::spirit::qi::rule<Iterator, std::string(), Skipper> type;
   boost::spirit::qi::rule<Iterator, std::string(), Skipper> field_name;
   boost::spirit::qi::rule<Iterator, ros_embedded_msg_def(), Skipper> embedded_type;
   boost::spirit::qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
   boost::spirit::qi::rule<Iterator, ros_msg_constant(), Skipper> constant;
   boost::spirit::qi::rule<Iterator, std::string(), Skipper> constant_name;
   boost::spirit::qi::rule<Iterator, std::string(), Skipper> constant_value;
-  boost::spirit::qi::rule<Iterator, std::string(), Skipper> field_or_constant;
+  boost::spirit::qi::rule<Iterator, ros_msg_member(), Skipper> member;
 };
 
 
@@ -330,7 +334,7 @@ bool Embag::read_records() {
         connection_data.type = fields.at("type");
         connection_data.md5sum = fields.at("md5sum");
         connection_data.message_definition = fields.at("message_definition");
-        std::cout << "Msg def for topic " << connection_data.topic << ":\n" << connection_data.message_definition << std::endl;
+        //std::cout << "Msg def for topic " << connection_data.topic << ":\n" << connection_data.message_definition << std::endl;
         if (fields.find("callerid") != fields.end()) {
           connection_data.callerid = fields.at("callerid");
         }
@@ -346,27 +350,27 @@ bool Embag::read_records() {
         typedef ros_msg_skipper<std::string::const_iterator> ros_msg_skipper;
         ros_msg_grammar grammar; // Our grammar
         ros_msg_def ast;         // Our tree
-        ros_msg_skipper skipper;
+        ros_msg_skipper skipper; // Things we're not interested in
 
         std::string::const_iterator iter = connection_data.message_definition.begin();
         std::string::const_iterator end = connection_data.message_definition.end();
-        bool r = phrase_parse(iter, end, grammar, skipper, ast);
+        const bool r = phrase_parse(iter, end, grammar, skipper, ast);
 
         if (r && iter == end) {
-          std::cout << "-------------------------\n";
-          std::cout << "Parsing succeeded\n";
-          std::cout << "name: " << ast.fields[0].field_name << std::endl;
-          std::cout << "type: " << ast.fields[0].type_name << std::endl;
-          std::cout << "embedded: " << ast.embedded_types[0].type_name << std::endl;
-          std::cout << "embedded field: " << ast.embedded_types[0].fields[0].field_name << std::endl;
-          std::cout << "-------------------------\n";
+          //std::cout << "-------------------------\n";
+          //std::cout << "Parsing succeeded\n";
+          //std::cout << "name: " << ast.fields[0].field_name << std::endl;
+          //std::cout << "type: " << ast.fields[0].type_name << std::endl;
+          //std::cout << "embedded: " << ast.embedded_types[0].type_name << std::endl;
+          //std::cout << "embedded field: " << ast.embedded_types[0].fields[0].field_name << std::endl;
+          //std::cout << "-------------------------\n";
         } else {
-            std::string::const_iterator some = iter + std::min(30, int(end - iter));
-            std::string context(iter, (some>end)?end:some);
-            std::cout << "-------------------------\n";
-            std::cout << "Parsing failed\n";
-            std::cout << "stopped at: \"" << context << "...\"\n";
-            std::cout << "-------------------------\n";
+          std::string::const_iterator some = iter + std::min(30, int(end - iter));
+          std::string context(iter, (some>end)?end:some);
+          std::cout << "-------------------------\n";
+          std::cout << "Parsing failed\n";
+          std::cout << "stopped at: \"" << context << "...\"\n";
+          std::cout << "-------------------------\n";
         }
 
         break;
