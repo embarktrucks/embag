@@ -119,50 +119,27 @@ Embag::header_t Embag::read_header(const record_t &record) {
 
 // TODO: move this stuff elsewhere?
 // Parser structures and binding
-struct ros_msg_field {
-  std::string type_name;
-  std::string field_name;
-};
-
-struct ros_msg_constant {
-  std::string type_name;
-  std::string constant_name;
-  std::string value;
-};
-
-typedef boost::variant<ros_msg_field, ros_msg_constant> ros_msg_member;
-
-struct ros_embedded_msg_def {
-  std::string type_name;
-  std::vector<ros_msg_member> members;
-};
-
-struct ros_msg_def {
-  std::vector<ros_msg_member> members;
-  std::vector<ros_embedded_msg_def> embedded_types;
-};
-
 BOOST_FUSION_ADAPT_STRUCT(
-  ros_msg_field,
+  Embag::ros_msg_field,
   type_name,
   field_name,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-  ros_msg_constant,
+  Embag::ros_msg_constant,
   type_name,
   constant_name,
   value,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-  ros_embedded_msg_def,
+  Embag::ros_embedded_msg_def,
   type_name,
   members,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-  ros_msg_def,
+  Embag::ros_msg_def,
   members,
   embedded_types,
 )
@@ -198,7 +175,7 @@ struct ros_msg_skipper : qi::grammar<Iterator> {
 // ROS message parsing
 // See http://wiki.ros.org/msg for details on the format
 template <typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
-struct ros_msg_grammar : qi::grammar<Iterator, ros_msg_def(), qi::locals<std::string>, Skipper> {
+struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), qi::locals<std::string>, Skipper> {
   ros_msg_grammar() : ros_msg_grammar::base_type(msg) {
     // TODO clean these up
     using qi::lit;
@@ -232,16 +209,16 @@ struct ros_msg_grammar : qi::grammar<Iterator, ros_msg_def(), qi::locals<std::st
     BOOST_SPIRIT_DEBUG_NODE(member);
   }
 
-  qi::rule<Iterator, ros_msg_def(), qi::locals<std::string>, Skipper> msg;
-  qi::rule<Iterator, ros_msg_field(), Skipper> field;
+  qi::rule<Iterator, Embag::ros_msg_def(), qi::locals<std::string>, Skipper> msg;
+  qi::rule<Iterator, Embag::ros_msg_field(), Skipper> field;
   qi::rule<Iterator, std::string(), Skipper> type;
   qi::rule<Iterator, std::string(), Skipper> field_name;
-  qi::rule<Iterator, ros_embedded_msg_def(), Skipper> embedded_type;
+  qi::rule<Iterator, Embag::ros_embedded_msg_def(), Skipper> embedded_type;
   qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
-  qi::rule<Iterator, ros_msg_constant(), Skipper> constant;
+  qi::rule<Iterator, Embag::ros_msg_constant(), Skipper> constant;
   qi::rule<Iterator, std::string(), Skipper> constant_name;
   qi::rule<Iterator, std::string(), Skipper> constant_value;
-  qi::rule<Iterator, ros_msg_member(), Skipper> member;
+  qi::rule<Iterator, Embag::ros_msg_member(), Skipper> member;
 };
 
 
@@ -356,6 +333,7 @@ bool Embag::read_records() {
           //std::cout << "embedded: " << ast.embedded_types[0].type_name << std::endl;
           //std::cout << "embedded field: " << ast.embedded_types[0].fields[0].field_name << std::endl;
           std::cout << "-------------------------\n";
+          message_schemata_[topic] = ast;
         } else {
           std::string::const_iterator some = iter + std::min(30, int(end - iter));
           std::string context(iter, (some>end)?end:some);

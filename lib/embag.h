@@ -5,6 +5,7 @@
 #include <vector>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/variant.hpp>
 
 class Embag {
  public:
@@ -17,6 +18,31 @@ class Embag {
   bool close();
 
   bool read_records();
+
+  // Schema stuff
+  // TODO: move this elsewhere?
+  struct ros_msg_field {
+    std::string type_name;
+    std::string field_name;
+  };
+
+  struct ros_msg_constant {
+    std::string type_name;
+    std::string constant_name;
+    std::string value;
+  };
+
+  typedef boost::variant<ros_msg_field, ros_msg_constant> ros_msg_member;
+
+  struct ros_embedded_msg_def {
+    std::string type_name;
+    std::vector<ros_msg_member> members;
+  };
+
+  struct ros_msg_def {
+    std::vector<ros_msg_member> members;
+    std::vector<ros_embedded_msg_def> embedded_types;
+  };
 
  private:
 
@@ -103,4 +129,5 @@ class Embag {
   std::vector<connection_record_t> connections_;
   std::vector<chunk_t> chunks_;
   uint64_t index_pos_;
+  std::map<std::string, ros_msg_def> message_schemata_;
 };
