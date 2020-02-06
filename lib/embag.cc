@@ -167,14 +167,16 @@ BOOST_FUSION_ADAPT_STRUCT(
   embedded_types,
 )
 
+// TODO namespace this stuff
+namespace qi = boost::spirit::qi;
 // A parser for all the things we don't care about (aka a skipper)
 template <typename Iterator>
-struct ros_msg_skipper : boost::spirit::qi::grammar<Iterator> {
+struct ros_msg_skipper : qi::grammar<Iterator> {
   ros_msg_skipper() : ros_msg_skipper::base_type(skip) {
     using boost::spirit::ascii::char_;
     using boost::spirit::eol;
-    using boost::spirit::qi::repeat;
-    using boost::spirit::qi::lit;
+    using qi::repeat;
+    using qi::lit;
     using boost::spirit::ascii::space;
 
     comment = *space >> "#" >> *(char_ - eol);
@@ -187,21 +189,20 @@ struct ros_msg_skipper : boost::spirit::qi::grammar<Iterator> {
     //BOOST_SPIRIT_DEBUG_NODE(newlines);
   }
 
-  boost::spirit::qi::rule<Iterator> skip;
-  boost::spirit::qi::rule<Iterator> comment;
-  boost::spirit::qi::rule<Iterator> separator;
-  boost::spirit::qi::rule<Iterator> blank_lines;
+  qi::rule<Iterator> skip;
+  qi::rule<Iterator> comment;
+  qi::rule<Iterator> separator;
+  qi::rule<Iterator> blank_lines;
 };
-
 
 // ROS message parsing
 // See http://wiki.ros.org/msg for details on the format
 template <typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
-struct ros_msg_grammar : boost::spirit::qi::grammar<Iterator, ros_msg_def(), boost::spirit::qi::locals<std::string>, Skipper> {
+struct ros_msg_grammar : qi::grammar<Iterator, ros_msg_def(), qi::locals<std::string>, Skipper> {
   ros_msg_grammar() : ros_msg_grammar::base_type(msg) {
     // TODO clean these up
-    using boost::spirit::qi::lit;
-    using boost::spirit::qi::lexeme;
+    using qi::lit;
+    using qi::lexeme;
     using boost::spirit::ascii::char_;
     using boost::spirit::ascii::space;
     using boost::spirit::eol;
@@ -223,33 +224,24 @@ struct ros_msg_grammar : boost::spirit::qi::grammar<Iterator, ros_msg_def(), boo
     embedded_type_name %= lit("MSG: ") >> lexeme[+(char_ - eol)];
     embedded_type = embedded_type_name >> +(member - lit("MSG: "));
 
-    // Finally, we put all these rules together to parse the full definition
-    msg =
-        *(member - lit("MSG: "))
-        >> *embedded_type
-        >> *eol;
+    // Finally, we put these rules together to parse the full definition
+    msg = *(member - lit("MSG: "))
+        >> *embedded_type;
 
-    //BOOST_SPIRIT_DEBUG_NODE(field);
-    //BOOST_SPIRIT_DEBUG_NODE(type);
-    //BOOST_SPIRIT_DEBUG_NODE(field_name);
-    //BOOST_SPIRIT_DEBUG_NODE(embedded_type);
-    //BOOST_SPIRIT_DEBUG_NODE(embedded_type_name);
-    //BOOST_SPIRIT_DEBUG_NODE(member);
-    //BOOST_SPIRIT_DEBUG_NODE(constant);
-    //BOOST_SPIRIT_DEBUG_NODE(constant_name);
-    //BOOST_SPIRIT_DEBUG_NODE(constant_value);
+    BOOST_SPIRIT_DEBUG_NODE(embedded_type);
+    BOOST_SPIRIT_DEBUG_NODE(member);
   }
 
-  boost::spirit::qi::rule<Iterator, ros_msg_def(), boost::spirit::qi::locals<std::string>, Skipper> msg;
-  boost::spirit::qi::rule<Iterator, ros_msg_field(), Skipper> field;
-  boost::spirit::qi::rule<Iterator, std::string(), Skipper> type;
-  boost::spirit::qi::rule<Iterator, std::string(), Skipper> field_name;
-  boost::spirit::qi::rule<Iterator, ros_embedded_msg_def(), Skipper> embedded_type;
-  boost::spirit::qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
-  boost::spirit::qi::rule<Iterator, ros_msg_constant(), Skipper> constant;
-  boost::spirit::qi::rule<Iterator, std::string(), Skipper> constant_name;
-  boost::spirit::qi::rule<Iterator, std::string(), Skipper> constant_value;
-  boost::spirit::qi::rule<Iterator, ros_msg_member(), Skipper> member;
+  qi::rule<Iterator, ros_msg_def(), qi::locals<std::string>, Skipper> msg;
+  qi::rule<Iterator, ros_msg_field(), Skipper> field;
+  qi::rule<Iterator, std::string(), Skipper> type;
+  qi::rule<Iterator, std::string(), Skipper> field_name;
+  qi::rule<Iterator, ros_embedded_msg_def(), Skipper> embedded_type;
+  qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
+  qi::rule<Iterator, ros_msg_constant(), Skipper> constant;
+  qi::rule<Iterator, std::string(), Skipper> constant_name;
+  qi::rule<Iterator, std::string(), Skipper> constant_value;
+  qi::rule<Iterator, ros_msg_member(), Skipper> member;
 };
 
 
@@ -357,13 +349,13 @@ bool Embag::read_records() {
         const bool r = phrase_parse(iter, end, grammar, skipper, ast);
 
         if (r && iter == end) {
-          //std::cout << "-------------------------\n";
-          //std::cout << "Parsing succeeded\n";
+          std::cout << "-------------------------\n";
+          std::cout << "Parsing succeeded\n";
           //std::cout << "name: " << ast.fields[0].field_name << std::endl;
           //std::cout << "type: " << ast.fields[0].type_name << std::endl;
           //std::cout << "embedded: " << ast.embedded_types[0].type_name << std::endl;
           //std::cout << "embedded field: " << ast.embedded_types[0].fields[0].field_name << std::endl;
-          //std::cout << "-------------------------\n";
+          std::cout << "-------------------------\n";
         } else {
           std::string::const_iterator some = iter + std::min(30, int(end - iter));
           std::string context(iter, (some>end)?end:some);
