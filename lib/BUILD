@@ -10,6 +10,7 @@ cc_library(
         "@boost//:spirit",
         "@boost//:fusion",
         "@boost//:variant",
+        "@system_libs//:liblz4",
     ],
 )
 

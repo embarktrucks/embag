@@ -10,7 +10,9 @@ int main(int argc, char *argv[]) {
   std::cout << "Opening " << filename << std::endl;
   reader.open();
 
-  reader.read_records();
+  reader.readRecords();
+
+  reader.printMsgs();
 
   reader.close();
 

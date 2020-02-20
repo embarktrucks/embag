@@ -62,7 +62,7 @@ bool Embag::close() {
   return false;
 }
 
-Embag::record_t Embag::read_record() {
+Embag::record_t Embag::readRecord() {
   Embag::record_t record;
   // Read header length
   bag_stream_.read(reinterpret_cast<char *>(&record.header_len), sizeof(record.header_len));
@@ -83,7 +83,8 @@ Embag::record_t Embag::read_record() {
   return record;
 }
 
-std::map<std::string, std::string> read_fields(const char* p, const uint64_t len) {
+
+std::map<std::string, std::string> readFields(const char* p, const uint64_t len) {
   std::map<std::string, std::string> fields;
   const char *end = p + len;
 
@@ -95,6 +96,8 @@ std::map<std::string, std::string> read_fields(const char* p, const uint64_t len
     // FIXME: these are copies...
     std::string buffer(p, field_len);
     const auto sep = buffer.find("=");
+
+    // TODO: check if = is std::string::npos
 
     const auto name = buffer.substr(0, sep);
     const auto value = buffer.substr(sep + 1);
@@ -109,10 +112,10 @@ std::map<std::string, std::string> read_fields(const char* p, const uint64_t len
   return fields;
 }
 
-Embag::header_t Embag::read_header(const record_t &record) {
+Embag::header_t Embag::readHeader(const record_t &record) {
   header_t header;
 
-  header.fields = read_fields(record.header, record.header_len);
+  header.fields = readFields(record.header, record.header_len);
 
   return header;
 }
@@ -122,6 +125,7 @@ Embag::header_t Embag::read_header(const record_t &record) {
 BOOST_FUSION_ADAPT_STRUCT(
   Embag::ros_msg_field,
   type_name,
+  is_array,
   field_name,
 )
 
@@ -182,12 +186,20 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), qi::locals<
     using qi::lexeme;
     using boost::spirit::ascii::char_;
     using boost::spirit::ascii::space;
+    using boost::spirit::qi::uint_;
     using boost::spirit::eol;
+    using boost::spirit::attr;
+    using qi::_val;
+    using qi::_1;
 
     // Parse a message field in the form: type field_name
-    type %= +(char_ - space);
+    //array_size %= +uint_ | attr(0);
+    //is_array %= lit('[') >> array_size >> lit(']');
+    is_array %= lit('[') >> lit(']') | attr(false);
+    //type %= +(char_ - (lit('[')|space)) >> is_array;
+    type %= +(char_ - (lit('[')|space));
     field_name %= lexeme[+(char_ - (space|eol|'#'))];
-    field = type >> +lit(' ') >> field_name;
+    field = type >> is_array >> +lit(' ') >> field_name;
 
     // Parse a constant in the form: type constant_name=constant_value
     constant_name %= lexeme[+(char_ - (space|lit('=')))];
@@ -205,13 +217,20 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), qi::locals<
     msg = *(member - lit("MSG: "))
         >> *embedded_type;
 
-    BOOST_SPIRIT_DEBUG_NODE(embedded_type);
+    BOOST_SPIRIT_DEBUG_NODE(is_array);
+    BOOST_SPIRIT_DEBUG_NODE(type);
+    BOOST_SPIRIT_DEBUG_NODE(field);
+    BOOST_SPIRIT_DEBUG_NODE(constant);
+    BOOST_SPIRIT_DEBUG_NODE(field_name);
     BOOST_SPIRIT_DEBUG_NODE(member);
+    BOOST_SPIRIT_DEBUG_NODE(embedded_type);
   }
 
   qi::rule<Iterator, Embag::ros_msg_def(), qi::locals<std::string>, Skipper> msg;
   qi::rule<Iterator, Embag::ros_msg_field(), Skipper> field;
   qi::rule<Iterator, std::string(), Skipper> type;
+  qi::rule<Iterator, bool, Skipper> is_array;
+  qi::rule<Iterator, uint32_t, Skipper> array_size;
   qi::rule<Iterator, std::string(), Skipper> field_name;
   qi::rule<Iterator, Embag::ros_embedded_msg_def(), Skipper> embedded_type;
   qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
@@ -222,7 +241,7 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), qi::locals<
 };
 
 
-bool Embag::read_records() {
+bool Embag::readRecords() {
   const int64_t file_size = bag_stream_->size();
 
   while (true) {
@@ -230,10 +249,10 @@ bool Embag::read_records() {
     if (pos == -1 || pos == file_size) {
       break;
     }
-    const auto record = read_record();
-    const auto header = read_header(record);
+    const auto record = readRecord();
+    const auto header = readHeader(record);
 
-    const auto op = header.get_op();
+    const auto op = header.getOp();
 
     switch(op) {
       case header_t::op::BAG_HEADER: {
@@ -241,9 +260,9 @@ bool Embag::read_records() {
         uint32_t chunk_count;
         uint64_t index_pos;
 
-        header.get_field("conn_count", connection_count);
-        header.get_field("chunk_count", chunk_count);
-        header.get_field("index_pos", index_pos);
+        header.getField("conn_count", connection_count);
+        header.getField("chunk_count", chunk_count);
+        header.getField("index_pos", index_pos);
 
         //std::cout << "conn: " << connection_count << " chunk: " << chunk_count << " index " << index_pos << std::endl;
 
@@ -258,8 +277,8 @@ bool Embag::read_records() {
         chunk_t chunk(record);
         chunk.offset = pos;
 
-        header.get_field("compression", chunk.compression);
-        header.get_field("size", chunk.size);
+        header.getField("compression", chunk.compression);
+        header.getField("size", chunk.uncompressed_size);
 
         chunks_.emplace_back(chunk);
 
@@ -271,9 +290,9 @@ bool Embag::read_records() {
         uint32_t msg_count;
 
         // TODO: check these values
-        header.get_field("ver", version);
-        header.get_field("conn", connection_id);
-        header.get_field("count", msg_count);
+        header.getField("ver", version);
+        header.getField("conn", connection_id);
+        header.getField("count", msg_count);
 
         index_block_t index_block;
         index_block.into_chunk = &chunks_.back();
@@ -287,23 +306,22 @@ bool Embag::read_records() {
         uint32_t connection_id;
         std::string topic;
 
-        header.get_field("conn", connection_id);
-        header.get_field("topic", topic);
+        header.getField("conn", connection_id);
+        header.getField("topic", topic);
+
+        if (topic.empty())
+          continue;
 
         // TODO: check these variables along with md5sum
         connection_data_t connection_data;
         connection_data.topic = topic;
-        if (!(connection_id > 0 && topic.size() > 0))
-          continue;
-        if (!((connection_id >= 0) && (size_t(connection_id) < connections_.size())))
-          continue;
 
-        const auto fields = read_fields(record.data, record.data_len);
+        const auto fields = readFields(record.data, record.data_len);
 
         connection_data.type = fields.at("type");
         connection_data.md5sum = fields.at("md5sum");
         connection_data.message_definition = fields.at("message_definition");
-        //std::cout << "Msg def for topic " << connection_data.topic << ":\n" << connection_data.message_definition << std::endl;
+        std::cout << "Msg def for topic " << connection_data.topic << ":\n" << connection_data.message_definition << std::endl;
         if (fields.find("callerid") != fields.end()) {
           connection_data.callerid = fields.at("callerid");
         }
@@ -326,13 +344,13 @@ bool Embag::read_records() {
         const bool r = phrase_parse(iter, end, grammar, skipper, ast);
 
         if (r && iter == end) {
-          std::cout << "-------------------------\n";
-          std::cout << "Parsing succeeded\n";
+          //std::cout << "-------------------------\n";
+          //std::cout << "Parsing succeeded\n";
           //std::cout << "name: " << ast.fields[0].field_name << std::endl;
           //std::cout << "type: " << ast.fields[0].type_name << std::endl;
           //std::cout << "embedded: " << ast.embedded_types[0].type_name << std::endl;
           //std::cout << "embedded field: " << ast.embedded_types[0].fields[0].field_name << std::endl;
-          std::cout << "-------------------------\n";
+          //std::cout << "-------------------------\n";
           message_schemata_[topic] = ast;
         } else {
           std::string::const_iterator some = iter + std::min(30, int(end - iter));
@@ -346,6 +364,7 @@ bool Embag::read_records() {
         break;
       }
       case header_t::op::MESSAGE_DATA: {
+        // Message data is usually found in chunks
         break;
       }
       case header_t::op::CHUNK_INFO: {
@@ -355,11 +374,11 @@ bool Embag::read_records() {
         uint64_t end_time;
         uint32_t count;
 
-        header.get_field("ver", ver);
-        header.get_field("chunk_pos", chunk_pos);
-        header.get_field("start_time", start_time);
-        header.get_field("end_time", end_time);
-        header.get_field("count", count);
+        header.getField("ver", ver);
+        header.getField("chunk_pos", chunk_pos);
+        header.getField("start_time", start_time);
+        header.getField("end_time", end_time);
+        header.getField("count", count);
 
         // TODO: It might make sense to save this data in a map or reverse the search.
         // At the moment there are only a few chunks so this doesn't really take long
@@ -385,4 +404,134 @@ bool Embag::read_records() {
   }
 
   return true;
+}
+
+bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size) {
+  size_t src_bytes_left = src_size;
+  size_t dst_bytes_left = dst_size;
+
+  while (dst_bytes_left && src_bytes_left) {
+    size_t src_bytes_read = src_bytes_left;
+    size_t dst_bytes_written = dst_bytes_left;
+    const size_t ret = LZ4F_decompress(lz4_ctx_, dst, &dst_bytes_written, src, &src_bytes_read, nullptr);
+    if (LZ4F_isError(ret)) {
+      std::cout << "chunk::decompress: lz4 decompression returned " << ret << ", expected " << src_bytes_read << std::endl;
+      return false;
+    }
+
+    src_bytes_left -= src_bytes_read;
+    dst_bytes_left -= dst_bytes_written;
+  }
+
+  if (src_bytes_left || dst_bytes_left) {
+    std::cout << "chunk::decompress: lz4 decompression left " << src_bytes_left << "/" << dst_bytes_left << " bytes in buffer" << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+void Embag::printMsgs() {
+  std::cout << "Printing " << chunks_.size() << " chunks..." << std::endl;
+
+  for (const auto chunk : chunks_) {
+    std::cout << "Offset: " << chunk.offset << std::endl;
+    std::cout << "  Compression: " << chunk.compression << std::endl;
+    std::cout << "  Compressed size: " << chunk.record.data_len << std::endl;
+    std::cout << "  Uncompressed size: " << chunk.uncompressed_size << std::endl;
+    std::cout << "  Duration: " << chunk.info.start_time  << " - " << chunk.info.end_time << std::endl;
+    std::cout << "  Messages: " << chunk.info.message_count << std::endl;
+
+    std::string buffer(chunk.uncompressed_size, 0);
+    decompressLz4Chunk(chunk.record.data, chunk.record.data_len, &buffer[0], chunk.uncompressed_size);
+
+    size_t processed_bytes = 0;
+    while (processed_bytes < chunk.uncompressed_size) {
+      const size_t offset = processed_bytes;
+
+      Embag::record_t record;
+      size_t p = sizeof(record.header_len);
+      std::memcpy(&record.header_len, buffer.c_str() + offset, p);
+      record.header = &buffer.c_str()[offset + p];
+      p += record.header_len;
+      std::memcpy(&record.data_len, buffer.c_str() + offset + p, sizeof(record.data_len));
+      p += sizeof(record.data_len);
+      record.data = &buffer.c_str()[offset + p];
+      p += record.data_len;
+      const auto header = readHeader(record);
+
+      const auto op = header.getOp();
+      switch (op) {
+        case header_t::op::MESSAGE_DATA: {
+          uint32_t connection_id;
+          header.getField("conn", connection_id);
+          const std::string &topic = connections_[connection_id].topic;
+          std::cout << "Found message data conn: " << connection_id << " topic: " << topic << std::endl;
+
+          parseMessage(connection_id, record.data);
+          break;
+        }
+        case header_t::op::CONNECTION: {
+          uint32_t connection_id;
+          header.getField("conn", connection_id);
+          std::cout << "Found connection data conn id: " << connection_id << std::endl;
+          break;
+        }
+        default: {
+          std::cout << "Found unknown record type: " << static_cast<int>(op) << std::endl;
+        }
+      }
+
+      processed_bytes += p;
+    }
+  }
+}
+
+struct member_visitor : boost::static_visitor<boost::optional<Embag::ros_msg_field>> {
+  boost::optional<Embag::ros_msg_field> operator()(Embag::ros_msg_field const& field) const {
+    return field;
+  }
+
+  boost::optional<Embag::ros_msg_field> operator()(Embag::ros_msg_constant const& constant) const {
+    // TODO: handle constants
+    return boost::none;
+  }
+};
+
+void Embag::parseMessage(const uint32_t connection_id, const char* data) {
+  const auto &connection_data = connections_[connection_id].data;
+  const auto &msg_def = message_schemata_[connection_data.topic];
+
+  for (const auto &member : msg_def.members) {
+    const auto field = boost::apply_visitor(member_visitor(), member);
+    if (field) {
+      /*
+      if (field->param.is_array) {
+        std::cout << "Found array" << std::endl;
+      } else {
+        std::cout << "Not an array" << std::endl;
+      }
+       */
+
+      if (primitive_type_map_.find(field->type_name) != primitive_type_map_.end()) {
+        std::cout << "Found primitive field: " << field->field_name << " type: " << field->type_name << std::endl;
+      } else {
+        // Search the embedded types for this type
+        // TODO: optimize this
+        bool found = false;
+        ros_embedded_msg_def found_embedded_type;
+        for (const auto &embedded_type : msg_def.embedded_types) {
+          if (embedded_type.type_name == field->type_name) {
+            found = true;
+            found_embedded_type = embedded_type;
+            std::cout << "Found embedded type " << field->type_name << std::endl;
+            break;
+          }
+        }
+        if (!found) {
+          std::cout << "Unable to find embedded type " << field->type_name << std::endl;
+        }
+      }
+    }
+  }
 }

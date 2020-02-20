@@ -9,3 +9,15 @@ git_repository(
 
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 boost_deps()
+
+new_local_repository(
+	name = "system_libs",
+	path = "/usr/lib/x86_64-linux-gnu",
+	build_file_content = """
+cc_library(
+	name = "liblz4",
+	srcs = ["liblz4.so"],
+	visibility = ["//visibility:public"],
+)
+""",
+)

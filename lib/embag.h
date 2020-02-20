@@ -7,23 +7,47 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/variant.hpp>
 
+// LZ4
+#include <lz4frame.h>
+
+// TODO: where does this go?
+struct lz4f_ctx
+{
+  LZ4F_decompressionContext_t ctx{nullptr};
+  ~lz4f_ctx() {
+    if (ctx)
+      LZ4F_freeDecompressionContext(ctx);
+  }
+  operator LZ4F_decompressionContext_t() {
+    return ctx;
+  }
+};
+
 class Embag {
  public:
-  const std::string MAGIC_STRING = "#ROSBAG V";
-
-  Embag(std::string filename) : filename_(filename) {}
+  Embag(std::string filename) : filename_(filename) {
+    const LZ4F_errorCode_t code = LZ4F_createDecompressionContext(&lz4_ctx_.ctx, LZ4F_VERSION);
+    if (LZ4F_isError(code)) {
+      // FIXME
+      //std::cout << "Received error code from LZ4F_createDecompressionContext: " << code << std::endl;
+    }
+  }
 
   bool open();
 
   bool close();
 
-  bool read_records();
+  bool readRecords();
+
+  void printMsgs();
 
   // Schema stuff
   // TODO: move this elsewhere?
   struct ros_msg_field {
     std::string type_name;
+    bool is_array = true;
     std::string field_name;
+    //uint32_t array_size;
   };
 
   struct ros_msg_constant {
@@ -45,8 +69,8 @@ class Embag {
   };
 
  private:
+  const std::string MAGIC_STRING = "#ROSBAG V";
 
-  // TODO: convert these to classes?
   struct record_t {
     uint32_t header_len;
     const char *header;
@@ -66,19 +90,19 @@ class Embag {
       UNSET        = 0xff,
     };
 
-    const op get_op() const {
+    const op getOp() const {
       return header_t::op(*(fields.at("op").data()));
     }
 
-    const void get_field(const std::string& name, std::string& value) const {
+    const void getField(const std::string& name, std::string& value) const {
       value = fields.at(name);
     }
 
     template <typename T>
-    const void get_field(const std::string& name, T& value) const {
+    const void getField(const std::string& name, T& value) const {
       value = *reinterpret_cast<const T*>(fields.at(name).data());
     }
-    const bool check_field(const std::string& name) const {
+    const bool checkField(const std::string& name) const {
       return fields.find(name) != fields.end();
     }
   };
@@ -93,10 +117,11 @@ class Embag {
     uint64_t offset = 0;
     chunk_info_t info;
     std::string compression;
-    uint32_t size;
+    uint32_t uncompressed_size;
+    record_t record;
 
     chunk_t(record_t r) {
-      // TODO
+      record = r;
     };
   };
 
@@ -120,8 +145,19 @@ class Embag {
     connection_data_t data;
   };
 
-  record_t read_record();
-  header_t read_header(const record_t &record);
+  std::map<std::string, std::type_index> primitive_type_map_ = {
+      {"uint32", typeid(uint32_t)},
+      {"uint8", typeid(uint8_t)},
+      {"string", typeid(std::string)},
+      {"int8", typeid(int8_t)},
+  };
+
+  record_t readRecord();
+  record_t readRecord(boost::iostreams::stream<boost::iostreams::basic_array_source<char>> &stream);
+  header_t readHeader(const record_t &record);
+  bool decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size);
+  void parseMessage(const uint32_t connection_id, const char* data);
+
   std::string filename_;
   boost::iostreams::stream <boost::iostreams::mapped_file_source> bag_stream_;
 
@@ -130,4 +166,6 @@ class Embag {
   std::vector<chunk_t> chunks_;
   uint64_t index_pos_;
   std::map<std::string, ros_msg_def> message_schemata_;
+
+  lz4f_ctx lz4_ctx_;
 };
