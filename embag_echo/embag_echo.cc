@@ -3,6 +3,7 @@
 #include "lib/embag.h"
 
 int main(int argc, char *argv[]) {
+  // TODO: arg processing
   const std::string filename = argv[1];
 
   Embag reader(filename);

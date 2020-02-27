@@ -6,11 +6,10 @@ cc_library(
     hdrs = ["embag.h"],
     visibility = ["//embag_echo:__pkg__"],
     deps = [
+        "@boost//:fusion",
         "@boost//:iostreams",
         "@boost//:spirit",
-        "@boost//:fusion",
         "@boost//:variant",
         "@system_libs//:liblz4",
     ],
 )
-

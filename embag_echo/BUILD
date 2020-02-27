@@ -7,4 +7,3 @@ cc_binary(
         "//lib:embag",
     ],
 )
-

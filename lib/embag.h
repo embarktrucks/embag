@@ -45,9 +45,8 @@ class Embag {
   // TODO: move this elsewhere?
   struct ros_msg_field {
     std::string type_name;
-    bool is_array = true;
+    int32_t array_size = 0;
     std::string field_name;
-    //uint32_t array_size;
   };
 
   struct ros_msg_constant {
@@ -145,18 +144,35 @@ class Embag {
     connection_data_t data;
   };
 
-  std::map<std::string, std::type_index> primitive_type_map_ = {
-      {"uint32", typeid(uint32_t)},
-      {"uint8", typeid(uint8_t)},
-      {"string", typeid(std::string)},
-      {"int8", typeid(int8_t)},
+  // TODO: do I need the types here?
+  enum PRIMITIVE_TYPE {
+    uint8,
+    int8,
+    uint32,
+    int32,
+    string,
+    float64,
+    time,
+  };
+
+  // TODO: it would be nice to not have to look this mapping up but establish it at parse time
+  std::map<std::string, PRIMITIVE_TYPE> primitive_type_map_ = {
+      {"uint8", uint8},
+      {"int8", int8},
+      {"uint32", uint32},
+      {"int32", int32},
+      {"string", string},
+      {"float64", float64},
+      {"time", time},
   };
 
   record_t readRecord();
-  record_t readRecord(boost::iostreams::stream<boost::iostreams::basic_array_source<char>> &stream);
   header_t readHeader(const record_t &record);
   bool decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size);
-  void parseMessage(const uint32_t connection_id, const char* data);
+  void parseMessage(const uint32_t connection_id, record_t message);
+  typedef boost::iostreams::stream<boost::iostreams::array_source> message_stream;
+  void parseField(const ros_msg_def &msg_def, const ros_msg_field &field, message_stream &stream);
+  void getPrimitiveField(const ros_msg_field &field, message_stream &stream);
 
   std::string filename_;
   boost::iostreams::stream <boost::iostreams::mapped_file_source> bag_stream_;

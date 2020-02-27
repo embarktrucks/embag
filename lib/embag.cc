@@ -125,7 +125,7 @@ Embag::header_t Embag::readHeader(const record_t &record) {
 BOOST_FUSION_ADAPT_STRUCT(
   Embag::ros_msg_field,
   type_name,
-  is_array,
+  array_size,
   field_name,
 )
 
@@ -179,7 +179,7 @@ struct ros_msg_skipper : qi::grammar<Iterator> {
 // ROS message parsing
 // See http://wiki.ros.org/msg for details on the format
 template <typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
-struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), qi::locals<std::string>, Skipper> {
+struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
   ros_msg_grammar() : ros_msg_grammar::base_type(msg) {
     // TODO clean these up
     using qi::lit;
@@ -188,18 +188,16 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), qi::locals<
     using boost::spirit::ascii::space;
     using boost::spirit::qi::uint_;
     using boost::spirit::eol;
+    using boost::spirit::eps;
     using boost::spirit::attr;
-    using qi::_val;
-    using qi::_1;
 
     // Parse a message field in the form: type field_name
-    //array_size %= +uint_ | attr(0);
-    //is_array %= lit('[') >> array_size >> lit(']');
-    is_array %= lit('[') >> lit(']') | attr(false);
-    //type %= +(char_ - (lit('[')|space)) >> is_array;
+    // This handles array types as well, for example type[n] field_name
+    array_size %= ('[' >> (uint_ | attr(-1)) >> ']') | attr(0);
     type %= +(char_ - (lit('[')|space));
     field_name %= lexeme[+(char_ - (space|eol|'#'))];
-    field = type >> is_array >> +lit(' ') >> field_name;
+
+    field = type >> array_size >> +lit(' ') >> field_name;
 
     // Parse a constant in the form: type constant_name=constant_value
     constant_name %= lexeme[+(char_ - (space|lit('=')))];
@@ -217,20 +215,19 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), qi::locals<
     msg = *(member - lit("MSG: "))
         >> *embedded_type;
 
-    BOOST_SPIRIT_DEBUG_NODE(is_array);
-    BOOST_SPIRIT_DEBUG_NODE(type);
-    BOOST_SPIRIT_DEBUG_NODE(field);
-    BOOST_SPIRIT_DEBUG_NODE(constant);
-    BOOST_SPIRIT_DEBUG_NODE(field_name);
-    BOOST_SPIRIT_DEBUG_NODE(member);
-    BOOST_SPIRIT_DEBUG_NODE(embedded_type);
+    //BOOST_SPIRIT_DEBUG_NODE(array_size);
+    //BOOST_SPIRIT_DEBUG_NODE(type);
+    //BOOST_SPIRIT_DEBUG_NODE(field);
+    //BOOST_SPIRIT_DEBUG_NODE(constant);
+    //BOOST_SPIRIT_DEBUG_NODE(field_name);
+    //BOOST_SPIRIT_DEBUG_NODE(member);
+    //BOOST_SPIRIT_DEBUG_NODE(embedded_type);
   }
 
-  qi::rule<Iterator, Embag::ros_msg_def(), qi::locals<std::string>, Skipper> msg;
+  qi::rule<Iterator, Embag::ros_msg_def(), Skipper> msg;
   qi::rule<Iterator, Embag::ros_msg_field(), Skipper> field;
   qi::rule<Iterator, std::string(), Skipper> type;
-  qi::rule<Iterator, bool, Skipper> is_array;
-  qi::rule<Iterator, uint32_t, Skipper> array_size;
+  qi::rule<Iterator, int32_t(), Skipper> array_size;
   qi::rule<Iterator, std::string(), Skipper> field_name;
   qi::rule<Iterator, Embag::ros_embedded_msg_def(), Skipper> embedded_type;
   qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
@@ -321,7 +318,7 @@ bool Embag::readRecords() {
         connection_data.type = fields.at("type");
         connection_data.md5sum = fields.at("md5sum");
         connection_data.message_definition = fields.at("message_definition");
-        std::cout << "Msg def for topic " << connection_data.topic << ":\n" << connection_data.message_definition << std::endl;
+        //std::cout << "Msg def for topic " << connection_data.topic << ":\n" << connection_data.message_definition << std::endl;
         if (fields.find("callerid") != fields.end()) {
           connection_data.callerid = fields.at("callerid");
         }
@@ -468,13 +465,13 @@ void Embag::printMsgs() {
           const std::string &topic = connections_[connection_id].topic;
           std::cout << "Found message data conn: " << connection_id << " topic: " << topic << std::endl;
 
-          parseMessage(connection_id, record.data);
+          parseMessage(connection_id, record);
           break;
         }
         case header_t::op::CONNECTION: {
           uint32_t connection_id;
           header.getField("conn", connection_id);
-          std::cout << "Found connection data conn id: " << connection_id << std::endl;
+          //std::cout << "Found connection data conn id: " << connection_id << std::endl;
           break;
         }
         default: {
@@ -498,40 +495,102 @@ struct member_visitor : boost::static_visitor<boost::optional<Embag::ros_msg_fie
   }
 };
 
-void Embag::parseMessage(const uint32_t connection_id, const char* data) {
+
+void Embag::parseMessage(const uint32_t connection_id, record_t message) {
   const auto &connection_data = connections_[connection_id].data;
   const auto &msg_def = message_schemata_[connection_data.topic];
+
+  // TODO: streaming this data means copying it into basic types.  It would be faster to just set pointers appropriately...
+  message_stream stream(message.data, message.data_len);
 
   for (const auto &member : msg_def.members) {
     const auto field = boost::apply_visitor(member_visitor(), member);
     if (field) {
-      /*
-      if (field->param.is_array) {
-        std::cout << "Found array" << std::endl;
-      } else {
-        std::cout << "Not an array" << std::endl;
-      }
-       */
+      parseField(msg_def, *field, stream);
+    }
+  }
+}
 
-      if (primitive_type_map_.find(field->type_name) != primitive_type_map_.end()) {
-        std::cout << "Found primitive field: " << field->field_name << " type: " << field->type_name << std::endl;
-      } else {
-        // Search the embedded types for this type
-        // TODO: optimize this
-        bool found = false;
-        ros_embedded_msg_def found_embedded_type;
-        for (const auto &embedded_type : msg_def.embedded_types) {
-          if (embedded_type.type_name == field->type_name) {
-            found = true;
-            found_embedded_type = embedded_type;
-            std::cout << "Found embedded type " << field->type_name << std::endl;
-            break;
+struct ros_time {
+  uint32_t secs;
+  uint32_t nsecs;
+};
+
+struct thing {
+  uint32_t uint32_value;
+  std::string string_value;
+  ros_time time_value;
+  double float64_value;
+};
+
+void Embag::parseField(const ros_msg_def &msg_def, const ros_msg_field &field, message_stream &stream) {
+  /* Unlimited number of array objects */
+  if (field.array_size == -1) {
+    uint32_t array_len;
+    stream.read(reinterpret_cast<char *>(&array_len), sizeof(array_len));
+    std::cout << "Found array len: " << array_len << std::endl;
+
+    if (primitive_type_map_.find(field.type_name) != primitive_type_map_.end()) {
+      std::cout << "Found primitive field: " << field.field_name << " type: " << field.type_name << std::endl;
+      getPrimitiveField(field, stream);
+    } else {
+      // Search the embedded types for this type
+      // TODO: optimize this
+      bool found = false;
+      ros_embedded_msg_def found_embedded_type;
+      for (const auto &embedded_type : msg_def.embedded_types) {
+        if (embedded_type.type_name == field.type_name) {
+          found = true;
+          found_embedded_type = embedded_type;
+          std::cout << "Found embedded type " << field.type_name << std::endl;
+          break;
+        }
+      }
+      if (!found) {
+        std::cout << "Unable to find embedded type " << field.type_name << std::endl;
+        return;
+      }
+
+      // We have the array size and type
+      for (size_t i = 0; i < array_len; i++) {
+        for (const auto &member : found_embedded_type.members) {
+          const auto embedded_field = boost::apply_visitor(member_visitor(), member);
+          if (embedded_field) {
+            parseField(msg_def, *embedded_field, stream);
           }
         }
-        if (!found) {
-          std::cout << "Unable to find embedded type " << field->type_name << std::endl;
-        }
       }
+    }
+  } else if (field.array_size == 0) {
+    if (primitive_type_map_.find(field.type_name) != primitive_type_map_.end()) {
+      std::cout << "Found primitive field: " << field.field_name << " type: " << field.type_name << std::endl;
+      getPrimitiveField(field, stream);
+    }
+  }
+}
+
+void Embag::getPrimitiveField(const ros_msg_field& field, message_stream &stream) {
+  PRIMITIVE_TYPE type = primitive_type_map_.at(field.type_name);
+  thing value;
+  switch (type) {
+    case uint32: {
+      stream.read(reinterpret_cast<char *>(&value.uint32_value), sizeof(type));
+      std::cout << "Read uint32: " << value.uint32_value << std::endl;
+      break;
+    }
+    case string: {
+      uint32_t string_len;
+      stream.read(reinterpret_cast<char *>(&string_len), sizeof(string_len));
+      value.string_value = std::string(string_len, 0);
+      stream.read(&value.string_value[0], string_len);
+      std::cout << "Read string: " << value.string_value << std::endl;
+      break;
+    }
+    case time: {
+      stream.read(reinterpret_cast<char *>(&value.time_value.secs), sizeof(value.time_value.secs));
+      stream.read(reinterpret_cast<char *>(&value.time_value.nsecs), sizeof(value.time_value.nsecs));
+      std::cout << "Read time: " << value.time_value.secs << "s + " << value.time_value.nsecs << std::endl;
+      break;
     }
   }
 }
