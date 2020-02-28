@@ -592,5 +592,10 @@ void Embag::getPrimitiveField(const ros_msg_field& field, message_stream &stream
       std::cout << "Read time: " << value.time_value.secs << "s + " << value.time_value.nsecs << std::endl;
       break;
     }
+    case float64: {
+      stream.read(reinterpret_cast<char *>(&value.float64_value), sizeof(value.float64_value));
+      std::cout << "Read float64: " << value.float64_value << std::endl;
+      break;
+    }
   }
 }
