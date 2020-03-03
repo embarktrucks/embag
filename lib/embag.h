@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <iostream>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/variant.hpp>
@@ -41,11 +42,40 @@ class Embag {
 
   void printMsgs();
 
+  // Generic type things
+  // TODO: move this elsewhere?
+  struct ros_time {
+    uint32_t secs;
+    uint32_t nsecs;
+  };
+
+  struct ros_duration {
+    int32_t secs;
+    int32_t nsecs;
+  };
+
+  struct thing {
+    bool bool_value;
+    int8_t int8_value;
+    uint8_t uint8_value;
+    int16_t int16_value;
+    uint16_t uint16_value;
+    int32_t int32_value;
+    uint32_t uint32_value;
+    int64_t int64_value;
+    uint64_t uint64_value;
+    float float32_value;
+    double float64_value;
+    std::string string_value;
+    ros_time time_value;
+    ros_duration duration_value;
+  };
+
   // Schema stuff
   // TODO: move this elsewhere?
   struct ros_msg_field {
     std::string type_name;
-    int32_t array_size = 0;
+    int32_t array_size;
     std::string field_name;
   };
 
@@ -60,6 +90,23 @@ class Embag {
   struct ros_embedded_msg_def {
     std::string type_name;
     std::vector<ros_msg_member> members;
+    std::string scope;
+    bool scope_set = false;
+
+    // TODO: make this less dumb
+    std::string getScope() {
+      if (scope_set) {
+        return scope;
+      }
+
+      scope_set = true;
+      const size_t slash_pos = type_name.find_first_of('/');
+      if (slash_pos != std::string::npos) {
+        scope = type_name.substr(0, slash_pos);
+      }
+
+      return scope;
+    }
   };
 
   struct ros_msg_def {
@@ -126,12 +173,12 @@ class Embag {
 
   struct index_block_t {
     chunk_t* into_chunk;
-
   };
 
   struct connection_data_t {
     std::string topic;
     std::string type;
+    std::string scope;
     std::string md5sum;
     std::string message_definition;
     std::string callerid;
@@ -146,24 +193,42 @@ class Embag {
 
   // TODO: do I need the types here?
   enum PRIMITIVE_TYPE {
-    uint8,
+    ros_bool,
     int8,
-    uint32,
+    uint8,
+    int16,
+    uint16,
     int32,
-    string,
+    uint32,
+    int64,
+    uint64,
+    float32,
     float64,
-    time,
+    string,
+    ros_time,
+    ros_duration,
   };
 
   // TODO: it would be nice to not have to look this mapping up but establish it at parse time
   std::map<std::string, PRIMITIVE_TYPE> primitive_type_map_ = {
-      {"uint8", uint8},
+      {"bool", ros_bool},
       {"int8", int8},
-      {"uint32", uint32},
+      {"uint8", uint8},
+      {"int16", int16},
+      {"uint16", uint16},
+      {"uint8", uint8},
       {"int32", int32},
-      {"string", string},
+      {"uint32", uint32},
+      {"int64", int64},
+      {"uint64", uint64},
+      {"float32", float32},
       {"float64", float64},
-      {"time", time},
+      {"string", string},
+      {"time", ros_time},
+      {"duration", ros_duration},
+      // Deprecated types
+      {"byte", int8},
+      {"char", uint8},
   };
 
   record_t readRecord();
@@ -171,8 +236,9 @@ class Embag {
   bool decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size);
   void parseMessage(const uint32_t connection_id, record_t message);
   typedef boost::iostreams::stream<boost::iostreams::array_source> message_stream;
-  void parseField(const ros_msg_def &msg_def, const ros_msg_field &field, message_stream &stream);
+  void parseField(const std::string &scope, const ros_msg_def &msg_def, const ros_msg_field &field, message_stream &stream);
   void getPrimitiveField(const ros_msg_field &field, message_stream &stream);
+  Embag::ros_embedded_msg_def getEmbeddedType(const std::string &scope, const ros_msg_def &msg_def, const ros_msg_field &field);
 
   std::string filename_;
   boost::iostreams::stream <boost::iostreams::mapped_file_source> bag_stream_;
