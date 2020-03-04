@@ -2,6 +2,7 @@
 #define BOOST_SPIRIT_DEBUG_OUT std::cout
 
 #include "embag.h"
+#include "ros_msg.h"
 
 #include <iostream>
 
@@ -19,9 +20,8 @@ bool Embag::open() {
   bag_stream_.read(&buffer[0], MAGIC_STRING.size());
 
   if (buffer != MAGIC_STRING) {
-    std::cout << "ERROR: This file doesn't appear to be a bag file... " << buffer << std::endl;
     bag_stream_.close();
-    return false;
+    throw std::runtime_error("This file doesn't appear to be a bag file... ");
   }
 
   // Next, parse the version
@@ -30,17 +30,15 @@ bool Embag::open() {
 
   // Only version 2.0 is supported at the moment
   if ("2.0" != buffer) {
-    std::cout << "ERROR: Unsupported bag file version: " << buffer << std::endl;
     bag_stream_.close();
-    return false;
+    throw std::runtime_error("Unsupported bag file version: " + buffer);
   }
 
   // The version is followed by a newline
   buffer.resize(1);
   bag_stream_.read(&buffer[0], 1);
   if ("\n" != buffer) {
-    std::cout << "ERROR: Unable to find newline after version string, perhaps this bag file is corrupted?" << std::endl;
-    return false;
+    throw std::runtime_error("Unable to find newline after version string, perhaps this bag file is corrupted?");
   }
 
   // At this point the stream is positioned at the first record so we're done here
@@ -57,7 +55,7 @@ bool Embag::close() {
 }
 
 Embag::record_t Embag::readRecord() {
-  Embag::record_t record;
+  Embag::record_t record{};
   // Read header length
   bag_stream_.read(reinterpret_cast<char *>(&record.header_len), sizeof(record.header_len));
 
@@ -71,8 +69,6 @@ Embag::record_t Embag::readRecord() {
   // Set the data pointer and skip to the next record
   record.data = bag_stream_->data() + bag_stream_.tellg();
   bag_stream_.seekg(record.data_len, std::ios_base::cur);
-
-  //std::cout << "Record with head len " << record.header_len << " data len " << record.data_len << std::endl;
 
   return record;
 }
@@ -97,8 +93,6 @@ std::map<std::string, std::string> readFields(const char* p, const uint64_t len)
     const auto value = buffer.substr(sep + 1);
 
     fields[name] = value;
-
-    //std::cout << "Field: " << name << " -> " << value << std::endl;
 
     p += field_len;
   }
@@ -256,8 +250,6 @@ bool Embag::readRecords() {
         header.getField("chunk_count", chunk_count);
         header.getField("index_pos", index_pos);
 
-        //std::cout << "conn: " << connection_count << " chunk: " << chunk_count << " index " << index_pos << std::endl;
-
         // TODO: check these values are nonzero and index_pos is > 64
         connections_.resize(connection_count);
         chunks_.reserve(chunk_count);
@@ -286,7 +278,7 @@ bool Embag::readRecords() {
         header.getField("conn", connection_id);
         header.getField("count", msg_count);
 
-        index_block_t index_block;
+        index_block_t index_block{};
         index_block.into_chunk = &chunks_.back();
         // TODO: set memory reference
 
@@ -317,7 +309,6 @@ bool Embag::readRecords() {
         }
         connection_data.md5sum = fields.at("md5sum");
         connection_data.message_definition = fields.at("message_definition");
-        //std::cout << "Msg def for topic " << connection_data.topic << ":\n" << connection_data.message_definition << std::endl;
         if (fields.find("callerid") != fields.end()) {
           connection_data.callerid = fields.at("callerid");
         }
@@ -340,21 +331,12 @@ bool Embag::readRecords() {
         const bool r = phrase_parse(iter, end, grammar, skipper, ast);
 
         if (r && iter == end) {
-          //std::cout << "-------------------------\n";
-          //std::cout << "Parsing succeeded\n";
-          //std::cout << "name: " << ast.fields[0].field_name << std::endl;
-          //std::cout << "type: " << ast.fields[0].type_name << std::endl;
-          //std::cout << "embedded: " << ast.embedded_types[0].type_name << std::endl;
-          //std::cout << "embedded field: " << ast.embedded_types[0].fields[0].field_name << std::endl;
-          //std::cout << "-------------------------\n";
           message_schemata_[topic] = ast;
         } else {
-          std::string::const_iterator some = iter + std::min(30, int(end - iter));
-          std::string context(iter, (some>end)?end:some);
-          std::cout << "-------------------------\n";
-          std::cout << "Parsing failed\n";
-          std::cout << "stopped at: \"" << context << "...\"\n";
-          std::cout << "-------------------------\n";
+          const std::string::const_iterator some = iter + std::min(30, int(end - iter));
+          const std::string context(iter, (some>end)?end:some);
+
+          throw std::runtime_error("Message definition parsing failed at: " + context);
         }
 
         break;
@@ -378,13 +360,12 @@ bool Embag::readRecords() {
 
         // TODO: It might make sense to save this data in a map or reverse the search.
         // At the moment there are only a few chunks so this doesn't really take long
-        auto chunk_it = std::find_if(chunks_.begin(), chunks_.end(), [this, &chunk_pos] (const chunk_t& c) {
+        auto chunk_it = std::find_if(chunks_.begin(), chunks_.end(), [&chunk_pos] (const chunk_t& c) {
           return c.offset == chunk_pos;
         });
 
         if (chunk_it == chunks_.end()) {
-          std::cout << "ERROR: unable to find chunk for chunk info at pos: " << chunk_pos << std::endl;
-          return false;
+          throw std::runtime_error("Unable to find chunk for chunk info at pos: " + std::to_string(chunk_pos));
         }
 
         chunk_it->info.start_time = start_time;
@@ -395,7 +376,7 @@ bool Embag::readRecords() {
       }
       case header_t::op::UNSET:
       default:
-        std::cout << "ERROR: Unknown record operation: " << uint8_t(op) << std::endl;
+        throw std::runtime_error( "Unknown record operation: " + std::to_string(uint8_t(op)));
     }
   }
 
@@ -411,8 +392,7 @@ bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst
     size_t dst_bytes_written = dst_bytes_left;
     const size_t ret = LZ4F_decompress(lz4_ctx_, dst, &dst_bytes_written, src, &src_bytes_read, nullptr);
     if (LZ4F_isError(ret)) {
-      std::cout << "chunk::decompress: lz4 decompression returned " << ret << ", expected " << src_bytes_read << std::endl;
-      return false;
+      throw std::runtime_error("chunk::decompress: lz4 decompression returned " + std::to_string(ret) + ", expected " + std::to_string(src_bytes_read));
     }
 
     src_bytes_left -= src_bytes_read;
@@ -420,17 +400,20 @@ bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst
   }
 
   if (src_bytes_left || dst_bytes_left) {
-    std::cout << "chunk::decompress: lz4 decompression left " << src_bytes_left << "/" << dst_bytes_left << " bytes in buffer" << std::endl;
-    return false;
+    throw std::runtime_error("chunk::decompress: lz4 decompression left " + std::to_string(src_bytes_left) + "/" + std::to_string(dst_bytes_left) + " bytes in buffer");
   }
 
   return true;
 }
 
-void Embag::printMsgs() {
+void Embag::topics() {
+
+}
+
+void Embag::pringAllMsgs() {
   std::cout << "Printing " << chunks_.size() << " chunks..." << std::endl;
 
-  for (const auto chunk : chunks_) {
+  for (const auto &chunk : chunks_) {
     std::cout << "Offset: " << chunk.offset << std::endl;
     std::cout << "  Compression: " << chunk.compression << std::endl;
     std::cout << "  Compressed size: " << chunk.record.data_len << std::endl;
@@ -445,7 +428,7 @@ void Embag::printMsgs() {
     while (processed_bytes < chunk.uncompressed_size) {
       const size_t offset = processed_bytes;
 
-      Embag::record_t record;
+      Embag::record_t record{};
       size_t p = sizeof(record.header_len);
       std::memcpy(&record.header_len, buffer.c_str() + offset, p);
       record.header = &buffer.c_str()[offset + p];
@@ -462,20 +445,22 @@ void Embag::printMsgs() {
           uint32_t connection_id;
           header.getField("conn", connection_id);
           const std::string &topic = connections_[connection_id].topic;
-          std::cout << "Found message data conn: " << connection_id << " topic: " << topic << std::endl;
 
-          parseMessage(connection_id, record);
+          std::cout << "Message on " << topic << std::endl;
+
+          RosValue message = parseMessage(connection_id, record);
+          printMsg(message);
+
           std::cout << "----------------------------" << std::endl;
           break;
         }
         case header_t::op::CONNECTION: {
           uint32_t connection_id;
           header.getField("conn", connection_id);
-          //std::cout << "Found connection data conn id: " << connection_id << std::endl;
           break;
         }
         default: {
-          std::cout << "Found unknown record type: " << static_cast<int>(op) << std::endl;
+          throw std::runtime_error("Found unknown record type: " + std::to_string(static_cast<int>(op)));
         }
       }
 
@@ -484,206 +469,97 @@ void Embag::printMsgs() {
   }
 }
 
-struct member_visitor : boost::static_visitor<boost::optional<Embag::ros_msg_field>> {
-  boost::optional<Embag::ros_msg_field> operator()(Embag::ros_msg_field const& field) const {
-    return field;
+void Embag::printMsg(const RosValue &field, const std::string &path) {
+  switch (field.type) {
+    case RosValue::Type::ros_bool: {
+      std::cout << path << " -> " << (field.bool_value ? "true" : "false") << std::endl;
+      break;
+    }
+    case RosValue::Type::int8: {
+      std::cout << path << " -> " << +field.int8_value << std::endl;
+      break;
+    }
+    case RosValue::Type::uint8: {
+      std::cout << path << " -> " << +field.uint8_value << std::endl;
+      break;
+    }
+    case RosValue::Type::int16: {
+      std::cout << path << " -> " << +field.int16_value << std::endl;
+      break;
+    }
+    case RosValue::Type::uint16: {
+      std::cout << path << " -> " << +field.uint16_value << std::endl;
+      break;
+    }
+    case RosValue::Type::int32: {
+      std::cout << path << " -> " << +field.int32_value << std::endl;
+      break;
+    }
+    case RosValue::Type::uint32: {
+      std::cout << path << " -> " << +field.uint32_value << std::endl;
+      break;
+    }
+    case RosValue::Type::int64: {
+      std::cout << path << " -> " << +field.int64_value << std::endl;
+      break;
+    }
+    case RosValue::Type::uint64: {
+      std::cout << path << " -> " << +field.uint64_value << std::endl;
+      break;
+    }
+    case RosValue::Type::float32: {
+      std::cout << path << " -> " << +field.float32_value << std::endl;
+      break;
+    }
+    case RosValue::Type::float64: {
+      std::cout << path << " -> " << +field.float64_value << std::endl;
+      break;
+    }
+    case RosValue::Type::string: {
+      std::cout << path << " -> " << field.string_value << std::endl;
+      break;
+    }
+    case RosValue::Type::ros_time: {
+      std::cout << path << " -> " << field.time_value.secs <<  "s " << field.time_value.nsecs << "ns" << std::endl;
+      break;
+    }
+    case RosValue::Type::ros_duration: {
+      std::cout << path << " -> " << field.duration_value.secs <<  "s " << field.duration_value.nsecs << "ns" << std::endl;
+      break;
+    }
+    case RosValue::Type::object: {
+      for (const auto &object : field.objects) {
+        if (path.empty()) {
+          printMsg(object.second, object.first);
+        } else {
+          printMsg(object.second, path + "." + object.first);
+        }
+      }
+      break;
+    }
+    case RosValue::Type::array: {
+      size_t i = 0;
+      for (const auto &item : field.values) {
+        const std::string array_path = path + "[" + std::to_string(i) + "]";
+        printMsg(item, array_path);
+        i++;
+      }
+      break;
+    }
   }
-
-  boost::optional<Embag::ros_msg_field> operator()(Embag::ros_msg_constant const& constant) const {
-    // TODO: handle constants
-    return boost::none;
-  }
-};
+}
 
 
-void Embag::parseMessage(const uint32_t connection_id, record_t message) {
-  const auto &connection_data = connections_[connection_id].data;
-  const auto &msg_def = message_schemata_[connection_data.topic];
+RosValue Embag::parseMessage(const uint32_t connection_id, record_t message) {
+  const auto &connection = connections_[connection_id];
+  const auto &msg_def = message_schemata_[connection.topic];
 
   // TODO: streaming this data means copying it into basic types.  It would be faster to just set pointers appropriately...
   message_stream stream(message.data, message.data_len);
 
-  for (const auto &member : msg_def.members) {
-    const auto field = boost::apply_visitor(member_visitor(), member);
-    if (field) {
-      parseField(connection_data.scope, msg_def, *field, stream);
-    }
-  }
-}
+  RosMsg msg(stream, connection.data, msg_def);
 
-Embag::ros_embedded_msg_def Embag::getEmbeddedType(const std::string &scope, const ros_msg_def &msg_def, const ros_msg_field &field) {
-  // TODO: optimize this with a map or something faster
-  for (const auto &embedded_type : msg_def.embedded_types) {
-    if (embedded_type.type_name == field.type_name) {
-      //std::cout << "Found embedded type " << field.type_name << std::endl;
-      return embedded_type;
-    }
+  RosValue parsed_message = msg.parse();
 
-    // ROS allows a type to lack its scope
-    if (scope.length() >= embedded_type.type_name.length()) {
-      continue;
-    }
-
-    const size_t scope_pos = embedded_type.type_name.find_first_of(scope);
-    if (scope_pos != std::string::npos) {
-      if (embedded_type.type_name.substr(scope.length() + 1) == field.type_name) {
-        return embedded_type;
-      }
-    }
-  }
-
-  std::cout << "Unable to find embedded type " << field.type_name << std::endl;
-  std::cout << "Available types are: " << std::endl;
-  for (const auto &embedded_type : msg_def.embedded_types) {
-    std::cout << "  " << embedded_type.type_name << std::endl;
-  }
-
-  throw std::runtime_error("Unable to find embedded type: " + field.type_name);
-}
-
-void Embag::parseField(const std::string &scope, const ros_msg_def &msg_def, const ros_msg_field &field, message_stream &stream) {
-  std::cout << "Scope: " << scope << std::endl;
-  switch(field.array_size) {
-    // Undefined number of array objects
-    case -1: {
-      uint32_t array_len;
-      stream.read(reinterpret_cast<char *>(&array_len), sizeof(array_len));
-      //std::cout << "Found array type: " << field.type_name << " len: " << array_len << std::endl;
-
-      if (array_len == 0) {
-        return;
-      }
-
-      if (primitive_type_map_.find(field.type_name) != primitive_type_map_.end()) {
-        //std::cout << "Found primitive field: " << field.field_name << " type: " << field.type_name << std::endl;
-        for (size_t i = 0; i < array_len; i++) {
-          getPrimitiveField(field, stream);
-        }
-      } else {
-        auto embedded_type = getEmbeddedType(scope, msg_def, field);
-
-        // We now have the array size and type
-        for (size_t i = 0; i < array_len; i++) {
-          for (const auto &member : embedded_type.members) {
-            const auto embedded_field = boost::apply_visitor(member_visitor(), member);
-            if (embedded_field) {
-              parseField(embedded_type.getScope(), msg_def, *embedded_field, stream);
-            }
-          }
-        }
-      }
-      break;
-    }
-    // Not an array
-    case 0: {
-      // Primitive type
-      if (primitive_type_map_.find(field.type_name) != primitive_type_map_.end()) {
-        //std::cout << "Found primitive field: " << field.field_name << " type: " << field.type_name << std::endl;
-        getPrimitiveField(field, stream);
-      } else {
-        // Embedded type
-        auto embedded_type = getEmbeddedType(scope, msg_def, field);
-        for (const auto &member : embedded_type.members) {
-          const auto embedded_field = boost::apply_visitor(member_visitor(), member);
-          if (embedded_field) {
-            parseField(embedded_type.getScope(), msg_def, *embedded_field, stream);
-          }
-        }
-      }
-      break;
-
-    }
-    // Array with fixed size
-    default: {
-      //std::cout << "Found fixed array size " << field.array_size << std::endl;
-      if (primitive_type_map_.find(field.type_name) != primitive_type_map_.end()) {
-        //std::cout << "Found primitive field: " << field.field_name << " type: " << field.type_name << std::endl;
-        for (int32_t i = 0; i < field.array_size; i++) {
-          getPrimitiveField(field, stream);
-        }
-      } else {
-        auto embedded_type = getEmbeddedType(scope, msg_def, field);
-
-        for (int32_t i = 0; i < field.array_size; i++) {
-          for (const auto &member : embedded_type.members) {
-            const auto embedded_field = boost::apply_visitor(member_visitor(), member);
-            if (embedded_field) {
-              parseField(embedded_type.getScope(), msg_def, *embedded_field, stream);
-            }
-          }
-        }
-      }
-
-      break;
-    }
-  }
-}
-
-void Embag::getPrimitiveField(const ros_msg_field& field, message_stream &stream) {
-  PRIMITIVE_TYPE type = primitive_type_map_.at(field.type_name);
-  thing value;
-  switch (type) {
-    case ros_bool: {
-      stream.read(reinterpret_cast<char *>(&value.bool_value), sizeof(value.bool_value));
-      break;
-    }
-    case int8: {
-      stream.read(reinterpret_cast<char *>(&value.int8_value), sizeof(value.int8_value));
-      break;
-    }
-    case uint8: {
-      stream.read(reinterpret_cast<char *>(&value.uint8_value), sizeof(value.uint8_value));
-      break;
-    }
-    case int16: {
-      stream.read(reinterpret_cast<char *>(&value.int16_value), sizeof(value.int16_value));
-      break;
-    }
-    case uint16: {
-      stream.read(reinterpret_cast<char *>(&value.uint16_value), sizeof(value.uint16_value));
-      break;
-    }
-    case int32: {
-      stream.read(reinterpret_cast<char *>(&value.int32_value), sizeof(value.int32_value));
-      break;
-    }
-    case uint32: {
-      stream.read(reinterpret_cast<char *>(&value.uint32_value), sizeof(value.uint32_value));
-      break;
-    }
-    case int64: {
-      stream.read(reinterpret_cast<char *>(&value.int64_value), sizeof(value.int64_value));
-      break;
-    }
-    case uint64: {
-      stream.read(reinterpret_cast<char *>(&value.uint64_value), sizeof(value.uint64_value));
-      break;
-    }
-    case float32: {
-      stream.read(reinterpret_cast<char *>(&value.float32_value), sizeof(value.float32_value));
-      break;
-    }
-    case float64: {
-      stream.read(reinterpret_cast<char *>(&value.float64_value), sizeof(value.float64_value));
-      break;
-    }
-    case string: {
-      uint32_t string_len;
-      stream.read(reinterpret_cast<char *>(&string_len), sizeof(string_len));
-      value.string_value = std::string(string_len, 0);
-      stream.read(&value.string_value[0], string_len);
-      std::cout << "Read string: " << value.string_value << std::endl;
-      break;
-    }
-    case ros_time: {
-      stream.read(reinterpret_cast<char *>(&value.time_value.secs), sizeof(value.time_value.secs));
-      stream.read(reinterpret_cast<char *>(&value.time_value.nsecs), sizeof(value.time_value.nsecs));
-      break;
-    }
-    case ros_duration: {
-      stream.read(reinterpret_cast<char *>(&value.duration_value.secs), sizeof(value.duration_value.secs));
-      stream.read(reinterpret_cast<char *>(&value.duration_value.nsecs), sizeof(value.duration_value.nsecs));
-      break;
-    }
-  }
+  return parsed_message;
 }

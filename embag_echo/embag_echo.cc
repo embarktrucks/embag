@@ -9,11 +9,12 @@ int main(int argc, char *argv[]) {
   Embag reader(filename);
 
   std::cout << "Opening " << filename << std::endl;
+
   reader.open();
 
   reader.readRecords();
 
-  reader.printMsgs();
+  reader.pringAllMsgs();
 
   reader.close();
 
