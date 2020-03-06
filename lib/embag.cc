@@ -74,8 +74,8 @@ Embag::record_t Embag::readRecord() {
 }
 
 
-std::map<std::string, std::string> readFields(const char* p, const uint64_t len) {
-  std::map<std::string, std::string> fields;
+std::unordered_map<std::string, std::string> readFields(const char* p, const uint64_t len) {
+  std::unordered_map<std::string, std::string> fields {};
   const char *end = p + len;
 
   while (p < end) {
@@ -85,7 +85,7 @@ std::map<std::string, std::string> readFields(const char* p, const uint64_t len)
 
     // FIXME: these are copies...
     std::string buffer(p, field_len);
-    const auto sep = buffer.find("=");
+    const auto sep = buffer.find('=');
 
     // TODO: check if = is std::string::npos
 
@@ -100,7 +100,7 @@ std::map<std::string, std::string> readFields(const char* p, const uint64_t len)
   return fields;
 }
 
-Embag::header_t Embag::readHeader(const record_t &record) {
+ Embag::header_t Embag::readHeader(const record_t &record) {
   header_t header;
 
   header.fields = readFields(record.header, record.header_len);
@@ -226,7 +226,7 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
   qi::rule<Iterator, Embag::ros_msg_member(), Skipper> member;
 };
 
-
+// TODO: make this private and call from open()
 bool Embag::readRecords() {
   const int64_t file_size = bag_stream_->size();
 
@@ -318,6 +318,7 @@ bool Embag::readRecords() {
 
         connections_[connection_id].topic = topic;
         connections_[connection_id].data = connection_data;
+        topic_connection_map_[topic] = connections_[connection_id];
 
         // Parse message definition
         typedef ros_msg_grammar<std::string::const_iterator> ros_msg_grammar;
@@ -383,6 +384,7 @@ bool Embag::readRecords() {
   return true;
 }
 
+// TODO: this should be a function in chunks
 bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size) {
   size_t src_bytes_left = src_size;
   size_t dst_bytes_left = dst_size;
@@ -406,21 +408,15 @@ bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst
   return true;
 }
 
-void Embag::topics() {
-
+BagView Embag::getView() {
+  return BagView{*this};
 }
 
-void Embag::pringAllMsgs() {
-  std::cout << "Printing " << chunks_.size() << " chunks..." << std::endl;
+
+void Embag::printAllMsgs() {
+  std::cout << "Printing all messages in " << chunks_.size() << " chunks..." << std::endl;
 
   for (const auto &chunk : chunks_) {
-    std::cout << "Offset: " << chunk.offset << std::endl;
-    std::cout << "  Compression: " << chunk.compression << std::endl;
-    std::cout << "  Compressed size: " << chunk.record.data_len << std::endl;
-    std::cout << "  Uncompressed size: " << chunk.uncompressed_size << std::endl;
-    std::cout << "  Duration: " << chunk.info.start_time  << " - " << chunk.info.end_time << std::endl;
-    std::cout << "  Messages: " << chunk.info.message_count << std::endl;
-
     std::string buffer(chunk.uncompressed_size, 0);
     decompressLz4Chunk(chunk.record.data, chunk.record.data_len, &buffer[0], chunk.uncompressed_size);
 
@@ -448,7 +444,7 @@ void Embag::pringAllMsgs() {
 
           std::cout << "Message on " << topic << std::endl;
 
-          RosValue message = parseMessage(connection_id, record);
+          auto message = parseMessage(connection_id, record);
           printMsg(message);
 
           std::cout << "----------------------------" << std::endl;
@@ -469,66 +465,67 @@ void Embag::pringAllMsgs() {
   }
 }
 
-void Embag::printMsg(const RosValue &field, const std::string &path) {
-  switch (field.type) {
+// This should really be a function on RosValue
+void Embag::printMsg(const std::unique_ptr<RosValue> &field, const std::string &path) {
+  switch (field->type) {
     case RosValue::Type::ros_bool: {
-      std::cout << path << " -> " << (field.bool_value ? "true" : "false") << std::endl;
+      std::cout << path << " -> " << (field->bool_value ? "true" : "false") << std::endl;
       break;
     }
     case RosValue::Type::int8: {
-      std::cout << path << " -> " << +field.int8_value << std::endl;
+      std::cout << path << " -> " << +field->int8_value << std::endl;
       break;
     }
     case RosValue::Type::uint8: {
-      std::cout << path << " -> " << +field.uint8_value << std::endl;
+      std::cout << path << " -> " << +field->uint8_value << std::endl;
       break;
     }
     case RosValue::Type::int16: {
-      std::cout << path << " -> " << +field.int16_value << std::endl;
+      std::cout << path << " -> " << +field->int16_value << std::endl;
       break;
     }
     case RosValue::Type::uint16: {
-      std::cout << path << " -> " << +field.uint16_value << std::endl;
+      std::cout << path << " -> " << +field->uint16_value << std::endl;
       break;
     }
     case RosValue::Type::int32: {
-      std::cout << path << " -> " << +field.int32_value << std::endl;
+      std::cout << path << " -> " << +field->int32_value << std::endl;
       break;
     }
     case RosValue::Type::uint32: {
-      std::cout << path << " -> " << +field.uint32_value << std::endl;
+      std::cout << path << " -> " << +field->uint32_value << std::endl;
       break;
     }
     case RosValue::Type::int64: {
-      std::cout << path << " -> " << +field.int64_value << std::endl;
+      std::cout << path << " -> " << +field->int64_value << std::endl;
       break;
     }
     case RosValue::Type::uint64: {
-      std::cout << path << " -> " << +field.uint64_value << std::endl;
+      std::cout << path << " -> " << +field->uint64_value << std::endl;
       break;
     }
     case RosValue::Type::float32: {
-      std::cout << path << " -> " << +field.float32_value << std::endl;
+      std::cout << path << " -> " << +field->float32_value << std::endl;
       break;
     }
     case RosValue::Type::float64: {
-      std::cout << path << " -> " << +field.float64_value << std::endl;
+      std::cout << path << " -> " << +field->float64_value << std::endl;
       break;
     }
     case RosValue::Type::string: {
-      std::cout << path << " -> " << field.string_value << std::endl;
+      std::cout << path << " -> " << field->string_value << std::endl;
       break;
     }
     case RosValue::Type::ros_time: {
-      std::cout << path << " -> " << field.time_value.secs <<  "s " << field.time_value.nsecs << "ns" << std::endl;
+      std::cout << path << " -> " << field->time_value.secs <<  "s " << field->time_value.nsecs << "ns" << std::endl;
       break;
     }
     case RosValue::Type::ros_duration: {
-      std::cout << path << " -> " << field.duration_value.secs <<  "s " << field.duration_value.nsecs << "ns" << std::endl;
+      std::cout << path << " -> " << field->duration_value.secs <<  "s " << field->duration_value.nsecs << "ns" << std::endl;
       break;
     }
     case RosValue::Type::object: {
-      for (const auto &object : field.objects) {
+      for (const auto &object : field->objects) {
         if (path.empty()) {
           printMsg(object.second, object.first);
         } else {
@@ -539,7 +536,7 @@ void Embag::printMsg(const RosValue &field, const std::string &path) {
     }
     case RosValue::Type::array: {
       size_t i = 0;
-      for (const auto &item : field.values) {
+      for (const auto &item : field->values) {
         const std::string array_path = path + "[" + std::to_string(i) + "]";
         printMsg(item, array_path);
         i++;
@@ -549,17 +546,15 @@ void Embag::printMsg(const RosValue &field, const std::string &path) {
   }
 }
 
-
-RosValue Embag::parseMessage(const uint32_t connection_id, record_t message) {
+std::unique_ptr<RosValue> Embag::parseMessage(const uint32_t connection_id, record_t message) {
   const auto &connection = connections_[connection_id];
   const auto &msg_def = message_schemata_[connection.topic];
 
   // TODO: streaming this data means copying it into basic types.  It would be faster to just set pointers appropriately...
-  message_stream stream(message.data, message.data_len);
+  message_stream stream{message.data, message.data_len};
 
-  RosMsg msg(stream, connection.data, msg_def);
+  RosMsg msg{stream, connection.data, msg_def};
 
-  RosValue parsed_message = msg.parse();
-
-  return parsed_message;
+  return msg.parse();
 }
+

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 #include <iostream>
@@ -13,6 +13,7 @@
 #include <lz4frame.h>
 
 #include "ros_value.h"
+#include "bag_vew.h"
 
 // TODO: where does this go?
 struct lz4f_ctx {
@@ -26,6 +27,7 @@ struct lz4f_ctx {
   }
 };
 
+class BagView;
 class Embag {
  public:
   explicit Embag(const std::string filename) : filename_(filename) {
@@ -42,8 +44,11 @@ class Embag {
 
   bool readRecords();
 
-  void pringAllMsgs();
-  void printMsg(const RosValue &message, const std::string &path = "");
+  void printAllMsgs();
+
+  void printMsg(const std::unique_ptr<RosValue> &message, const std::string &path = "");
+
+  BagView getView();
 
   // Schema stuff
   // TODO: move this elsewhere?
@@ -111,7 +116,7 @@ class Embag {
   };
 
   struct header_t {
-    std::map<std::string, std::string> fields;
+    std::unordered_map<std::string, std::string> fields;
     enum class op {
       BAG_HEADER   = 0x03,
       CHUNK        = 0x05,
@@ -168,18 +173,24 @@ class Embag {
   };
 
   record_t readRecord();
-  header_t readHeader(const record_t &record);
+  static header_t readHeader(const record_t &record);
   bool decompressLz4Chunk(const char *src, size_t src_size, char *dst, size_t dst_size);
-  RosValue parseMessage(uint32_t connection_id, record_t message);
+  std::unique_ptr<RosValue> parseMessage(uint32_t connection_id, record_t message);
 
   std::string filename_;
   boost::iostreams::stream <boost::iostreams::mapped_file_source> bag_stream_;
 
   // Bag data
   std::vector<connection_record_t> connections_;
+  std::unordered_map<std::string, connection_record_t> topic_connection_map_;
   std::vector<chunk_t> chunks_;
   uint64_t index_pos_ = 0;
-  std::map<std::string, ros_msg_def> message_schemata_;
+  std::unordered_map<std::string, ros_msg_def> message_schemata_;
+
+  // FIXME: We really should store this in BagView but I can't figure out the circular deps :(
+  std::vector<chunk_t *> chunks_to_parse_;
 
   lz4f_ctx lz4_ctx_;
+
+  friend class BagView;
 };

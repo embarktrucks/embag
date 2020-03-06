@@ -14,7 +14,12 @@ int main(int argc, char *argv[]) {
 
   reader.readRecords();
 
-  reader.pringAllMsgs();
+  //reader.printAllMsgs();
+
+  for (const auto &message : reader.getView().getMessages("/CANMessageIn/vcan")) {
+    reader.printMsg(message);
+    std::cout << "----------------------------" << std::endl;
+  }
 
   reader.close();
 

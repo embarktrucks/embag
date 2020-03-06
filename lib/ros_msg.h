@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "embag.h"
 #include "ros_value.h"
 
@@ -11,12 +13,12 @@ class RosMsg {
       const Embag::ros_msg_def &msg_def
       ) : stream_(stream), connection_data_(connection_data), msg_def_(msg_def) {};
 
-  RosValue parse();
+  std::unique_ptr<RosValue> parse();
 
  private:
 
   // TODO: it would be nice to not have to look up this mapping but establish it at parse time
-  std::map<std::string, RosValue::Type> primitive_type_map_ = {
+  std::unordered_map<std::string, RosValue::Type> primitive_type_map_ = {
       {"bool", RosValue::ros_bool},
       {"int8", RosValue::int8},
       {"uint8", RosValue::uint8},
@@ -42,8 +44,10 @@ class RosMsg {
   const Embag::ros_msg_def &msg_def_;
 
 
-  RosValue parseField(const std::string &scope, const Embag::ros_msg_field &field);
+  std::unique_ptr<RosValue> parseField(const std::string &scope, const Embag::ros_msg_field &field);
+  void parseArray(size_t array_len, Embag::ros_embedded_msg_def &embedded_type, std::unique_ptr<RosValue> &value);
+  std::unique_ptr<RosValue> parseMembers(Embag::ros_embedded_msg_def &embedded_type);
   Embag::ros_embedded_msg_def getEmbeddedType(const std::string &scope, const Embag::ros_msg_field &field);
-  RosValue getPrimitiveField(const Embag::ros_msg_field& field);
+  std::unique_ptr<RosValue> getPrimitiveField(const Embag::ros_msg_field& field);
 
 };

@@ -2,11 +2,13 @@
 
 #include <cstdint>
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 class RosValue {
  public:
+
+  // TODO: convert this to boost::variant and use strict_get
 
   enum Type {
     ros_bool,
@@ -55,8 +57,8 @@ class RosValue {
   ros_time_t time_value;
   ros_duration_t duration_value;
 
-  std::map<std::string, RosValue> objects;
-  std::vector<RosValue> values;
+  std::unordered_map<std::string, std::unique_ptr<RosValue>> objects;
+  std::vector<std::unique_ptr<RosValue>> values;
 
   Type type;
 
@@ -64,12 +66,15 @@ class RosValue {
   explicit RosValue(Type type) : type(type) {}
 
   // Convenience accessors
+  // TODO: move these to cc file and fix copies
+  /*
   RosValue operator [](const std::string &key) {
-    return objects[key];
+    return *objects[key];
   }
 
   RosValue operator [](const size_t idx) {
-    return values[idx];
+    return *values[idx];
   }
+   */
  private:
 };
