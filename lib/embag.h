@@ -51,7 +51,7 @@ class Embag {
   BagView getView();
 
   // Schema stuff
-  // TODO: move this elsewhere?
+  // TODO: move this stuff elsewhere
   struct ros_msg_field {
     std::string type_name;
     int32_t array_size;
@@ -93,6 +93,7 @@ class Embag {
     std::vector<ros_embedded_msg_def> embedded_types;
   };
 
+  // TODO: move these into another header file to avoid circular deps
   struct connection_data_t {
     std::string topic;
     std::string type;

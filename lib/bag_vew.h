@@ -1,6 +1,7 @@
 #pragma once
 
 #include "embag.h"
+#include "ros_value.h"
 
 class Embag;
 class BagView {
@@ -12,7 +13,7 @@ class BagView {
     const BagView& view_;
     explicit iterator(const BagView &view) : view_(view) {};
     iterator(const BagView &view, size_t chunk_count);
-    iterator(const iterator& other) : view_(other.view_), i(other.i) {};
+    iterator(const iterator& other) : view_(other.view_) {};
 
     iterator& operator=(const iterator&& other) {
       chunk_index_ = other.chunk_index_;
@@ -36,11 +37,18 @@ class BagView {
 
     iterator& operator++();
 
+    void readMessage();
+
     size_t chunk_index_ = 0;
     size_t chunk_count_ = 0;
     std::string current_buffer_;
     size_t processed_bytes_ = 0;
     uint32_t uncompressed_size_ = 0;
+
+    // TODO: remove these once ros bag types are available
+    uint32_t current_connection_id_ = 0;
+    char *current_message_data_;
+    uint32_t current_message_len_ = 0;
   };
 
 

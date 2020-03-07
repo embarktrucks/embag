@@ -1,5 +1,6 @@
 #include "bag_vew.h"
 #include "ros_value.h"
+#include "ros_msg.h"
 
 BagView::iterator BagView::begin() {
   return iterator{*this, bag_.chunks_to_parse_.size()};
@@ -9,16 +10,27 @@ BagView::iterator BagView::end() {
   return iterator{*this};
 }
 
-BagView::iterator::iterator(const BagView& view, size_t chunk_count) : view_(view), chunk_count_(chunk_count) {}
 
-
-std::unique_ptr<RosValue> BagView::iterator::operator*() const {
-
-  auto message = view_.bag_.parseMessage(connection_id, record);
-
+BagView::iterator::iterator(const BagView& view, size_t chunk_count) : view_(view), chunk_count_(chunk_count) {
+  readMessage();
 }
 
-BagView::iterator& BagView::iterator::operator++() {
+// TODO: move this
+typedef boost::iostreams::stream<boost::iostreams::array_source> message_stream;
+
+std::unique_ptr<RosValue> BagView::iterator::operator*() const {
+  const auto &connection = view_.bag_.connections_[current_connection_id_];
+  const auto &msg_def = view_.bag_.message_schemata_[connection.topic];
+
+  // TODO: streaming this data means copying it into basic types.  It would be faster to just set pointers appropriately...
+  message_stream stream{current_message_data_, current_message_len_};
+
+  RosMsg msg{stream, connection.data, msg_def};
+
+  return msg.parse();
+}
+
+void BagView::iterator::readMessage() {
   if (current_buffer_.empty()) {
     const auto &chunk = view_.bag_.chunks_to_parse_[chunk_index_];
     current_buffer_ = std::string(chunk->uncompressed_size, 0);
@@ -44,20 +56,25 @@ BagView::iterator& BagView::iterator::operator++() {
     const auto op = header.getOp();
     switch (op) {
       case Embag::header_t::op::MESSAGE_DATA: {
-        uint32_t connection_id;
-        header.getField("conn", connection_id);
-        const std::string &topic = view_.bag_.connections_[connection_id].topic;
+        header.getField("conn", current_connection_id_);
+        const std::string &topic = view_.bag_.connections_[current_connection_id_].topic;
 
-        std::cout << "Message on " << topic << std::endl;
+        //std::cout << "Message on " << topic << std::endl;
+
+        current_message_data_ = const_cast<char *>(record.data);
+        current_message_len_ = record.data_len;
 
         //auto message = view_.bag_.parseMessage(connection_id, record);
 
+        processed_bytes_ += p;
         break;
       }
       case Embag::header_t::op::CONNECTION: {
         // TODO: not entirely sure what to do with these...
-        uint32_t connection_id;
-        header.getField("conn", connection_id);
+
+        // Move to the next record
+        processed_bytes_ += p;
+        readMessage();
         break;
       }
       default: {
@@ -65,11 +82,14 @@ BagView::iterator& BagView::iterator::operator++() {
       }
     }
 
-    processed_bytes_ += p;
   } else {
     // TODO: move to the next chunk
     chunk_count_ = 0;
   }
+}
+
+BagView::iterator& BagView::iterator::operator++() {
+  readMessage();
 
   return *this;
 }
