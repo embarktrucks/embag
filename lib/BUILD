@@ -10,6 +10,7 @@ cc_library(
     hdrs = [
         "bag_vew.h",
         "embag.h",
+        "ros_bag_types.h",
         "ros_msg.h",
         "ros_value.h",
     ],

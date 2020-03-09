@@ -3,7 +3,7 @@
 #include "ros_msg.h"
 
 BagView::iterator BagView::begin() {
-  return iterator{*this, bag_.chunks_to_parse_.size()};
+  return iterator{*this, chunks_to_parse_.size()};
 }
 
 BagView::iterator BagView::end() {
@@ -12,6 +12,10 @@ BagView::iterator BagView::end() {
 
 
 BagView::iterator::iterator(const BagView& view, size_t chunk_count) : view_(view), chunk_count_(chunk_count) {
+  if (chunk_count == 0) {
+    return;
+  }
+
   readMessage();
 }
 
@@ -19,6 +23,7 @@ BagView::iterator::iterator(const BagView& view, size_t chunk_count) : view_(vie
 typedef boost::iostreams::stream<boost::iostreams::array_source> message_stream;
 
 std::unique_ptr<RosValue> BagView::iterator::operator*() const {
+  // TODO: move this out of the hot path
   const auto &connection = view_.bag_.connections_[current_connection_id_];
   const auto &msg_def = view_.bag_.message_schemata_[connection.topic];
 
@@ -32,8 +37,8 @@ std::unique_ptr<RosValue> BagView::iterator::operator*() const {
 
 void BagView::iterator::readMessage() {
   if (current_buffer_.empty()) {
-    const auto &chunk = view_.bag_.chunks_to_parse_[chunk_index_];
-    current_buffer_ = std::string(chunk->uncompressed_size, 0);
+    const auto &chunk = view_.chunks_to_parse_[chunk_index_];
+    current_buffer_.resize(chunk->uncompressed_size, 0);
     // TODO: this really should be a function in chunks
     view_.bag_.decompressLz4Chunk(chunk->record.data, chunk->record.data_len, &current_buffer_[0], chunk->uncompressed_size);
     uncompressed_size_ = chunk->uncompressed_size;
@@ -42,7 +47,8 @@ void BagView::iterator::readMessage() {
   if (processed_bytes_ < uncompressed_size_) {
     const size_t offset = processed_bytes_;
 
-    Embag::record_t record{};
+    // TODO: clean this up
+    RosBagTypes::record_t record{};
     size_t p = sizeof(record.header_len);
     std::memcpy(&record.header_len, current_buffer_.c_str() + offset, p);
     record.header = &current_buffer_.c_str()[offset + p];
@@ -55,25 +61,30 @@ void BagView::iterator::readMessage() {
 
     const auto op = header.getOp();
     switch (op) {
-      case Embag::header_t::op::MESSAGE_DATA: {
-        header.getField("conn", current_connection_id_);
-        const std::string &topic = view_.bag_.connections_[current_connection_id_].topic;
+      case RosBagTypes::header_t::op::MESSAGE_DATA: {
+        uint32_t connection_id;
+        RosValue::ros_time_t timestamp;
+        header.getField("conn", connection_id);
+        header.getField("time", timestamp);
 
-        //std::cout << "Message on " << topic << std::endl;
+        if (view_.connection_ids_.count(connection_id)) {
+          current_message_data_ = const_cast<char *>(record.data);
+          current_message_len_ = record.data_len;
+          current_connection_id_ = connection_id;
+          processed_bytes_ += p;
+        } else {
+          processed_bytes_ += p;
+          // FIXME: Recursion may be expensive here...
+          readMessage();
+        }
 
-        current_message_data_ = const_cast<char *>(record.data);
-        current_message_len_ = record.data_len;
-
-        //auto message = view_.bag_.parseMessage(connection_id, record);
-
-        processed_bytes_ += p;
         break;
       }
-      case Embag::header_t::op::CONNECTION: {
+      case RosBagTypes::header_t::op::CONNECTION: {
         // TODO: not entirely sure what to do with these...
-
-        // Move to the next record
+        // Move to the next record for now
         processed_bytes_ += p;
+        // FIXME: Recursion may be expensive here...
         readMessage();
         break;
       }
@@ -81,10 +92,11 @@ void BagView::iterator::readMessage() {
         throw std::runtime_error("Found unknown record type: " + std::to_string(static_cast<int>(op)));
       }
     }
-
   } else {
-    // TODO: move to the next chunk
-    chunk_count_ = 0;
+    chunk_index_++;
+    chunk_count_--;
+    current_buffer_.clear();
+    processed_bytes_ = 0;
   }
 }
 
@@ -94,15 +106,44 @@ BagView::iterator& BagView::iterator::operator++() {
   return *this;
 }
 
-BagView BagView::getMessages(const std::string &topic) {
-  auto &connection_record = bag_.topic_connection_map_[topic];
-
-  bag_.chunks_to_parse_.clear();
-  for (const auto &block : connection_record.blocks) {
-    bag_.chunks_to_parse_.emplace_back(block.into_chunk);
+BagView BagView::getMessages() {
+  chunks_to_parse_.clear();
+  for (auto &chunk : bag_.chunks_) {
+    chunks_to_parse_.emplace_back(&chunk);
   }
 
-  std::cout << "Found " << bag_.chunks_to_parse_.size() << " chunks to parse (of " << bag_.chunks_.size() << ") for topic " << topic << std::endl;
+  connection_ids_.clear();
+  for (size_t i = 0; i < bag_.connections_.size(); i++) {
+    connection_ids_.emplace(i);
+  }
+
+  std::cout << "Found " << chunks_to_parse_.size() << " chunks to parse (of " << bag_.chunks_.size() << ") for all topics " << std::endl;
+
+  return *this;
+}
+
+BagView BagView::getMessages(const std::string &topic) {
+  return getMessages({topic});
+}
+
+// TODO: handle the case where we find no messages
+BagView BagView::getMessages(std::initializer_list<std::string> topics) {
+  chunks_to_parse_.clear();
+  connection_ids_.clear();
+
+  for (const auto &topic : topics) {
+    if (!bag_.topic_connection_map_.count(topic)) {
+      std::cout << "WARNING: unable to find topic in bag: " << topic << std::endl;
+      continue;
+    }
+
+    auto &connection_record = bag_.topic_connection_map_[topic];
+    for (const auto &block : connection_record.blocks) {
+      chunks_to_parse_.emplace_back(block.into_chunk);
+    }
+
+    connection_ids_.emplace(connection_record.id);
+  }
 
   return *this;
 }

@@ -1,12 +1,14 @@
 #pragma once
 
+#include <unordered_set>
+#include <vector>
 #include "embag.h"
 #include "ros_value.h"
+#include "ros_bag_types.h"
 
 class Embag;
 class BagView {
  public:
-
   BagView(Embag& bag) : bag_(bag) {};
 
   struct iterator {
@@ -47,17 +49,19 @@ class BagView {
 
     // TODO: remove these once ros bag types are available
     uint32_t current_connection_id_ = 0;
-    char *current_message_data_;
+    char *current_message_data_ = nullptr;
     uint32_t current_message_len_ = 0;
   };
-
 
   iterator begin();
   iterator end();
 
+  BagView getMessages();
   BagView getMessages(const std::string &topic);
+  BagView getMessages(std::initializer_list<std::string> topics);
 
  private:
   Embag &bag_;
-
+  std::vector<RosBagTypes::chunk_t *> chunks_to_parse_;
+  std::unordered_set<uint32_t> connection_ids_;
 };

@@ -14,6 +14,7 @@
 
 #include "ros_value.h"
 #include "bag_vew.h"
+#include "ros_bag_types.h"
 
 // TODO: where does this go?
 struct lz4f_ctx {
@@ -42,16 +43,14 @@ class Embag {
 
   bool close();
 
-  bool readRecords();
-
   void printAllMsgs();
 
-  void printMsg(const std::unique_ptr<RosValue> &message, const std::string &path = "");
+  static void printMsg(const std::unique_ptr<RosValue> &message, const std::string &path = "");
 
   BagView getView();
 
   // Schema stuff
-  // TODO: move this stuff elsewhere
+  // TODO: move this stuff elsewhere?
   struct ros_msg_field {
     std::string type_name;
     int32_t array_size;
@@ -93,103 +92,26 @@ class Embag {
     std::vector<ros_embedded_msg_def> embedded_types;
   };
 
-  // TODO: move these into another header file to avoid circular deps
-  struct connection_data_t {
-    std::string topic;
-    std::string type;
-    std::string scope;
-    std::string md5sum;
-    std::string message_definition;
-    std::string callerid;
-    bool latching = false;
-  };
-
   typedef boost::iostreams::stream<boost::iostreams::array_source> message_stream;
 
  private:
   const std::string MAGIC_STRING = "#ROSBAG V";
 
-  struct record_t {
-    uint32_t header_len;
-    const char *header;
-    uint32_t data_len;
-    const char *data;
-  };
-
-  struct header_t {
-    std::unordered_map<std::string, std::string> fields;
-    enum class op {
-      BAG_HEADER   = 0x03,
-      CHUNK        = 0x05,
-      CONNECTION   = 0x07,
-      MESSAGE_DATA = 0x02,
-      INDEX_DATA   = 0x04,
-      CHUNK_INFO   = 0x06,
-      UNSET        = 0xff,
-    };
-
-    const op getOp() const {
-      return header_t::op(*(fields.at("op").data()));
-    }
-
-    const void getField(const std::string& name, std::string& value) const {
-      value = fields.at(name);
-    }
-
-    template <typename T>
-    const void getField(const std::string& name, T& value) const {
-      value = *reinterpret_cast<const T*>(fields.at(name).data());
-    }
-    const bool checkField(const std::string& name) const {
-      return fields.find(name) != fields.end();
-    }
-  };
-
-  struct chunk_info_t {
-    uint64_t start_time;
-    uint64_t end_time;
-    uint32_t message_count;
-  };
-
-  struct chunk_t {
-    uint64_t offset = 0;
-    chunk_info_t info;
-    std::string compression;
-    uint32_t uncompressed_size;
-    record_t record;
-
-    chunk_t(record_t r) {
-      record = r;
-    };
-  };
-
-  struct index_block_t {
-    chunk_t* into_chunk;
-  };
-
-  struct connection_record_t {
-    std::vector<index_block_t> blocks;
-    std::string topic;
-    connection_data_t data;
-  };
-
-  record_t readRecord();
-  static header_t readHeader(const record_t &record);
+  bool readRecords();
+  RosBagTypes::record_t readRecord();
+  static RosBagTypes::header_t readHeader(const RosBagTypes::record_t &record);
   bool decompressLz4Chunk(const char *src, size_t src_size, char *dst, size_t dst_size);
-  std::unique_ptr<RosValue> parseMessage(uint32_t connection_id, record_t message);
+  std::unique_ptr<RosValue> parseMessage(uint32_t connection_id, RosBagTypes::record_t message);
 
   std::string filename_;
   boost::iostreams::stream <boost::iostreams::mapped_file_source> bag_stream_;
 
   // Bag data
-  std::vector<connection_record_t> connections_;
-  std::unordered_map<std::string, connection_record_t> topic_connection_map_;
-  std::vector<chunk_t> chunks_;
+  std::vector<RosBagTypes::connection_record_t> connections_;
+  std::unordered_map<std::string, RosBagTypes::connection_record_t> topic_connection_map_;
+  std::vector<RosBagTypes::chunk_t> chunks_;
   uint64_t index_pos_ = 0;
   std::unordered_map<std::string, ros_msg_def> message_schemata_;
-
-  // FIXME: We really should store this in BagView but I can't figure out the circular deps :(
-  std::vector<chunk_t *> chunks_to_parse_;
 
   lz4f_ctx lz4_ctx_;
 

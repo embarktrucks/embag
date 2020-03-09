@@ -3,7 +3,7 @@
 #include "lib/embag.h"
 
 int main(int argc, char *argv[]) {
-  // TODO: arg processing
+  // TODO: proper arg processing
   const std::string filename = argv[1];
 
   Embag reader(filename);
@@ -12,13 +12,9 @@ int main(int argc, char *argv[]) {
 
   reader.open();
 
-  reader.readRecords();
-
-  //reader.printAllMsgs();
-
   for (const auto &message : reader.getView().getMessages("/CANMessageIn/vcan")) {
-    reader.printMsg(message);
-    std::cout << "----------------------------" << std::endl;
+    //Embag::printMsg(message);
+    //std::cout << "----------------------------" << std::endl;
   }
 
   reader.close();

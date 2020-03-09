@@ -41,7 +41,8 @@ bool Embag::open() {
     throw std::runtime_error("Unable to find newline after version string, perhaps this bag file is corrupted?");
   }
 
-  // At this point the stream is positioned at the first record so we're done here
+  readRecords();
+
   return true;
 }
 
@@ -54,8 +55,8 @@ bool Embag::close() {
   return false;
 }
 
-Embag::record_t Embag::readRecord() {
-  Embag::record_t record{};
+RosBagTypes::record_t Embag::readRecord() {
+  RosBagTypes::record_t record{};
   // Read header length
   bag_stream_.read(reinterpret_cast<char *>(&record.header_len), sizeof(record.header_len));
 
@@ -100,8 +101,8 @@ std::unordered_map<std::string, std::string> readFields(const char* p, const uin
   return fields;
 }
 
- Embag::header_t Embag::readHeader(const record_t &record) {
-  header_t header;
+ RosBagTypes::header_t Embag::readHeader(const RosBagTypes::record_t &record) {
+  RosBagTypes::header_t header;
 
   header.fields = readFields(record.header, record.header_len);
 
@@ -226,7 +227,6 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
   qi::rule<Iterator, Embag::ros_msg_member(), Skipper> member;
 };
 
-// TODO: make this private and call from open()
 bool Embag::readRecords() {
   const int64_t file_size = bag_stream_->size();
 
@@ -241,7 +241,7 @@ bool Embag::readRecords() {
     const auto op = header.getOp();
 
     switch(op) {
-      case header_t::op::BAG_HEADER: {
+      case RosBagTypes::header_t::op::BAG_HEADER: {
         uint32_t connection_count;
         uint32_t chunk_count;
         uint64_t index_pos;
@@ -257,8 +257,8 @@ bool Embag::readRecords() {
 
         break;
       }
-      case header_t::op::CHUNK: {
-        chunk_t chunk(record);
+      case RosBagTypes::header_t::op::CHUNK: {
+        RosBagTypes::chunk_t chunk(record);
         chunk.offset = pos;
 
         header.getField("compression", chunk.compression);
@@ -268,7 +268,7 @@ bool Embag::readRecords() {
 
         break;
       }
-      case header_t::op::INDEX_DATA: {
+      case RosBagTypes::header_t::op::INDEX_DATA: {
         uint32_t version;
         uint32_t connection_id;
         uint32_t msg_count;
@@ -278,7 +278,7 @@ bool Embag::readRecords() {
         header.getField("conn", connection_id);
         header.getField("count", msg_count);
 
-        index_block_t index_block{};
+        RosBagTypes::index_block_t index_block{};
         index_block.into_chunk = &chunks_.back();
         // TODO: set memory reference
 
@@ -286,7 +286,7 @@ bool Embag::readRecords() {
 
         break;
       }
-      case header_t::op::CONNECTION: {
+      case RosBagTypes::header_t::op::CONNECTION: {
         uint32_t connection_id;
         std::string topic;
 
@@ -297,7 +297,7 @@ bool Embag::readRecords() {
           continue;
 
         // TODO: check these variables along with md5sum
-        connection_data_t connection_data;
+        RosBagTypes::connection_data_t connection_data;
         connection_data.topic = topic;
 
         const auto fields = readFields(record.data, record.data_len);
@@ -316,6 +316,7 @@ bool Embag::readRecords() {
           connection_data.latching = fields.at("latching") == "1";
         }
 
+        connections_[connection_id].id = connection_id;
         connections_[connection_id].topic = topic;
         connections_[connection_id].data = connection_data;
         topic_connection_map_[topic] = connections_[connection_id];
@@ -342,11 +343,11 @@ bool Embag::readRecords() {
 
         break;
       }
-      case header_t::op::MESSAGE_DATA: {
+      case RosBagTypes::header_t::op::MESSAGE_DATA: {
         // Message data is usually found in chunks
         break;
       }
-      case header_t::op::CHUNK_INFO: {
+      case RosBagTypes::header_t::op::CHUNK_INFO: {
         uint32_t ver;
         uint64_t chunk_pos;
         uint64_t start_time;
@@ -361,7 +362,7 @@ bool Embag::readRecords() {
 
         // TODO: It might make sense to save this data in a map or reverse the search.
         // At the moment there are only a few chunks so this doesn't really take long
-        auto chunk_it = std::find_if(chunks_.begin(), chunks_.end(), [&chunk_pos] (const chunk_t& c) {
+        auto chunk_it = std::find_if(chunks_.begin(), chunks_.end(), [&chunk_pos] (const RosBagTypes::chunk_t& c) {
           return c.offset == chunk_pos;
         });
 
@@ -375,7 +376,7 @@ bool Embag::readRecords() {
 
         break;
       }
-      case header_t::op::UNSET:
+      case RosBagTypes::header_t::op::UNSET:
       default:
         throw std::runtime_error( "Unknown record operation: " + std::to_string(uint8_t(op)));
     }
@@ -412,61 +413,17 @@ BagView Embag::getView() {
   return BagView{*this};
 }
 
-
 void Embag::printAllMsgs() {
   std::cout << "Printing all messages in " << chunks_.size() << " chunks..." << std::endl;
 
-  for (const auto &chunk : chunks_) {
-    std::string buffer(chunk.uncompressed_size, 0);
-    decompressLz4Chunk(chunk.record.data, chunk.record.data_len, &buffer[0], chunk.uncompressed_size);
-
-    size_t processed_bytes = 0;
-    while (processed_bytes < chunk.uncompressed_size) {
-      const size_t offset = processed_bytes;
-
-      Embag::record_t record{};
-      size_t p = sizeof(record.header_len);
-      std::memcpy(&record.header_len, buffer.c_str() + offset, p);
-      record.header = &buffer.c_str()[offset + p];
-      p += record.header_len;
-      std::memcpy(&record.data_len, buffer.c_str() + offset + p, sizeof(record.data_len));
-      p += sizeof(record.data_len);
-      record.data = &buffer.c_str()[offset + p];
-      p += record.data_len;
-      const auto header = readHeader(record);
-
-      const auto op = header.getOp();
-      switch (op) {
-        case header_t::op::MESSAGE_DATA: {
-          uint32_t connection_id;
-          header.getField("conn", connection_id);
-          const std::string &topic = connections_[connection_id].topic;
-
-          std::cout << "Message on " << topic << std::endl;
-
-          auto message = parseMessage(connection_id, record);
-          printMsg(message);
-
-          std::cout << "----------------------------" << std::endl;
-          break;
-        }
-        case header_t::op::CONNECTION: {
-          uint32_t connection_id;
-          header.getField("conn", connection_id);
-          break;
-        }
-        default: {
-          throw std::runtime_error("Found unknown record type: " + std::to_string(static_cast<int>(op)));
-        }
-      }
-
-      processed_bytes += p;
-    }
+  for (const auto &message : getView().getMessages()) {
+    printMsg(message);
+    std::cout << "----------------------------" << std::endl;
   }
 }
 
-// This should really be a function on RosValue
-void Embag::printMsg(const std::unique_ptr<RosValue> &field, const std::string &path) {
+// TODO: This should really be a function on RosValue
+ void Embag::printMsg(const std::unique_ptr<RosValue> &field, const std::string &path) {
   switch (field->type) {
     case RosValue::Type::ros_bool: {
       std::cout << path << " -> " << (field->bool_value ? "true" : "false") << std::endl;
@@ -546,7 +503,8 @@ void Embag::printMsg(const std::unique_ptr<RosValue> &field, const std::string &
   }
 }
 
-std::unique_ptr<RosValue> Embag::parseMessage(const uint32_t connection_id, record_t message) {
+// TODO: where should I move this?
+std::unique_ptr<RosValue> Embag::parseMessage(const uint32_t connection_id, RosBagTypes::record_t message) {
   const auto &connection = connections_[connection_id];
   const auto &msg_def = message_schemata_[connection.topic];
 

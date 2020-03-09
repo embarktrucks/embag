@@ -4,12 +4,13 @@
 
 #include "embag.h"
 #include "ros_value.h"
+#include "ros_bag_types.h"
 
 class RosMsg {
  public:
   RosMsg(
       Embag::message_stream &stream,
-      const Embag::connection_data_t &connection_data,
+      const RosBagTypes::connection_data_t &connection_data,
       const Embag::ros_msg_def &msg_def
       ) : stream_(stream), connection_data_(connection_data), msg_def_(msg_def) {};
 
@@ -40,7 +41,7 @@ class RosMsg {
       {"char", RosValue::uint8},
   };
   Embag::message_stream &stream_;
-  const Embag::connection_data_t &connection_data_;
+  const RosBagTypes::connection_data_t &connection_data_;
   const Embag::ros_msg_def &msg_def_;
 
 
@@ -49,5 +50,4 @@ class RosMsg {
   std::unique_ptr<RosValue> parseMembers(Embag::ros_embedded_msg_def &embedded_type);
   Embag::ros_embedded_msg_def getEmbeddedType(const std::string &scope, const Embag::ros_msg_field &field);
   std::unique_ptr<RosValue> getPrimitiveField(const Embag::ros_msg_field& field);
-
 };
