@@ -5,14 +5,15 @@ cc_library(
     srcs = [
         "bag_view.cc",
         "embag.cc",
-        "ros_msg.cc",
+        "message_parser.cc",
         "ros_value.cc",
     ],
     hdrs = [
         "bag_vew.h",
         "embag.h",
+        "message_parser.h",
         "ros_bag_types.h",
-        "ros_msg.h",
+        "ros_message.h",
         "ros_value.h",
         "util.h",
     ],

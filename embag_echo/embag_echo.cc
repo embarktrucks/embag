@@ -6,14 +6,14 @@ int main(int argc, char *argv[]) {
   // TODO: proper arg processing
   const std::string filename = argv[1];
 
-  Embag reader(filename);
-
   std::cout << "Opening " << filename << std::endl;
 
+  Embag reader(filename);
   reader.open();
 
   for (const auto &message : reader.getView().getMessages("/CANMessageIn/vcan")) {
-    message->print();
+    std::cout << message->topic << " at " << message->timestamp.secs << "." << message->timestamp.nsecs << std::endl;
+    message->value->print();
     std::cout << "----------------------------" << std::endl;
   }
 

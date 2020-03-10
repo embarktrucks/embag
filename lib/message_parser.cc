@@ -1,34 +1,22 @@
-#include "ros_msg.h"
-#include "util.h"
-
 #include <boost/optional.hpp>
 
-// TODO: Replace this with get_strict
-struct member_visitor : boost::static_visitor<boost::optional<Embag::ros_msg_field>> {
-  boost::optional<Embag::ros_msg_field> operator()(Embag::ros_msg_field const& field) const {
-    return field;
-  }
+#include "message_parser.h"
+#include "util.h"
 
-  boost::optional<Embag::ros_msg_field> operator()(Embag::ros_msg_constant const& constant) const {
-    // TODO: handle constants
-    return boost::none;
-  }
-};
-
-std::unique_ptr<RosValue> RosMsg::parse() {
+std::unique_ptr<RosValue> MessageParser::parse() {
   auto parsed_message = make_unique<RosValue>(RosValue::Type::object);
 
   for (const auto &member : msg_def_->members) {
-    const auto field = boost::apply_visitor(member_visitor(), member);
-    if (field) {
-      parsed_message->objects[field->field_name] = parseField(connection_data_.scope, *field);
+    if (member.which() == 0) {  // ros_msg_field
+      const auto field = boost::get<Embag::ros_msg_field>(member);
+      parsed_message->objects[field.field_name] = parseField(connection_data_.scope, field);
     }
   }
 
   return parsed_message;
 }
 
-std::unique_ptr<RosValue> RosMsg::parseField(const std::string &scope, const Embag::ros_msg_field &field) {
+std::unique_ptr<RosValue> MessageParser::parseField(const std::string &scope, const Embag::ros_msg_field &field) {
   auto parsed_field = make_unique<RosValue>();
 
   switch(field.array_size) {
@@ -63,9 +51,9 @@ std::unique_ptr<RosValue> RosMsg::parseField(const std::string &scope, const Emb
         parsed_field->type = RosValue::Type::object;
         auto embedded_type = getEmbeddedType(scope, field);
         for (const auto &member : embedded_type.members) {
-          const auto embedded_field = boost::apply_visitor(member_visitor(), member);
-          if (embedded_field) {
-            parsed_field->objects[embedded_field->field_name] = parseField(embedded_type.getScope(), *embedded_field);
+          if (member.which() == 0) {  // ros_msg_field
+            const auto embedded_field = boost::get<Embag::ros_msg_field>(member);
+            parsed_field->objects[embedded_field.field_name] = parseField(embedded_type.getScope(), embedded_field);
           }
         }
       }
@@ -90,27 +78,27 @@ std::unique_ptr<RosValue> RosMsg::parseField(const std::string &scope, const Emb
   return parsed_field;
 }
 
-void RosMsg::parseArray(const size_t array_len, Embag::ros_embedded_msg_def &embedded_type, std::unique_ptr<RosValue> &value) {
+void MessageParser::parseArray(const size_t array_len, Embag::ros_embedded_msg_def &embedded_type, std::unique_ptr<RosValue> &value) {
   for (size_t i = 0; i < array_len; i++) {
     value->values.emplace_back(parseMembers(embedded_type));
   }
 }
 
-std::unique_ptr<RosValue> RosMsg::parseMembers(Embag::ros_embedded_msg_def &embedded_type) {
+std::unique_ptr<RosValue> MessageParser::parseMembers(Embag::ros_embedded_msg_def &embedded_type) {
   auto values = make_unique<RosValue>(RosValue::Type::object);
 
   for (const auto &member : embedded_type.members) {
     // TODO: use strict_get() instead of this visitor thing
-    const auto embedded_field = boost::apply_visitor(member_visitor(), member);
-    if (embedded_field) {
-      values->objects[embedded_field->field_name] = parseField(embedded_type.getScope(), *embedded_field);
+    if (member.which() == 0) {  // ros_msg_field
+      const auto embedded_field = boost::get<Embag::ros_msg_field>(member);
+      values->objects[embedded_field.field_name] = parseField(embedded_type.getScope(), embedded_field);
     }
   }
 
   return values;
 }
 
-Embag::ros_embedded_msg_def RosMsg::getEmbeddedType(const std::string &scope, const Embag::ros_msg_field &field) {
+Embag::ros_embedded_msg_def MessageParser::getEmbeddedType(const std::string &scope, const Embag::ros_msg_field &field) {
   // TODO: optimize this with a map or something faster
   for (const auto &embedded_type : msg_def_->embedded_types) {
     if (embedded_type.type_name == field.type_name) {
@@ -133,7 +121,7 @@ Embag::ros_embedded_msg_def RosMsg::getEmbeddedType(const std::string &scope, co
   throw std::runtime_error("Unable to find embedded type: " + field.type_name);
 }
 
-std::unique_ptr<RosValue> RosMsg::getPrimitiveField(const Embag::ros_msg_field& field) {
+std::unique_ptr<RosValue> MessageParser::getPrimitiveField(const Embag::ros_msg_field& field) {
   RosValue::Type type = primitive_type_map_.at(field.type_name);
   auto value = make_unique<RosValue>(type);
 

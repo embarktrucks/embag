@@ -28,7 +28,9 @@ struct lz4f_ctx {
   }
 };
 
+// Forward declaration
 class BagView;
+
 class Embag {
  public:
   explicit Embag(const std::string filename) : filename_(filename) {
@@ -42,8 +44,6 @@ class Embag {
   bool open();
 
   bool close();
-
-  void printAllMsgs();
 
   BagView getView();
 
@@ -90,8 +90,6 @@ class Embag {
     std::vector<ros_embedded_msg_def> embedded_types;
   };
 
-  typedef boost::iostreams::stream<boost::iostreams::array_source> message_stream;
-
  private:
   const std::string MAGIC_STRING = "#ROSBAG V";
 
@@ -100,7 +98,6 @@ class Embag {
   static std::unique_ptr<std::unordered_map<std::string, std::string>> readFields(const char* p, uint64_t len);
   static RosBagTypes::header_t readHeader(const RosBagTypes::record_t &record);
   bool decompressLz4Chunk(const char *src, size_t src_size, char *dst, size_t dst_size);
-  std::unique_ptr<RosValue> parseMessage(uint32_t connection_id, RosBagTypes::record_t message);
 
   std::string filename_;
   boost::iostreams::stream <boost::iostreams::mapped_file_source> bag_stream_;

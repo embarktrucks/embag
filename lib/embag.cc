@@ -8,7 +8,7 @@
 #include <boost/fusion/include/adapt_struct.hpp>
 
 #include "embag.h"
-#include "ros_msg.h"
+#include "message_parser.h"
 #include "util.h"
 
 bool Embag::open() {
@@ -416,27 +416,3 @@ bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst
 BagView Embag::getView() {
   return BagView{*this};
 }
-
-void Embag::printAllMsgs() {
-  std::cout << "Printing all messages in " << chunks_.size() << " chunks..." << std::endl;
-
-  for (const auto &message : getView().getMessages()) {
-    message->print();
-    std::cout << "----------------------------" << std::endl;
-  }
-}
-
-
-// TODO: where should I move this?
-std::unique_ptr<RosValue> Embag::parseMessage(const uint32_t connection_id, RosBagTypes::record_t message) {
-  const auto &connection = connections_[connection_id];
-  const auto &msg_def = message_schemata_[connection.topic];
-
-  // TODO: streaming this data means copying it into basic types.  It would be faster to just set pointers appropriately...
-  message_stream stream{message.data, message.data_len};
-
-  RosMsg msg{stream, connection.data, msg_def};
-
-  return msg.parse();
-}
-

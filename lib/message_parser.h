@@ -5,11 +5,12 @@
 #include "embag.h"
 #include "ros_value.h"
 #include "ros_bag_types.h"
+#include "util.h"
 
-class RosMsg {
+class MessageParser {
  public:
-  RosMsg(
-      Embag::message_stream &stream,
+  MessageParser(
+      message_stream &stream,
       const RosBagTypes::connection_data_t &connection_data,
       const std::shared_ptr<Embag::ros_msg_def> msg_def
       ) : stream_(stream), connection_data_(connection_data), msg_def_(msg_def) {};
@@ -40,14 +41,14 @@ class RosMsg {
       {"byte", RosValue::int8},
       {"char", RosValue::uint8},
   };
-  Embag::message_stream &stream_;
-  const RosBagTypes::connection_data_t &connection_data_;
-  const std::shared_ptr<Embag::ros_msg_def> msg_def_;
-
 
   std::unique_ptr<RosValue> parseField(const std::string &scope, const Embag::ros_msg_field &field);
   void parseArray(size_t array_len, Embag::ros_embedded_msg_def &embedded_type, std::unique_ptr<RosValue> &value);
   std::unique_ptr<RosValue> parseMembers(Embag::ros_embedded_msg_def &embedded_type);
   Embag::ros_embedded_msg_def getEmbeddedType(const std::string &scope, const Embag::ros_msg_field &field);
   std::unique_ptr<RosValue> getPrimitiveField(const Embag::ros_msg_field& field);
+
+  message_stream &stream_;
+  const RosBagTypes::connection_data_t &connection_data_;
+  const std::shared_ptr<Embag::ros_msg_def> msg_def_;
 };
