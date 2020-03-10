@@ -1,4 +1,5 @@
 #include "ros_msg.h"
+#include "util.h"
 
 #include <boost/optional.hpp>
 
@@ -14,16 +15,10 @@ struct member_visitor : boost::static_visitor<boost::optional<Embag::ros_msg_fie
   }
 };
 
-// std::make_unique is not available in c++11 :(
-template<typename T, typename... Args>
-std::unique_ptr<T> make_unique(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
 std::unique_ptr<RosValue> RosMsg::parse() {
   auto parsed_message = make_unique<RosValue>(RosValue::Type::object);
 
-  for (const auto &member : msg_def_.members) {
+  for (const auto &member : msg_def_->members) {
     const auto field = boost::apply_visitor(member_visitor(), member);
     if (field) {
       parsed_message->objects[field->field_name] = parseField(connection_data_.scope, *field);
@@ -33,8 +28,6 @@ std::unique_ptr<RosValue> RosMsg::parse() {
   return parsed_message;
 }
 
-
-// TODO: DRY up this code
 std::unique_ptr<RosValue> RosMsg::parseField(const std::string &scope, const Embag::ros_msg_field &field) {
   auto parsed_field = make_unique<RosValue>();
 
@@ -119,7 +112,7 @@ std::unique_ptr<RosValue> RosMsg::parseMembers(Embag::ros_embedded_msg_def &embe
 
 Embag::ros_embedded_msg_def RosMsg::getEmbeddedType(const std::string &scope, const Embag::ros_msg_field &field) {
   // TODO: optimize this with a map or something faster
-  for (const auto &embedded_type : msg_def_.embedded_types) {
+  for (const auto &embedded_type : msg_def_->embedded_types) {
     if (embedded_type.type_name == field.type_name) {
       return embedded_type;
     }

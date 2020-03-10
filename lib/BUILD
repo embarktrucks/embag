@@ -6,6 +6,7 @@ cc_library(
         "bag_view.cc",
         "embag.cc",
         "ros_msg.cc",
+        "ros_value.cc",
     ],
     hdrs = [
         "bag_vew.h",
@@ -13,6 +14,7 @@ cc_library(
         "ros_bag_types.h",
         "ros_msg.h",
         "ros_value.h",
+        "util.h",
     ],
     visibility = ["//embag_echo:__pkg__"],
     deps = [

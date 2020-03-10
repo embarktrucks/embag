@@ -13,8 +13,8 @@ int main(int argc, char *argv[]) {
   reader.open();
 
   for (const auto &message : reader.getView().getMessages("/CANMessageIn/vcan")) {
-    //Embag::printMsg(message);
-    //std::cout << "----------------------------" << std::endl;
+    message->print();
+    std::cout << "----------------------------" << std::endl;
   }
 
   reader.close();

@@ -11,7 +11,7 @@ class RosMsg {
   RosMsg(
       Embag::message_stream &stream,
       const RosBagTypes::connection_data_t &connection_data,
-      const Embag::ros_msg_def &msg_def
+      const std::shared_ptr<Embag::ros_msg_def> msg_def
       ) : stream_(stream), connection_data_(connection_data), msg_def_(msg_def) {};
 
   std::unique_ptr<RosValue> parse();
@@ -42,7 +42,7 @@ class RosMsg {
   };
   Embag::message_stream &stream_;
   const RosBagTypes::connection_data_t &connection_data_;
-  const Embag::ros_msg_def &msg_def_;
+  const std::shared_ptr<Embag::ros_msg_def> msg_def_;
 
 
   std::unique_ptr<RosValue> parseField(const std::string &scope, const Embag::ros_msg_field &field);

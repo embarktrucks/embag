@@ -1,14 +1,15 @@
 #define BOOST_SPIRIT_DEBUG
 #define BOOST_SPIRIT_DEBUG_OUT std::cout
 
-#include "embag.h"
-#include "ros_msg.h"
-
 #include <iostream>
 
 // Boost Magic
 #include <boost/spirit/include/qi.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
+
+#include "embag.h"
+#include "ros_msg.h"
+#include "util.h"
 
 bool Embag::open() {
   boost::iostreams::mapped_file_source mapped_file_source(filename_);
@@ -75,8 +76,8 @@ RosBagTypes::record_t Embag::readRecord() {
 }
 
 
-std::unordered_map<std::string, std::string> readFields(const char* p, const uint64_t len) {
-  std::unordered_map<std::string, std::string> fields {};
+std::unique_ptr<std::unordered_map<std::string, std::string>> Embag::readFields(const char* p, const uint64_t len) {
+  auto fields = make_unique<std::unordered_map<std::string, std::string>>();
   const char *end = p + len;
 
   while (p < end) {
@@ -88,12 +89,14 @@ std::unordered_map<std::string, std::string> readFields(const char* p, const uin
     std::string buffer(p, field_len);
     const auto sep = buffer.find('=');
 
-    // TODO: check if = is std::string::npos
+    if (sep == std::string::npos) {
+      throw std::runtime_error("Unable to find '=' in header field - perhaps this bag is corrupt...");
+    }
 
     const auto name = buffer.substr(0, sep);
-    const auto value = buffer.substr(sep + 1);
+    auto value = buffer.substr(sep + 1);
 
-    fields[name] = value;
+    (*fields)[name] = std::move(value);
 
     p += field_len;
   }
@@ -230,6 +233,11 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
 bool Embag::readRecords() {
   const int64_t file_size = bag_stream_->size();
 
+  typedef ros_msg_grammar<std::string::const_iterator> ros_msg_grammar;
+  typedef ros_msg_skipper<std::string::const_iterator> ros_msg_skipper;
+  ros_msg_grammar grammar;
+  ros_msg_skipper skipper;
+
   while (true) {
     const auto pos = bag_stream_.tellg();
     if (pos == -1 || pos == file_size) {
@@ -302,38 +310,34 @@ bool Embag::readRecords() {
 
         const auto fields = readFields(record.data, record.data_len);
 
-        connection_data.type = fields.at("type");
+        connection_data.type = fields->at("type");
         const size_t slash_pos = connection_data.type.find_first_of('/');
         if (slash_pos != std::string::npos) {
           connection_data.scope = connection_data.type.substr(0, slash_pos);
         }
-        connection_data.md5sum = fields.at("md5sum");
-        connection_data.message_definition = fields.at("message_definition");
-        if (fields.find("callerid") != fields.end()) {
-          connection_data.callerid = fields.at("callerid");
+        connection_data.md5sum = fields->at("md5sum");
+        connection_data.message_definition = fields->at("message_definition");
+        if (fields->find("callerid") != fields->end()) {
+          connection_data.callerid = fields->at("callerid");
         }
-        if (fields.find("latching") != fields.end()) {
-          connection_data.latching = fields.at("latching") == "1";
+        if (fields->find("latching") != fields->end()) {
+          connection_data.latching = fields->at("latching") == "1";
         }
 
         connections_[connection_id].id = connection_id;
         connections_[connection_id].topic = topic;
         connections_[connection_id].data = connection_data;
-        topic_connection_map_[topic] = connections_[connection_id];
+        topic_connection_map_[topic] = &connections_[connection_id];
 
         // Parse message definition
-        typedef ros_msg_grammar<std::string::const_iterator> ros_msg_grammar;
-        typedef ros_msg_skipper<std::string::const_iterator> ros_msg_skipper;
-        ros_msg_grammar grammar; // Our grammar
-        ros_msg_def ast;         // Our tree
-        ros_msg_skipper skipper; // Things we're not interested in
+        auto ast = std::make_shared<ros_msg_def>();
 
         std::string::const_iterator iter = connection_data.message_definition.begin();
         std::string::const_iterator end = connection_data.message_definition.end();
-        const bool r = phrase_parse(iter, end, grammar, skipper, ast);
+        const bool r = phrase_parse(iter, end, grammar, skipper, *ast);
 
         if (r && iter == end) {
-          message_schemata_[topic] = ast;
+          message_schemata_[topic] = std::move(ast);
         } else {
           const std::string::const_iterator some = iter + std::min(30, int(end - iter));
           const std::string context(iter, (some>end)?end:some);
@@ -417,91 +421,11 @@ void Embag::printAllMsgs() {
   std::cout << "Printing all messages in " << chunks_.size() << " chunks..." << std::endl;
 
   for (const auto &message : getView().getMessages()) {
-    printMsg(message);
+    message->print();
     std::cout << "----------------------------" << std::endl;
   }
 }
 
-// TODO: This should really be a function on RosValue
- void Embag::printMsg(const std::unique_ptr<RosValue> &field, const std::string &path) {
-  switch (field->type) {
-    case RosValue::Type::ros_bool: {
-      std::cout << path << " -> " << (field->bool_value ? "true" : "false") << std::endl;
-      break;
-    }
-    case RosValue::Type::int8: {
-      std::cout << path << " -> " << +field->int8_value << std::endl;
-      break;
-    }
-    case RosValue::Type::uint8: {
-      std::cout << path << " -> " << +field->uint8_value << std::endl;
-      break;
-    }
-    case RosValue::Type::int16: {
-      std::cout << path << " -> " << +field->int16_value << std::endl;
-      break;
-    }
-    case RosValue::Type::uint16: {
-      std::cout << path << " -> " << +field->uint16_value << std::endl;
-      break;
-    }
-    case RosValue::Type::int32: {
-      std::cout << path << " -> " << +field->int32_value << std::endl;
-      break;
-    }
-    case RosValue::Type::uint32: {
-      std::cout << path << " -> " << +field->uint32_value << std::endl;
-      break;
-    }
-    case RosValue::Type::int64: {
-      std::cout << path << " -> " << +field->int64_value << std::endl;
-      break;
-    }
-    case RosValue::Type::uint64: {
-      std::cout << path << " -> " << +field->uint64_value << std::endl;
-      break;
-    }
-    case RosValue::Type::float32: {
-      std::cout << path << " -> " << +field->float32_value << std::endl;
-      break;
-    }
-    case RosValue::Type::float64: {
-      std::cout << path << " -> " << +field->float64_value << std::endl;
-      break;
-    }
-    case RosValue::Type::string: {
-      std::cout << path << " -> " << field->string_value << std::endl;
-      break;
-    }
-    case RosValue::Type::ros_time: {
-      std::cout << path << " -> " << field->time_value.secs <<  "s " << field->time_value.nsecs << "ns" << std::endl;
-      break;
-    }
-    case RosValue::Type::ros_duration: {
-      std::cout << path << " -> " << field->duration_value.secs <<  "s " << field->duration_value.nsecs << "ns" << std::endl;
-      break;
-    }
-    case RosValue::Type::object: {
-      for (const auto &object : field->objects) {
-        if (path.empty()) {
-          printMsg(object.second, object.first);
-        } else {
-          printMsg(object.second, path + "." + object.first);
-        }
-      }
-      break;
-    }
-    case RosValue::Type::array: {
-      size_t i = 0;
-      for (const auto &item : field->values) {
-        const std::string array_path = path + "[" + std::to_string(i) + "]";
-        printMsg(item, array_path);
-        i++;
-      }
-      break;
-    }
-  }
-}
 
 // TODO: where should I move this?
 std::unique_ptr<RosValue> Embag::parseMessage(const uint32_t connection_id, RosBagTypes::record_t message) {

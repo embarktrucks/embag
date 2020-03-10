@@ -23,7 +23,8 @@ struct RosBagTypes {
   };
 
   struct header_t {
-    std::unordered_map<std::string, std::string> fields;
+    std::unique_ptr<std::unordered_map<std::string, std::string>> fields;
+
     enum class op {
       BAG_HEADER   = 0x03,
       CHUNK        = 0x05,
@@ -35,20 +36,16 @@ struct RosBagTypes {
     };
 
     const op getOp() const {
-      return header_t::op(*(fields.at("op").data()));
+      return header_t::op(*(fields->at("op").data()));
     }
 
     const void getField(const std::string& name, std::string& value) const {
-      value = fields.at(name);
+      value = fields->at(name);
     }
 
     template <typename T>
     const void getField(const std::string& name, T& value) const {
-      value = *reinterpret_cast<const T*>(fields.at(name).data());
-    }
-
-    const bool checkField(const std::string& name) const {
-      return fields.find(name) != fields.end();
+      value = *reinterpret_cast<const T*>(fields->at(name).data());
     }
   };
 

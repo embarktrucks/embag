@@ -45,8 +45,6 @@ class Embag {
 
   void printAllMsgs();
 
-  static void printMsg(const std::unique_ptr<RosValue> &message, const std::string &path = "");
-
   BagView getView();
 
   // Schema stuff
@@ -99,6 +97,7 @@ class Embag {
 
   bool readRecords();
   RosBagTypes::record_t readRecord();
+  static std::unique_ptr<std::unordered_map<std::string, std::string>> readFields(const char* p, uint64_t len);
   static RosBagTypes::header_t readHeader(const RosBagTypes::record_t &record);
   bool decompressLz4Chunk(const char *src, size_t src_size, char *dst, size_t dst_size);
   std::unique_ptr<RosValue> parseMessage(uint32_t connection_id, RosBagTypes::record_t message);
@@ -108,10 +107,10 @@ class Embag {
 
   // Bag data
   std::vector<RosBagTypes::connection_record_t> connections_;
-  std::unordered_map<std::string, RosBagTypes::connection_record_t> topic_connection_map_;
+  std::unordered_map<std::string, RosBagTypes::connection_record_t *> topic_connection_map_;
   std::vector<RosBagTypes::chunk_t> chunks_;
   uint64_t index_pos_ = 0;
-  std::unordered_map<std::string, ros_msg_def> message_schemata_;
+  std::unordered_map<std::string, std::shared_ptr<ros_msg_def>> message_schemata_;
 
   lz4f_ctx lz4_ctx_;
 

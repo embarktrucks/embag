@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -60,7 +61,7 @@ class RosValue {
   std::unordered_map<std::string, std::unique_ptr<RosValue>> objects;
   std::vector<std::unique_ptr<RosValue>> values;
 
-  Type type;
+  Type type = object;
 
   RosValue () = default;
   explicit RosValue(Type type) : type(type) {}
@@ -76,5 +77,7 @@ class RosValue {
     return *values[idx];
   }
    */
+
+  void print(const std::string &path = "");
  private:
 };
