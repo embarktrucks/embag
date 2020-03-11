@@ -9,7 +9,6 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/variant.hpp>
 
-// LZ4
 #include <lz4frame.h>
 
 #include "ros_value.h"

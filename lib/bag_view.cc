@@ -30,7 +30,7 @@ std::unique_ptr<RosMessage> BagView::iterator::operator*() const {
   auto message = make_unique<RosMessage>();
   MessageParser msg{stream, connection.data, msg_def};
 
-  message->value = msg.parse();
+  message->data = msg.parse();
   message->topic = connection.topic;
   message->timestamp = current_timestamp_;
 
@@ -82,6 +82,7 @@ void BagView::iterator::readMessage() {
   while (processed_bytes_ < uncompressed_size_) {
     RosBagTypes::record_t record{};
 
+    // TODO: just use pointers instead of copying memory?
     std::memcpy(&record.header_len, current_buffer_.c_str() + processed_bytes_, sizeof(record.header_len));
     processed_bytes_ += sizeof(record.header_len);
     record.header = &current_buffer_.c_str()[processed_bytes_];

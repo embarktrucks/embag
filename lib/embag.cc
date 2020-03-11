@@ -1,18 +1,13 @@
-#define BOOST_SPIRIT_DEBUG
-#define BOOST_SPIRIT_DEBUG_OUT std::cout
-
 #include <iostream>
 
-// Boost Magic
 #include <boost/spirit/include/qi.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 
 #include "embag.h"
-#include "message_parser.h"
 #include "util.h"
 
 bool Embag::open() {
-  boost::iostreams::mapped_file_source mapped_file_source(filename_);
+  boost::iostreams::mapped_file_source mapped_file_source{filename_};
   bag_stream_.open(mapped_file_source);
 
   // First, check for the magic string indicating this is indeed a bag file
@@ -157,9 +152,6 @@ struct ros_msg_skipper : qi::grammar<Iterator> {
     blank_lines = *lit(' ') >> eol;
 
     skip = comment | separator | eol | blank_lines;
-
-    //BOOST_SPIRIT_DEBUG_NODE(skip);
-    //BOOST_SPIRIT_DEBUG_NODE(newlines);
   }
 
   qi::rule<Iterator> skip;
@@ -207,14 +199,6 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
     // Finally, we put these rules together to parse the full definition
     msg = *(member - lit("MSG: "))
         >> *embedded_type;
-
-    //BOOST_SPIRIT_DEBUG_NODE(array_size);
-    //BOOST_SPIRIT_DEBUG_NODE(type);
-    //BOOST_SPIRIT_DEBUG_NODE(field);
-    //BOOST_SPIRIT_DEBUG_NODE(constant);
-    //BOOST_SPIRIT_DEBUG_NODE(field_name);
-    //BOOST_SPIRIT_DEBUG_NODE(member);
-    //BOOST_SPIRIT_DEBUG_NODE(embedded_type);
   }
 
   qi::rule<Iterator, Embag::ros_msg_def(), Skipper> msg;
@@ -233,10 +217,8 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
 bool Embag::readRecords() {
   const int64_t file_size = bag_stream_->size();
 
-  typedef ros_msg_grammar<std::string::const_iterator> ros_msg_grammar;
-  typedef ros_msg_skipper<std::string::const_iterator> ros_msg_skipper;
-  ros_msg_grammar grammar;
-  ros_msg_skipper skipper;
+  ros_msg_grammar<std::string::const_iterator> grammar;
+  ros_msg_skipper<std::string::const_iterator> skipper;
 
   while (true) {
     const auto pos = bag_stream_.tellg();
@@ -266,7 +248,7 @@ bool Embag::readRecords() {
         break;
       }
       case RosBagTypes::header_t::op::CHUNK: {
-        RosBagTypes::chunk_t chunk(record);
+        RosBagTypes::chunk_t chunk{record};
         chunk.offset = pos;
 
         header.getField("compression", chunk.compression);
@@ -288,7 +270,6 @@ bool Embag::readRecords() {
 
         RosBagTypes::index_block_t index_block{};
         index_block.into_chunk = &chunks_.back();
-        // TODO: set memory reference
 
         connections_[connection_id].blocks.emplace_back(index_block);
 

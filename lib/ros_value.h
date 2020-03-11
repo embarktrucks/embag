@@ -9,7 +9,7 @@
 class RosValue {
  public:
 
-  // TODO: convert this to boost::variant and use strict_get
+  // TODO: convert this to boost::variant?
 
   enum Type {
     ros_bool,
@@ -68,11 +68,11 @@ class RosValue {
 
   // Convenience accessors
   // TODO: move these to cc file and fix copies
-  /*
   RosValue operator [](const std::string &key) {
     return *objects[key];
   }
 
+  /*
   RosValue operator [](const size_t idx) {
     return *values[idx];
   }
