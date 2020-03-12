@@ -18,8 +18,8 @@ int main(int argc, char *argv[]) {
 
   for (const auto &message : reader.getView().getMessages("/CANMessageIn/vcan")) {
     std::cout << message->topic << " at " << message->timestamp.secs << "." << message->timestamp.nsecs << std::endl;
-    //message->data->print();
-    message->data["messages"]->print();
+    std::cout << message->data->get("messages")->get(0)->get("name")->string_value << std::endl;
+    std::cout << message->data->get("messages")->get(0)->get("name")->get<std::string>() << std::endl;
     std::cout << "----------------------------" << std::endl;
   }
 

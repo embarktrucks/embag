@@ -67,17 +67,43 @@ class RosValue {
   explicit RosValue(Type type) : type(type) {}
 
   // Convenience accessors
-  // TODO: move these to cc file and fix copies
-  RosValue operator [](const std::string &key) {
-    return *objects[key];
+  const std::unique_ptr<RosValue> & get(const std::string &key) {
+    if (type != object) {
+      throw std::runtime_error("Value is not an object");
+    }
+    return objects[key];
   }
 
-  /*
-  RosValue operator [](const size_t idx) {
-    return *values[idx];
+  const std::unique_ptr<RosValue> & get(const size_t idx) {
+    if (type != array) {
+      throw std::runtime_error("Value is not an array");
+    }
+    return values[idx];
   }
-   */
+
+  template<typename T>
+  struct identity { typedef T type; };
+
+  template<typename T>
+  T & get() {
+    return getValue(identity<T>());
+  }
 
   void print(const std::string &path = "");
+
  private:
+  // Primitive accessors
+  bool & getValue(identity<bool>) {
+    if (type != bool_value) {
+      throw std::runtime_error("Value is not a bool");
+    }
+    return bool_value;
+  }
+
+  std::string & getValue(identity<std::string>) {
+    if (type != string) {
+      throw std::runtime_error("Value is not a string");
+    }
+    return string_value;
+  }
 };
