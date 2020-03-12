@@ -16,23 +16,11 @@ int main(int argc, char *argv[]) {
   Embag reader{filename};
   reader.open();
 
-  for (const auto &message : reader.getView().getMessages("/CANMessageIn/vcan")) {
+  for (const auto &message : reader.getView().getMessages(topic)) {
     std::cout << message->topic << " at " << message->timestamp.secs << "." << message->timestamp.nsecs << std::endl;
-    // TODO: string_value make private
-    std::cout << message->data->get("messages")->get(0)->get("name")->string_value << std::endl;
-    std::cout << message->data->get("messages")->get(0)->get("name")->get<std::string>() << std::endl;
-
-    // TODO: this is the target api, implement this!
-    std::cout << message->data("messages")->at(0)->getValue<std::string>("name") << std::endl;
-
-    message("messages")
-    message->data("messages")
-    std::cout << "----------------------------" << std::endl;
   }
 
   reader.close();
-
-  std::cout << "Done." << std::endl;
 
   return 0;
 }

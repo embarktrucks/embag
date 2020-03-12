@@ -2,6 +2,122 @@
 
 #include "ros_value.h"
 
+const std::unique_ptr<RosValue> & RosValue::operator()(const std::string &key) {
+  return get(key);
+}
+
+const std::unique_ptr<RosValue> & RosValue::get(const std::string &key) {
+  if (type != object) {
+    throw std::runtime_error("Value is not an object");
+  }
+  return objects[key];
+}
+
+const std::unique_ptr<RosValue> & RosValue::at(const size_t idx) {
+  if (type != array) {
+    throw std::runtime_error("Value is not an array");
+  }
+  return values[idx];
+}
+
+bool & RosValue::getValueImpl(identity<bool>) {
+  if (type != bool_value) {
+    throw std::runtime_error("Value is not a bool");
+  }
+  return bool_value;
+}
+
+int8_t & RosValue::getValueImpl(identity<int8_t>) {
+  if (type != int8_value) {
+    throw std::runtime_error("Value is not an int8");
+  }
+  return int8_value;
+}
+
+uint8_t & RosValue::getValueImpl(identity<uint8_t>) {
+  if (type != uint8_value) {
+    throw std::runtime_error("Value is not a uint8");
+  }
+  return uint8_value;
+}
+
+int16_t & RosValue::getValueImpl(identity<int16_t>) {
+  if (type != int16_value) {
+    throw std::runtime_error("Value is not an int16");
+  }
+  return int16_value;
+}
+
+uint16_t & RosValue::getValueImpl(identity<uint16_t>) {
+  if (type != uint16_value) {
+    throw std::runtime_error("Value is not a uint16");
+  }
+  return uint16_value;
+}
+
+int32_t & RosValue::getValueImpl(identity<int32_t>) {
+  if (type != int32_value) {
+    throw std::runtime_error("Value is not an int32");
+  }
+  return int32_value;
+}
+
+uint32_t & RosValue::getValueImpl(identity<uint32_t>) {
+  if (type != uint32_value) {
+    throw std::runtime_error("Value is not a uint32");
+  }
+  return uint32_value;
+}
+
+int64_t & RosValue::getValueImpl(identity<int64_t>) {
+  if (type != int64_value) {
+    throw std::runtime_error("Value is not an int64");
+  }
+  return int64_value;
+}
+
+uint64_t & RosValue::getValueImpl(identity<uint64_t>) {
+  if (type != uint64_value) {
+    throw std::runtime_error("Value is not a uint64");
+  }
+  return uint64_value;
+}
+
+float & RosValue::getValueImpl(identity<float>) {
+  if (type != uint64_value) {
+    throw std::runtime_error("Value is not a float");
+  }
+  return float32_value;
+}
+
+double & RosValue::getValueImpl(identity<double>) {
+  if (type != uint64_value) {
+    throw std::runtime_error("Value is not a double");
+  }
+  return float64_value;
+}
+
+std::string & RosValue::getValueImpl(identity<std::string>) {
+  if (type != string) {
+    throw std::runtime_error("Value is not a string");
+  }
+  return string_value;
+}
+
+RosValue::ros_time_t & RosValue::getValueImpl(identity<RosValue::ros_time_t>) {
+  if (type != ros_time) {
+    throw std::runtime_error("Value is not a time type");
+  }
+  return time_value;
+}
+
+RosValue::ros_duration_t & RosValue::getValueImpl(identity<RosValue::ros_duration_t>) {
+  if (type != ros_duration) {
+    throw std::runtime_error("Value is not a duration type");
+  }
+  return duration_value;
+}
+
 void RosValue::print(const std::string &path) {
   switch (type) {
     case Type::ros_bool: {

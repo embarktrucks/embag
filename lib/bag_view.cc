@@ -30,7 +30,7 @@ std::unique_ptr<RosMessage> BagView::iterator::operator*() const {
   auto message = make_unique<RosMessage>();
   MessageParser msg{stream, connection.data, msg_def};
 
-  message->data = msg.parse();
+  message->data_ = msg.parse();
   message->topic = connection.topic;
   message->timestamp = current_timestamp_;
 

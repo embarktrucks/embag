@@ -9,8 +9,6 @@
 class RosValue {
  public:
 
-  // TODO: convert this to boost::variant?
-
   enum Type {
     ros_bool,
     int8,
@@ -32,7 +30,6 @@ class RosValue {
     array,
   };
 
-  // Generic types
   struct ros_time_t {
     uint32_t secs = 0;
     uint32_t nsecs = 0;
@@ -42,6 +39,29 @@ class RosValue {
     int32_t secs = 0;
     int32_t nsecs = 0;
   };
+
+  Type getType() {
+    return type;
+  }
+
+  // Constructors
+  RosValue () = default;
+  explicit RosValue(Type type) : type(type) {}
+
+  // Convenience accessors
+  const std::unique_ptr<RosValue> & operator()(const std::string &key);
+  const std::unique_ptr<RosValue> & get(const std::string &key);
+  const std::unique_ptr<RosValue> & at(size_t idx);
+  template<typename T> T & getValue(const std::string &key) {
+    if (type != object) {
+      throw std::runtime_error("Value is not an object");
+    }
+    return objects[key]->getValueImpl(identity<T>());
+  }
+
+  void print(const std::string &path = "");
+
+ private:
 
   bool bool_value = false;
   int8_t int8_value = 0;
@@ -61,49 +81,29 @@ class RosValue {
   std::unordered_map<std::string, std::unique_ptr<RosValue>> objects;
   std::vector<std::unique_ptr<RosValue>> values;
 
+  // Default type
   Type type = object;
 
-  RosValue () = default;
-  explicit RosValue(Type type) : type(type) {}
-
-  // Convenience accessors
-  const std::unique_ptr<RosValue> & get(const std::string &key) {
-    if (type != object) {
-      throw std::runtime_error("Value is not an object");
-    }
-    return objects[key];
-  }
-
-  const std::unique_ptr<RosValue> & get(const size_t idx) {
-    if (type != array) {
-      throw std::runtime_error("Value is not an array");
-    }
-    return values[idx];
-  }
-
+  // Used for accessor template resolution
   template<typename T>
   struct identity { typedef T type; };
 
-  template<typename T>
-  T & get() {
-    return getValue(identity<T>());
-  }
-
-  void print(const std::string &path = "");
-
- private:
   // Primitive accessors
-  bool & getValue(identity<bool>) {
-    if (type != bool_value) {
-      throw std::runtime_error("Value is not a bool");
-    }
-    return bool_value;
-  }
+  bool & getValueImpl(identity<bool>);
+  int8_t & getValueImpl(identity<int8_t>);
+  uint8_t & getValueImpl(identity<uint8_t>);
+  int16_t & getValueImpl(identity<int16_t>);
+  uint16_t & getValueImpl(identity<uint16_t>);
+  int32_t & getValueImpl(identity<int32_t>);
+  uint32_t & getValueImpl(identity<uint32_t>);
+  int64_t & getValueImpl(identity<int64_t>);
+  uint64_t & getValueImpl(identity<uint64_t>);
+  float & getValueImpl(identity<float>);
+  double & getValueImpl(identity<double>);
+  std::string & getValueImpl(identity<std::string>);
+  ros_time_t & getValueImpl(identity<ros_time_t>);
+  ros_duration_t & getValueImpl(identity<ros_duration_t>);
 
-  std::string & getValue(identity<std::string>) {
-    if (type != string) {
-      throw std::runtime_error("Value is not a string");
-    }
-    return string_value;
-  }
+  friend class BagView;
+  friend class MessageParser;
 };
