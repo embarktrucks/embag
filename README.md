@@ -9,7 +9,7 @@ TBD
 Embag reader{filename};
 
 for (const auto &message : reader.getView().getMessages({"/fun/topic", "/another/topic"})) {
-  std::cout << message->topic << " at " << message->timestamp.secs << "." << message->timestamp.nsecs << std::endl;
+  std::cout << message->timestamp.secs << " : " << message->topic << std::endl;
   std::cout << message->data("fun_array")->at(0)->getValue<std::string>("fun_field") << std::endl;
 }
 

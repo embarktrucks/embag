@@ -13,4 +13,8 @@ class RosMessage {
   const std::unique_ptr<RosValue> & data(const std::string &key) {
     return data_->get(key);
   }
+
+  void print() {
+    data_->print();
+  }
 };

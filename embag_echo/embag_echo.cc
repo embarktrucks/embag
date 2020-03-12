@@ -16,7 +16,8 @@ int main(int argc, char *argv[]) {
   Embag reader{filename};
 
   for (const auto &message : reader.getView().getMessages(topic)) {
-    std::cout << message->topic << " at " << message->timestamp.secs << "." << message->timestamp.nsecs << std::endl;
+    std::cout << message->timestamp.secs << "." << message->timestamp.nsecs << " : " << message->topic << std::endl;
+    message->print();
   }
 
   reader.close();
