@@ -15,7 +15,7 @@
 #include "bag_vew.h"
 #include "ros_bag_types.h"
 
-// TODO: where does this go?
+// TODO: move to threaded decompression to make things even faster
 struct lz4f_ctx {
   LZ4F_decompressionContext_t ctx{nullptr};
   ~lz4f_ctx() {
@@ -38,6 +38,8 @@ class Embag {
       // FIXME
       //std::cout << "Received error code from LZ4F_createDecompressionContext: " << code << std::endl;
     }
+
+    open();
   }
 
   bool open();
