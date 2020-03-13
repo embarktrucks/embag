@@ -23,8 +23,14 @@ First, you'll need [Bazel](https://docs.bazel.build/versions/master/install-ubun
 
 To build, run:
 
+    # Embag echo demo binary
     bazel build //embag_echo:embag_echo
-    
+    # Run with
+    bazel-bin/embag_echo/embag_echo /path/to/sweet.bag /awesome/topic
+
+    # Shared object file
+    bazel build //lib:embag.so
+
 ## Thank you...
 This library was heavily influenced by:
 - [bag_rdr: a zero-copy ROS bag parser library](https://github.com/starship-technologies/bag_rdr)

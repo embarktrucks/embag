@@ -26,3 +26,11 @@ cc_library(
         "@system_libs//:liblz4",
     ],
 )
+
+cc_binary(
+    name = "embag.so",
+    linkshared = True,
+    deps = [
+        "//lib:embag",
+    ],
+)
