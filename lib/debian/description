@@ -1,0 +1,1 @@
+A library for reading ROS bag files quickly without message descriptions and without any ROS dependencies.

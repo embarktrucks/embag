@@ -1,0 +1,12 @@
+#   EmBag - Fast, dependency free ROS bag file reader
+
+prefix=/usr
+libdir=/usr/lib
+includedir=/usr/include/embag
+
+Name: embag
+Description: fast dependecy free ROS bag file reader
+URL: https://github.com/embarktrucks/embag
+Version: 0.0.1
+Libs: -L/usr/lib -lembag
+Cflags: -I/usr/include/embag
