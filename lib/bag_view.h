@@ -8,17 +8,19 @@
 #include "ros_value.h"
 #include "ros_bag_types.h"
 
-// Forward declaration
-class Embag;
+namespace Embag {
 
-class BagView {
+// Forward declaration
+class Bag;
+
+class View {
  public:
-  BagView(Embag& bag) : bag_(bag) {};
+  View(Embag::Bag& bag) : bag_(bag) {};
 
   struct iterator {
-    const BagView& view_;
-    explicit iterator(const BagView &view) : view_(view) {};
-    iterator(const BagView &view, size_t chunk_count);
+    const View& view_;
+    explicit iterator(const View &view) : view_(view) {};
+    iterator(const View &view, size_t chunk_count);
     iterator(const iterator& other) : view_(other.view_) {};
 
     iterator& operator=(const iterator&& other) {
@@ -68,12 +70,13 @@ class BagView {
   iterator begin();
   iterator end();
 
-  BagView getMessages();
-  BagView getMessages(const std::string &topic);
-  BagView getMessages(std::initializer_list<std::string> topics);
+  View getMessages();
+  View getMessages(const std::string &topic);
+  View getMessages(std::initializer_list<std::string> topics);
 
  private:
-  Embag &bag_;
+  Embag::Bag &bag_;
   std::vector<RosBagTypes::chunk_t *> chunks_to_parse_;
   std::unordered_set<uint32_t> connection_ids_;
 };
+}

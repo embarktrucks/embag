@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+namespace Embag {
+
 class RosValue {
  public:
 
@@ -45,14 +47,15 @@ class RosValue {
   }
 
   // Constructors
-  RosValue () = default;
+  RosValue() = default;
   explicit RosValue(Type type) : type(type) {}
 
   // Convenience accessors
-  const std::unique_ptr<RosValue> & operator()(const std::string &key);
-  const std::unique_ptr<RosValue> & get(const std::string &key);
-  const std::unique_ptr<RosValue> & at(size_t idx);
-  template<typename T> T & getValue(const std::string &key) {
+  const std::unique_ptr<RosValue> &operator()(const std::string &key);
+  const std::unique_ptr<RosValue> &get(const std::string &key);
+  const std::unique_ptr<RosValue> &at(size_t idx);
+  template<typename T>
+  T &getValue(const std::string &key) {
     if (type != object) {
       throw std::runtime_error("Value is not an object");
     }
@@ -89,21 +92,22 @@ class RosValue {
   struct identity { typedef T type; };
 
   // Primitive accessors
-  bool & getValueImpl(identity<bool>);
-  int8_t & getValueImpl(identity<int8_t>);
-  uint8_t & getValueImpl(identity<uint8_t>);
-  int16_t & getValueImpl(identity<int16_t>);
-  uint16_t & getValueImpl(identity<uint16_t>);
-  int32_t & getValueImpl(identity<int32_t>);
-  uint32_t & getValueImpl(identity<uint32_t>);
-  int64_t & getValueImpl(identity<int64_t>);
-  uint64_t & getValueImpl(identity<uint64_t>);
-  float & getValueImpl(identity<float>);
-  double & getValueImpl(identity<double>);
-  std::string & getValueImpl(identity<std::string>);
-  ros_time_t & getValueImpl(identity<ros_time_t>);
-  ros_duration_t & getValueImpl(identity<ros_duration_t>);
+  bool &getValueImpl(identity<bool>);
+  int8_t &getValueImpl(identity<int8_t>);
+  uint8_t &getValueImpl(identity<uint8_t>);
+  int16_t &getValueImpl(identity<int16_t>);
+  uint16_t &getValueImpl(identity<uint16_t>);
+  int32_t &getValueImpl(identity<int32_t>);
+  uint32_t &getValueImpl(identity<uint32_t>);
+  int64_t &getValueImpl(identity<int64_t>);
+  uint64_t &getValueImpl(identity<uint64_t>);
+  float &getValueImpl(identity<float>);
+  double &getValueImpl(identity<double>);
+  std::string &getValueImpl(identity<std::string>);
+  ros_time_t &getValueImpl(identity<ros_time_t>);
+  ros_duration_t &getValueImpl(identity<ros_duration_t>);
 
   friend class BagView;
   friend class MessageParser;
 };
+}

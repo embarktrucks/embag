@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
+namespace Embag {
 struct RosBagTypes {
   struct connection_data_t {
     std::string topic;
@@ -26,26 +27,26 @@ struct RosBagTypes {
     std::unique_ptr<std::unordered_map<std::string, std::string>> fields;
 
     enum class op {
-      BAG_HEADER   = 0x03,
-      CHUNK        = 0x05,
-      CONNECTION   = 0x07,
+      BAG_HEADER = 0x03,
+      CHUNK = 0x05,
+      CONNECTION = 0x07,
       MESSAGE_DATA = 0x02,
-      INDEX_DATA   = 0x04,
-      CHUNK_INFO   = 0x06,
-      UNSET        = 0xff,
+      INDEX_DATA = 0x04,
+      CHUNK_INFO = 0x06,
+      UNSET = 0xff,
     };
 
     const op getOp() const {
       return header_t::op(*(fields->at("op").data()));
     }
 
-    const void getField(const std::string& name, std::string& value) const {
+    const void getField(const std::string &name, std::string &value) const {
       value = fields->at(name);
     }
 
-    template <typename T>
-    const void getField(const std::string& name, T& value) const {
-      value = *reinterpret_cast<const T*>(fields->at(name).data());
+    template<typename T>
+    const void getField(const std::string &name, T &value) const {
+      value = *reinterpret_cast<const T *>(fields->at(name).data());
     }
   };
 
@@ -68,7 +69,7 @@ struct RosBagTypes {
   };
 
   struct index_block_t {
-    chunk_t* into_chunk;
+    chunk_t *into_chunk;
   };
 
   struct connection_record_t {
@@ -78,3 +79,4 @@ struct RosBagTypes {
     connection_data_t data;
   };
 };
+}

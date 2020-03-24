@@ -12,8 +12,10 @@
 #include <lz4frame.h>
 
 #include "ros_value.h"
-#include "bag_vew.h"
+#include "bag_view.h"
 #include "ros_bag_types.h"
+
+namespace Embag {
 
 // TODO: move to threaded decompression to make things even faster
 struct lz4f_ctx {
@@ -28,11 +30,11 @@ struct lz4f_ctx {
 };
 
 // Forward declaration
-class BagView;
+class View;
 
-class Embag {
+class Bag {
  public:
-  explicit Embag(const std::string filename) : filename_(filename) {
+  explicit Bag(const std::string filename) : filename_(filename) {
     const LZ4F_errorCode_t code = LZ4F_createDecompressionContext(&lz4_ctx_.ctx, LZ4F_VERSION);
     if (LZ4F_isError(code)) {
       // FIXME
@@ -46,7 +48,7 @@ class Embag {
 
   bool close();
 
-  BagView getView();
+  View getView();
 
   // Schema stuff
   // TODO: move this stuff elsewhere?
@@ -96,12 +98,12 @@ class Embag {
 
   bool readRecords();
   RosBagTypes::record_t readRecord();
-  static std::unique_ptr<std::unordered_map<std::string, std::string>> readFields(const char* p, uint64_t len);
+  static std::unique_ptr<std::unordered_map<std::string, std::string>> readFields(const char *p, uint64_t len);
   static RosBagTypes::header_t readHeader(const RosBagTypes::record_t &record);
   bool decompressLz4Chunk(const char *src, size_t src_size, char *dst, size_t dst_size);
 
   std::string filename_;
-  boost::iostreams::stream <boost::iostreams::mapped_file_source> bag_stream_;
+  boost::iostreams::stream<boost::iostreams::mapped_file_source> bag_stream_;
 
   // Bag data
   std::vector<RosBagTypes::connection_record_t> connections_;
@@ -112,5 +114,6 @@ class Embag {
 
   lz4f_ctx lz4_ctx_;
 
-  friend class BagView;
+  friend class View;
 };
+}

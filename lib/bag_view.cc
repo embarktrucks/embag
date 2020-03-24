@@ -1,18 +1,19 @@
-#include "bag_vew.h"
+#include "bag_view.h"
 #include "ros_message.h"
 #include "ros_value.h"
 #include "message_parser.h"
 #include "util.h"
 
-BagView::iterator BagView::begin() {
+namespace Embag {
+View::iterator View::begin() {
   return iterator{*this, chunks_to_parse_.size()};
 }
 
-BagView::iterator BagView::end() {
+View::iterator View::end() {
   return iterator{*this};
 }
 
-BagView::iterator::iterator(const BagView& view, size_t chunk_count) : view_(view), chunk_count_(chunk_count) {
+View::iterator::iterator(const View &view, size_t chunk_count) : view_(view), chunk_count_(chunk_count) {
   if (chunk_count == 0) {
     return;
   }
@@ -20,7 +21,7 @@ BagView::iterator::iterator(const BagView& view, size_t chunk_count) : view_(vie
   readMessage();
 }
 
-std::unique_ptr<RosMessage> BagView::iterator::operator*() const {
+std::unique_ptr<RosMessage> View::iterator::operator*() const {
   const auto &connection = view_.bag_.connections_[current_connection_id_];
   const auto &msg_def = view_.bag_.message_schemata_[connection.topic];
 
@@ -38,7 +39,7 @@ std::unique_ptr<RosMessage> BagView::iterator::operator*() const {
 }
 
 // This implementation of readHeader is faster but less flexible than the map-based version in Embag.
-BagView::iterator::header_t BagView::iterator::readHeader(const RosBagTypes::record_t &record) {
+View::iterator::header_t View::iterator::readHeader(const RosBagTypes::record_t &record) {
   header_t header{};
 
   auto p = record.header;
@@ -70,12 +71,15 @@ BagView::iterator::header_t BagView::iterator::readHeader(const RosBagTypes::rec
   return header;
 }
 
-void BagView::iterator::readMessage() {
+void View::iterator::readMessage() {
   if (current_buffer_.empty()) {
     const auto &chunk = view_.chunks_to_parse_[chunk_index_];
     current_buffer_.reserve(chunk->uncompressed_size);
     // TODO: this really should be a function in chunks
-    view_.bag_.decompressLz4Chunk(chunk->record.data, chunk->record.data_len, &current_buffer_[0], chunk->uncompressed_size);
+    view_.bag_.decompressLz4Chunk(chunk->record.data,
+                                  chunk->record.data_len,
+                                  &current_buffer_[0],
+                                  chunk->uncompressed_size);
     uncompressed_size_ = chunk->uncompressed_size;
   }
 
@@ -125,13 +129,13 @@ void BagView::iterator::readMessage() {
   processed_bytes_ = 0;
 }
 
-BagView::iterator& BagView::iterator::operator++() {
+View::iterator &View::iterator::operator++() {
   readMessage();
 
   return *this;
 }
 
-BagView BagView::getMessages() {
+View View::getMessages() {
   chunks_to_parse_.clear();
   connection_ids_.clear();
 
@@ -146,11 +150,11 @@ BagView BagView::getMessages() {
   return *this;
 }
 
-BagView BagView::getMessages(const std::string &topic) {
+View View::getMessages(const std::string &topic) {
   return getMessages({topic});
 }
 
-BagView BagView::getMessages(std::initializer_list<std::string> topics) {
+View View::getMessages(std::initializer_list<std::string> topics) {
   chunks_to_parse_.clear();
   connection_ids_.clear();
 
@@ -169,4 +173,5 @@ BagView BagView::getMessages(std::initializer_list<std::string> topics) {
   }
 
   return *this;
+}
 }

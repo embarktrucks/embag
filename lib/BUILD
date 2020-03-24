@@ -9,7 +9,7 @@ cc_library(
         "ros_value.cc",
     ],
     hdrs = [
-        "bag_vew.h",
+        "bag_view.h",
         "embag.h",
         "message_parser.h",
         "ros_bag_types.h",
@@ -40,7 +40,7 @@ pkg_tar(
 pkg_tar(
     name = "embag-headers",
     srcs = [
-        "bag_vew.h",
+        "bag_view.h",
         "embag.h",
         "message_parser.h",
         "ros_bag_types.h",

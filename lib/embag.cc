@@ -6,7 +6,9 @@
 #include "embag.h"
 #include "util.h"
 
-bool Embag::open() {
+namespace Embag {
+
+bool Bag::open() {
   boost::iostreams::mapped_file_source mapped_file_source{filename_};
   bag_stream_.open(mapped_file_source);
 
@@ -42,7 +44,7 @@ bool Embag::open() {
   return true;
 }
 
-bool Embag::close() {
+bool Bag::close() {
   if (bag_stream_.is_open()) {
     bag_stream_.close();
     return true;
@@ -51,7 +53,7 @@ bool Embag::close() {
   return false;
 }
 
-RosBagTypes::record_t Embag::readRecord() {
+RosBagTypes::record_t Bag::readRecord() {
   RosBagTypes::record_t record{};
   // Read header length
   bag_stream_.read(reinterpret_cast<char *>(&record.header_len), sizeof(record.header_len));
@@ -70,8 +72,7 @@ RosBagTypes::record_t Embag::readRecord() {
   return record;
 }
 
-
-std::unique_ptr<std::unordered_map<std::string, std::string>> Embag::readFields(const char* p, const uint64_t len) {
+std::unique_ptr<std::unordered_map<std::string, std::string>> Bag::readFields(const char *p, const uint64_t len) {
   auto fields = make_unique<std::unordered_map<std::string, std::string>>();
   const char *end = p + len;
 
@@ -99,46 +100,49 @@ std::unique_ptr<std::unordered_map<std::string, std::string>> Embag::readFields(
   return fields;
 }
 
- RosBagTypes::header_t Embag::readHeader(const RosBagTypes::record_t &record) {
+RosBagTypes::header_t Bag::readHeader(const RosBagTypes::record_t &record) {
   RosBagTypes::header_t header;
 
   header.fields = readFields(record.header, record.header_len);
 
   return header;
 }
+}
 
 // TODO: move this stuff elsewhere?
-// Parser structures and binding
+// Parser structures and binding - must exist in global namespace
 BOOST_FUSION_ADAPT_STRUCT(
-  Embag::ros_msg_field,
-  type_name,
-  array_size,
-  field_name,
+    Embag::Bag::ros_msg_field,
+    type_name,
+    array_size,
+    field_name,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-  Embag::ros_msg_constant,
-  type_name,
-  constant_name,
-  value,
+    Embag::Bag::ros_msg_constant,
+    type_name,
+    constant_name,
+    value,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-  Embag::ros_embedded_msg_def,
-  type_name,
-  members,
+    Embag::Bag::ros_embedded_msg_def,
+    type_name,
+    members,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-  Embag::ros_msg_def,
-  members,
-  embedded_types,
+    Embag::Bag::ros_msg_def,
+    members,
+    embedded_types,
 )
+
+namespace Embag {
 
 // TODO namespace this stuff
 namespace qi = boost::spirit::qi;
 // A parser for all the things we don't care about (aka a skipper)
-template <typename Iterator>
+template<typename Iterator>
 struct ros_msg_skipper : qi::grammar<Iterator> {
   ros_msg_skipper() : ros_msg_skipper::base_type(skip) {
     using boost::spirit::ascii::char_;
@@ -162,8 +166,8 @@ struct ros_msg_skipper : qi::grammar<Iterator> {
 
 // ROS message parsing
 // See http://wiki.ros.org/msg for details on the format
-template <typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
-struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
+template<typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
+struct ros_msg_grammar : qi::grammar<Iterator, Bag::ros_msg_def(), Skipper> {
   ros_msg_grammar() : ros_msg_grammar::base_type(msg) {
     // TODO clean these up
     using qi::lit;
@@ -178,14 +182,14 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
     // Parse a message field in the form: type field_name
     // This handles array types as well, for example type[n] field_name
     array_size %= ('[' >> (uint_ | attr(-1)) >> ']') | attr(0);
-    type %= (lit("std_msgs/") >> +(char_ - (lit('[')|space)) | +(char_ - (lit('[')|space)));
-    field_name %= lexeme[+(char_ - (space|eol|'#'))];
+    type %= (lit("std_msgs/") >> +(char_ - (lit('[') | space)) | +(char_ - (lit('[') | space)));
+    field_name %= lexeme[+(char_ - (space | eol | '#'))];
 
     field = type >> array_size >> +lit(' ') >> field_name;
 
     // Parse a constant in the form: type constant_name=constant_value
-    constant_name %= lexeme[+(char_ - (space|lit('=')))];
-    constant_value %= lexeme[+(char_ - (space|eol|'#'))];
+    constant_name %= lexeme[+(char_ - (space | lit('=')))];
+    constant_value %= lexeme[+(char_ - (space | eol | '#'))];
     constant = type >> +lit(' ') >> constant_name >> *lit(' ') >> lit('=') >> *lit(' ') >> constant_value;
 
     // Each line of a message definition can be a constant or a field declaration
@@ -201,20 +205,20 @@ struct ros_msg_grammar : qi::grammar<Iterator, Embag::ros_msg_def(), Skipper> {
         >> *embedded_type;
   }
 
-  qi::rule<Iterator, Embag::ros_msg_def(), Skipper> msg;
-  qi::rule<Iterator, Embag::ros_msg_field(), Skipper> field;
+  qi::rule<Iterator, Bag::ros_msg_def(), Skipper> msg;
+  qi::rule<Iterator, Bag::ros_msg_field(), Skipper> field;
   qi::rule<Iterator, std::string(), Skipper> type;
   qi::rule<Iterator, int32_t(), Skipper> array_size;
   qi::rule<Iterator, std::string(), Skipper> field_name;
-  qi::rule<Iterator, Embag::ros_embedded_msg_def(), Skipper> embedded_type;
+  qi::rule<Iterator, Bag::ros_embedded_msg_def(), Skipper> embedded_type;
   qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
-  qi::rule<Iterator, Embag::ros_msg_constant(), Skipper> constant;
+  qi::rule<Iterator, Bag::ros_msg_constant(), Skipper> constant;
   qi::rule<Iterator, std::string(), Skipper> constant_name;
   qi::rule<Iterator, std::string(), Skipper> constant_value;
-  qi::rule<Iterator, Embag::ros_msg_member(), Skipper> member;
+  qi::rule<Iterator, Bag::ros_msg_member(), Skipper> member;
 };
 
-bool Embag::readRecords() {
+bool Bag::readRecords() {
   const int64_t file_size = bag_stream_->size();
 
   ros_msg_grammar<std::string::const_iterator> grammar;
@@ -230,7 +234,7 @@ bool Embag::readRecords() {
 
     const auto op = header.getOp();
 
-    switch(op) {
+    switch (op) {
       case RosBagTypes::header_t::op::BAG_HEADER: {
         uint32_t connection_count;
         uint32_t chunk_count;
@@ -321,7 +325,7 @@ bool Embag::readRecords() {
           message_schemata_[topic] = std::move(ast);
         } else {
           const std::string::const_iterator some = iter + std::min(30, int(end - iter));
-          const std::string context(iter, (some>end)?end:some);
+          const std::string context(iter, (some > end) ? end : some);
 
           throw std::runtime_error("Message definition parsing failed at: " + context);
         }
@@ -347,7 +351,7 @@ bool Embag::readRecords() {
 
         // TODO: It might make sense to save this data in a map or reverse the search.
         // At the moment there are only a few chunks so this doesn't really take long
-        auto chunk_it = std::find_if(chunks_.begin(), chunks_.end(), [&chunk_pos] (const RosBagTypes::chunk_t& c) {
+        auto chunk_it = std::find_if(chunks_.begin(), chunks_.end(), [&chunk_pos](const RosBagTypes::chunk_t &c) {
           return c.offset == chunk_pos;
         });
 
@@ -362,8 +366,7 @@ bool Embag::readRecords() {
         break;
       }
       case RosBagTypes::header_t::op::UNSET:
-      default:
-        throw std::runtime_error( "Unknown record operation: " + std::to_string(uint8_t(op)));
+      default:throw std::runtime_error("Unknown record operation: " + std::to_string(uint8_t(op)));
     }
   }
 
@@ -371,7 +374,7 @@ bool Embag::readRecords() {
 }
 
 // TODO: this should be a function in chunks
-bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size) {
+bool Bag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size) {
   size_t src_bytes_left = src_size;
   size_t dst_bytes_left = dst_size;
 
@@ -380,7 +383,8 @@ bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst
     size_t dst_bytes_written = dst_bytes_left;
     const size_t ret = LZ4F_decompress(lz4_ctx_, dst, &dst_bytes_written, src, &src_bytes_read, nullptr);
     if (LZ4F_isError(ret)) {
-      throw std::runtime_error("chunk::decompress: lz4 decompression returned " + std::to_string(ret) + ", expected " + std::to_string(src_bytes_read));
+      throw std::runtime_error("chunk::decompress: lz4 decompression returned " + std::to_string(ret) + ", expected "
+                                   + std::to_string(src_bytes_read));
     }
 
     src_bytes_left -= src_bytes_read;
@@ -388,12 +392,14 @@ bool Embag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst
   }
 
   if (src_bytes_left || dst_bytes_left) {
-    throw std::runtime_error("chunk::decompress: lz4 decompression left " + std::to_string(src_bytes_left) + "/" + std::to_string(dst_bytes_left) + " bytes in buffer");
+    throw std::runtime_error("chunk::decompress: lz4 decompression left " + std::to_string(src_bytes_left) + "/"
+                                 + std::to_string(dst_bytes_left) + " bytes in buffer");
   }
 
   return true;
 }
 
-BagView Embag::getView() {
-  return BagView{*this};
+View Bag::getView() {
+  return View{*this};
+}
 }
