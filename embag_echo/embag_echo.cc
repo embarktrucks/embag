@@ -13,12 +13,19 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Opening " << filename << std::endl;
 
-  Embag::Bag bag_a{filename};
-  Embag::Bag bag_b{"truck-201_run-15955_2020-03-12-00-06-09_luminar_107.bag"};
+  Embag::Bag bag_a{"/home/jason/em/embag/truck-201_run-15955_2020-03-12-00-06-09_slim_107.bag"};
+  Embag::Bag bag_b{"/home/jason/em/embag/truck-201_run-15955_2020-03-12-00-06-09_luminar_107.bag"};
 
-  for (const auto &message : bag_a.getView().getMessages(topic)) {
+  Embag::View view{};
+
+  // FIXME
+  //view.addBags({bag_a, bag_b});
+  view.addBag(bag_a);
+  view.addBag(bag_b);
+
+  for (const auto &message : view.getMessages({"/debug/planner", "/luminar_pointcloud"})) {
     std::cout << message->timestamp.secs << "." << message->timestamp.nsecs << " : " << message->topic << std::endl;
-    message->print();
+    //message->print();
   }
 
   bag_a.close();

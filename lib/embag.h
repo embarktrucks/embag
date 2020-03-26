@@ -100,7 +100,7 @@ class Bag {
   RosBagTypes::record_t readRecord();
   static std::unique_ptr<std::unordered_map<std::string, std::string>> readFields(const char *p, uint64_t len);
   static RosBagTypes::header_t readHeader(const RosBagTypes::record_t &record);
-  bool decompressLz4Chunk(const char *src, size_t src_size, char *dst, size_t dst_size);
+  void decompressLz4Chunk(const char *src, size_t src_size, char *dst, size_t dst_size);
 
   std::string filename_;
   boost::iostreams::stream<boost::iostreams::mapped_file_source> bag_stream_;

@@ -374,7 +374,7 @@ bool Bag::readRecords() {
 }
 
 // TODO: this should be a function in chunks
-bool Bag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size) {
+void Bag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size) {
   size_t src_bytes_left = src_size;
   size_t dst_bytes_left = dst_size;
 
@@ -395,11 +395,9 @@ bool Bag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, 
     throw std::runtime_error("chunk::decompress: lz4 decompression left " + std::to_string(src_bytes_left) + "/"
                                  + std::to_string(dst_bytes_left) + " bytes in buffer");
   }
-
-  return true;
 }
 
 View Bag::getView() {
-  return View{*this};
+  return View{this};
 }
 }

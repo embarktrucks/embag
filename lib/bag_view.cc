@@ -6,34 +6,43 @@
 
 namespace Embag {
 View::iterator View::begin() {
-  return iterator{*this, chunks_to_parse_.size()};
+  return iterator{*this, bags_.size()};
 }
 
 View::iterator View::end() {
   return iterator{*this};
 }
 
-View::iterator::iterator(const View &view, size_t chunk_count) : view_(view), chunk_count_(chunk_count) {
-  if (chunk_count == 0) {
+View::iterator::iterator(View &view, size_t bag_count) : view_(view), bag_count_(bag_count) {
+  if (bag_count == 0) {
     return;
   }
 
-  readMessage();
+  // Read a message from each bag into the corresponding bag wrapper
+  for (auto &pair : view_.bag_wrappers_) {
+    readMessage(pair.second);
+
+    // Push each wrapper into the queue
+    msg_queue_.push(pair.second);
+  }
 }
 
 std::unique_ptr<RosMessage> View::iterator::operator*() const {
-  const auto &connection = view_.bag_.connections_[current_connection_id_];
-  const auto &msg_def = view_.bag_.message_schemata_[connection.topic];
+  // Take the first wrapper from the priority queue
+  auto wrapper = msg_queue_.top();
+
+  const auto &connection = wrapper->bag->connections_[wrapper->current_connection_id];
+  const auto &msg_def = wrapper->bag->message_schemata_[connection.topic];
 
   // TODO: streaming this data means copying it into basic types.  It would be faster to just set pointers...
-  message_stream stream{current_message_data_, current_message_len_};
+  message_stream stream{wrapper->current_message_data, wrapper->current_message_len};
 
   auto message = make_unique<RosMessage>();
   MessageParser msg{stream, connection.data, msg_def};
 
   message->data_ = msg.parse();
   message->topic = connection.topic;
-  message->timestamp = current_timestamp_;
+  message->timestamp = wrapper->current_timestamp;
 
   return message;
 }
@@ -71,42 +80,47 @@ View::iterator::header_t View::iterator::readHeader(const RosBagTypes::record_t 
   return header;
 }
 
-void View::iterator::readMessage() {
-  if (current_buffer_.empty()) {
-    const auto &chunk = view_.chunks_to_parse_[chunk_index_];
-    current_buffer_.reserve(chunk->uncompressed_size);
+/*
+ * initialize: fill the queue with a message from each bag
+ * store the message with the smallest timestamp in current_msg_ stuff and remove it from the queue
+ * read another message from the bag that had its message removed from the queue
+ */
+void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
+  if (bag_wrapper->current_buffer.empty()) {
+    const auto &chunk = bag_wrapper->chunks_to_parse[bag_wrapper->chunk_index];
+    bag_wrapper->current_buffer.reserve(chunk->uncompressed_size);
     // TODO: this really should be a function in chunks
-    view_.bag_.decompressLz4Chunk(chunk->record.data,
+    bag_wrapper->bag->decompressLz4Chunk(chunk->record.data,
                                   chunk->record.data_len,
-                                  &current_buffer_[0],
+                                  &bag_wrapper->current_buffer[0],
                                   chunk->uncompressed_size);
-    uncompressed_size_ = chunk->uncompressed_size;
+    bag_wrapper->uncompressed_size = chunk->uncompressed_size;
   }
 
-  while (processed_bytes_ < uncompressed_size_) {
+  while (bag_wrapper->processed_bytes < bag_wrapper->uncompressed_size) {
     RosBagTypes::record_t record{};
 
     // TODO: just use pointers instead of copying memory?
-    std::memcpy(&record.header_len, current_buffer_.c_str() + processed_bytes_, sizeof(record.header_len));
-    processed_bytes_ += sizeof(record.header_len);
-    record.header = &current_buffer_.c_str()[processed_bytes_];
-    processed_bytes_ += record.header_len;
+    std::memcpy(&record.header_len, bag_wrapper->current_buffer.c_str() + bag_wrapper->processed_bytes, sizeof(record.header_len));
+    bag_wrapper->processed_bytes += sizeof(record.header_len);
+    record.header = &bag_wrapper->current_buffer.c_str()[bag_wrapper->processed_bytes];
+    bag_wrapper->processed_bytes += record.header_len;
 
-    std::memcpy(&record.data_len, current_buffer_.c_str() + processed_bytes_, sizeof(record.data_len));
-    processed_bytes_ += sizeof(record.data_len);
-    record.data = &current_buffer_.c_str()[processed_bytes_];
-    processed_bytes_ += record.data_len;
+    std::memcpy(&record.data_len, bag_wrapper->current_buffer.c_str() + bag_wrapper->processed_bytes, sizeof(record.data_len));
+    bag_wrapper->processed_bytes += sizeof(record.data_len);
+    record.data = &bag_wrapper->current_buffer.c_str()[bag_wrapper->processed_bytes];
+    bag_wrapper->processed_bytes += record.data_len;
 
     const auto header = readHeader(record);
 
     switch (header.op) {
       case RosBagTypes::header_t::op::MESSAGE_DATA: {
         // Check if this is a topic we're interested in
-        if (view_.connection_ids_.count(header.connection_id)) {
-          current_message_data_ = const_cast<char *>(record.data);
-          current_message_len_ = record.data_len;
-          current_connection_id_ = header.connection_id;
-          current_timestamp_ = header.timestamp;
+        if (bag_wrapper->connection_ids.count(header.connection_id)) {
+          bag_wrapper->current_message_data = const_cast<char *>(record.data);
+          bag_wrapper->current_message_len = record.data_len;
+          bag_wrapper->current_connection_id = header.connection_id;
+          bag_wrapper->current_timestamp = header.timestamp;
         } else {
           continue;
         }
@@ -123,28 +137,36 @@ void View::iterator::readMessage() {
     }
   }
 
-  chunk_index_++;
-  chunk_count_--;
-  current_buffer_.clear();
-  processed_bytes_ = 0;
+  bag_wrapper->chunk_index++;
+  bag_wrapper->chunk_count--;
+  bag_wrapper->current_buffer.clear();
+  bag_wrapper->processed_bytes = 0;
 }
 
 View::iterator &View::iterator::operator++() {
-  readMessage();
+  auto wrapper = msg_queue_.top();
+  msg_queue_.pop();
+
+  readMessage(wrapper);
+
+  msg_queue_.push(wrapper);
 
   return *this;
 }
 
 View View::getMessages() {
-  chunks_to_parse_.clear();
-  connection_ids_.clear();
+  bag_wrappers_.clear();
 
-  for (auto &chunk : bag_.chunks_) {
-    chunks_to_parse_.emplace_back(&chunk);
-  }
+  for (const auto bag : bags_) {
+    bag_wrappers_[bag] = std::make_shared<iterator::bag_wrapper_t>();
 
-  for (size_t i = 0; i < bag_.connections_.size(); i++) {
-    connection_ids_.emplace(i);
+    for (const auto &chunk : bag->chunks_) {
+      bag_wrappers_[bag]->chunks_to_parse.emplace_back(&chunk);
+    }
+
+    for (size_t i = 0; i < bag->connections_.size(); i++) {
+      bag_wrappers_[bag]->connection_ids.emplace(i);
+    }
   }
 
   return *this;
@@ -155,21 +177,39 @@ View View::getMessages(const std::string &topic) {
 }
 
 View View::getMessages(std::initializer_list<std::string> topics) {
-  chunks_to_parse_.clear();
-  connection_ids_.clear();
+  bag_wrappers_.clear();
 
-  for (const auto &topic : topics) {
-    if (!bag_.topic_connection_map_.count(topic)) {
-      std::cout << "WARNING: unable to find topic in bag: " << topic << std::endl;
-      continue;
+  for (const auto bag : bags_) {
+    for (const auto &topic : topics) {
+      if (!bag->topic_connection_map_.count(topic)) {
+        continue;
+      }
+
+      bag_wrappers_[bag] = std::make_shared<iterator::bag_wrapper_t>();
+      bag_wrappers_[bag]->bag = bag;
+
+      const auto connection_record = bag->topic_connection_map_.at(topic);
+      for (const auto &block : connection_record->blocks) {
+        bag_wrappers_[bag]->chunks_to_parse.emplace_back(block.into_chunk);
+      }
+
+      bag_wrappers_[bag]->connection_ids.emplace(connection_record->id);
     }
+  }
 
-    auto connection_record = bag_.topic_connection_map_[topic];
-    for (const auto &block : connection_record->blocks) {
-      chunks_to_parse_.emplace_back(block.into_chunk);
-    }
+  return *this;
+}
 
-    connection_ids_.emplace(connection_record->id);
+View View::addBag(Bag &bag) {
+  bags_.emplace_back(&bag);
+
+  return *this;
+}
+
+View View::addBags(std::initializer_list<Bag> bags) {
+  for (auto &bag : bags) {
+    // FIXME
+    //bags_.emplace_back(&bag);
   }
 
   return *this;
