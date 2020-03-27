@@ -8,6 +8,28 @@
 
 namespace Embag {
 
+Bag::primitive_type_map_t Bag::ros_msg_field::primitive_type_map_ = {
+    {"bool", RosValue::ros_bool},
+    {"int8", RosValue::int8},
+    {"uint8", RosValue::uint8},
+    {"int16", RosValue::int16},
+    {"uint16", RosValue::uint16},
+    {"uint8", RosValue::uint8},
+    {"int32", RosValue::int32},
+    {"uint32", RosValue::uint32},
+    {"int64", RosValue::int64},
+    {"uint64", RosValue::uint64},
+    {"float32", RosValue::float32},
+    {"float64", RosValue::float64},
+    {"string", RosValue::string},
+    {"time", RosValue::ros_time},
+    {"duration", RosValue::ros_duration},
+
+    // Deprecated types
+    {"byte", RosValue::int8},
+    {"char", RosValue::uint8},
+};
+
 bool Bag::open() {
   boost::iostreams::mapped_file_source mapped_file_source{filename_};
   bag_stream_.open(mapped_file_source);
@@ -395,9 +417,5 @@ void Bag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, 
     throw std::runtime_error("chunk::decompress: lz4 decompression left " + std::to_string(src_bytes_left) + "/"
                                  + std::to_string(dst_bytes_left) + " bytes in buffer");
   }
-}
-
-View Bag::getView() {
-  return View{this};
 }
 }

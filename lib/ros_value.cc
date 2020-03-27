@@ -196,6 +196,14 @@ void RosValue::print(const std::string &path) {
       }
       break;
     }
+    case RosValue::Type::blob: {
+      std::cout << path << " -> blob" << std::endl;
+      break;
+    }
+    default: {
+      std::cout << path << " -> unknown type" << std::endl;
+      break;
+    }
   }
 }
 }

@@ -1,34 +1,52 @@
 #include <iostream>
+#include <vector>
+#include <boost/program_options.hpp>
 
 #include "lib/embag.h"
 
 int main(int argc, char *argv[]) {
-  if (argc != 3) {
-    std::cout << "Usage: embag_echo path/to/bagfile.bag /topic/of/interest" << std::endl;
-    exit(1);
+  namespace po = boost::program_options;
+
+  po::options_description desc("Usage:");
+  desc.add_options()
+    ("help", "produce help message")
+    ("topic,t", po::value<std::vector<std::string> >(), "topic to echo")
+    ("bag,b", po::value<std::vector<std::string> >(), "bag files to read")
+    ;
+
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);
+
+  if (vm.count("help")) {
+    std::cout << desc << std::endl;
+    return 0;
   }
 
-  const std::string filename = argv[1];
-  const std::string topic = argv[2];
-
-  std::cout << "Opening " << filename << std::endl;
-
-  Embag::Bag bag_a{"/home/jason/em/embag/truck-201_run-15955_2020-03-12-00-06-09_slim_107.bag"};
-  Embag::Bag bag_b{"/home/jason/em/embag/truck-201_run-15955_2020-03-12-00-06-09_luminar_107.bag"};
+  if (vm.count("bag") == 0) {
+    std::cout << "You must specify at least one bag file." << std::endl;
+    return 1;
+  }
 
   Embag::View view{};
 
-  // FIXME
-  //view.addBags({bag_a, bag_b});
-  view.addBag(bag_a);
-  view.addBag(bag_b);
-
-  for (const auto &message : view.getMessages({"/debug/planner", "/luminar_pointcloud"})) {
-    std::cout << message->timestamp.secs << "." << message->timestamp.nsecs << " : " << message->topic << std::endl;
-    //message->print();
+  for (const auto& filename : vm["bag"].as<std::vector<std::string>>()) {
+    std::cout << "Opening " << filename << std::endl;
+    auto bag = std::make_shared<Embag::Bag>(filename);
+    view.addBag(bag);
   }
 
-  bag_a.close();
+  if (vm.count("topic")) {
+    for (const auto &message : view.getMessages(vm["topic"].as<std::vector<std::string>>())) {
+      std::cout << message->timestamp.secs << "." << message->timestamp.nsecs << " : " << message->topic << std::endl;
+      message->print();
+    }
+  } else {
+    for (const auto &message : view.getMessages()) {
+      std::cout << message->timestamp.secs << "." << message->timestamp.nsecs << " : " << message->topic << std::endl;
+      message->print();
+    }
+  }
 
   return 0;
 }

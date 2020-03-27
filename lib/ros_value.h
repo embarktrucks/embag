@@ -30,6 +30,7 @@ class RosValue {
     // Custom types
     object,
     array,
+    blob,
   };
 
   struct ros_time_t {
@@ -80,6 +81,12 @@ class RosValue {
   std::string string_value;
   ros_time_t time_value;
   ros_duration_t duration_value;
+
+  struct {
+    std::string data;
+    size_t size;
+    Type type;
+  } blob_storage;
 
   std::unordered_map<std::string, std::unique_ptr<RosValue>> objects;
   std::vector<std::unique_ptr<RosValue>> values;

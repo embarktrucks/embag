@@ -45,17 +45,28 @@ class Bag {
   }
 
   bool open();
-
   bool close();
-
-  View getView();
 
   // Schema stuff
   // TODO: move this stuff elsewhere?
+  typedef std::unordered_map<std::string, RosValue::Type> primitive_type_map_t;
   struct ros_msg_field {
+    static primitive_type_map_t primitive_type_map_;
+
     std::string type_name;
     int32_t array_size;
     std::string field_name;
+
+    bool type_set = false;
+    RosValue::Type ros_type;
+
+    RosValue::Type get_ros_type() {
+      if (!type_set) {
+        ros_type = primitive_type_map_.at(type_name);
+        type_set = true;
+      }
+      return ros_type;
+    }
   };
 
   struct ros_msg_constant {
