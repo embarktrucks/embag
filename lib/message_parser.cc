@@ -36,12 +36,6 @@ std::unique_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ba
 
       if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
         // This is a primitive type array
-        /*
-        for (size_t i = 0; i < array_len; i++) {
-          parsed_field->values.emplace_back(getPrimitiveField(field));
-        }
-         */
-        parsed_field->type = RosValue::Type::blob;
         parsed_field = getPrimitiveBlob(field, array_len);
       } else {
         // This is an array of embedded types
@@ -72,9 +66,7 @@ std::unique_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ba
     default: {
       parsed_field->type = RosValue::Type::array;
       if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
-        for (int32_t i = 0; i < field.array_size; i++) {
-          getPrimitiveField(field);
-        }
+        parsed_field = getPrimitiveBlob(field, field.array_size);
       } else {
         auto embedded_type = getEmbeddedType(scope, field);
         parseArray(field.array_size, embedded_type, parsed_field);
