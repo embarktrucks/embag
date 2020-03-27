@@ -44,7 +44,7 @@ std::unique_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ba
       }
       break;
     }
-      // Not an array
+    // Not an array
     case 0: {
       // Primitive type
       if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
@@ -62,7 +62,7 @@ std::unique_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ba
       }
       break;
     }
-      // Array with fixed size
+    // Array with fixed size
     default: {
       parsed_field->type = RosValue::Type::array;
       if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
