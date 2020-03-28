@@ -43,6 +43,12 @@ class RosValue {
     int32_t nsecs = 0;
   };
 
+  struct blob_t {
+    std::string data;
+    size_t size = 0;
+    Type type = Type::uint8;
+  };
+
   Type getType() {
     return type;
   }
@@ -82,11 +88,7 @@ class RosValue {
   ros_time_t time_value;
   ros_duration_t duration_value;
 
-  struct {
-    std::string data;
-    size_t size;
-    Type type;
-  } blob_storage;
+  blob_t blob_storage;
 
   std::unordered_map<std::string, std::unique_ptr<RosValue>> objects;
   std::vector<std::unique_ptr<RosValue>> values;
@@ -113,8 +115,8 @@ class RosValue {
   std::string &getValueImpl(identity<std::string>);
   ros_time_t &getValueImpl(identity<ros_time_t>);
   ros_duration_t &getValueImpl(identity<ros_duration_t>);
+  blob_t &getValueImpl(identity<blob_t>);
 
-  friend class BagView;
   friend class MessageParser;
 };
 }

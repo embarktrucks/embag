@@ -120,6 +120,14 @@ RosValue::ros_duration_t &RosValue::getValueImpl(identity<RosValue::ros_duration
   return duration_value;
 }
 
+RosValue::blob_t &RosValue::getValueImpl(identity<RosValue::blob_t>) {
+  if (type != blob) {
+    throw std::runtime_error("Value is not a blob type");
+  }
+
+  return blob_storage;
+}
+
 void RosValue::print(const std::string &path) {
   switch (type) {
     case Type::ros_bool: {

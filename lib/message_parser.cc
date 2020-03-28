@@ -92,7 +92,6 @@ std::unique_ptr<RosValue> MessageParser::parseMembers(Bag::ros_embedded_msg_def 
   auto values = make_unique<RosValue>(RosValue::Type::object);
 
   for (const auto &member : embedded_type.members) {
-    // TODO: use strict_get() instead of this visitor thing
     if (member.which() == 0) {  // ros_msg_field
       auto embedded_field = boost::get<Bag::ros_msg_field>(member);
       values->objects[embedded_field.field_name] = parseField(embedded_type.getScope(), embedded_field);
@@ -131,42 +130,42 @@ std::unique_ptr<RosValue> MessageParser::getPrimitiveBlob(Bag::ros_msg_field &fi
   const auto& type = field.get_ros_type();
   value->blob_storage.size = len;
   value->blob_storage.type = type;
+
+  size_t bytes = 0;
+
   switch (type) {
     case RosValue::ros_bool:
     case RosValue::int8:
     case RosValue::uint8: {
-      const size_t bytes = sizeof(uint8_t) * len;
-      value->blob_storage.data = std::string(bytes, 0);
-      stream_.read(&value->blob_storage.data[0], bytes);
+      bytes = sizeof(uint8_t) * len;
       break;
     }
     case RosValue::int16:
     case RosValue::uint16: {
-      const size_t bytes = sizeof(uint16_t) * len;
-      value->blob_storage.data = std::string(bytes, 0);
-      stream_.read(&value->blob_storage.data[0], bytes);
+      bytes = sizeof(uint16_t) * len;
+      break;
     }
     case RosValue::int32:
     case RosValue::uint32:
     case RosValue::float32: {
-      const size_t bytes = sizeof(uint32_t) * len;
-      value->blob_storage.data = std::string(bytes, 0);
-      stream_.read(&value->blob_storage.data[0], bytes);
+      bytes = sizeof(uint32_t) * len;
+      break;
     }
     case RosValue::int64:
     case RosValue::uint64:
     case RosValue::float64: {
-      const size_t bytes = sizeof(uint64_t) * len;
-      value->blob_storage.data = std::string(bytes, 0);
-      stream_.read(&value->blob_storage.data[0], bytes);
+      bytes = sizeof(uint64_t) * len;
+      break;
     }
     case RosValue::blob:
     default: {
       throw std::runtime_error("Unable to read unknown blob type: " + field.type_name);
     };
-
   }
-  stream_.read(&value->blob_storage.data[0], sizeof(type) * len);
+
+  value->blob_storage.data.reserve(bytes);
+  value->blob_storage.data = std::string(bytes, 0);
+  stream_.read(&value->blob_storage.data[0], bytes);
 
   return value;
 }
