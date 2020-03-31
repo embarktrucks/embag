@@ -7,6 +7,6 @@ includedir=/usr/include/embag
 Name: embag
 Description: fast dependecy free ROS bag file reader
 URL: https://github.com/embarktrucks/embag
-Version: 0.0.1
+Version: 0.0.2
 Libs: -L/usr/lib -lembag
 Cflags: -I/usr/include/embag
