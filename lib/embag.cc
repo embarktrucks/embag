@@ -361,8 +361,8 @@ bool Bag::readRecords() {
       case RosBagTypes::header_t::op::CHUNK_INFO: {
         uint32_t ver;
         uint64_t chunk_pos;
-        uint64_t start_time;
-        uint64_t end_time;
+        RosValue::ros_time_t start_time;
+        RosValue::ros_time_t end_time;
         uint32_t count;
 
         header.getField("ver", ver);

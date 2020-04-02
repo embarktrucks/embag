@@ -36,6 +36,11 @@ int main(int argc, char *argv[]) {
     view.addBag(bag);
   }
 
+  const auto start_time = view.getStartTime();
+  const auto end_time = view.getEndTime();
+  std::cout << "Start time is " << start_time.secs << "." << start_time.nsecs << std::endl;
+  std::cout << "End time is " << end_time.secs << "." << end_time.nsecs << std::endl;
+
   if (vm.count("topic")) {
     for (const auto &message : view.getMessages(vm["topic"].as<std::vector<std::string>>())) {
       std::cout << message->timestamp.secs << "." << message->timestamp.nsecs << " : " << message->topic << std::endl;

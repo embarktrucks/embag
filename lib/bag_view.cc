@@ -37,6 +37,8 @@ std::unique_ptr<RosMessage> View::iterator::operator*() const {
   message->topic = connection.topic;
   message->timestamp = wrapper->current_timestamp;
   message->md5 = connection.data.md5sum;
+  message->raw_data = wrapper->current_message_data;
+  message->raw_data_len = wrapper->current_message_len;
 
   return message;
 }
@@ -200,6 +202,40 @@ View View::getMessages(const std::vector<std::string> &topics) {
 
 View View::getMessages(std::initializer_list<std::string> topics) {
   return getMessages(std::vector<std::string>(topics.begin(), topics.end()));
+}
+
+RosValue::ros_time_t View::getStartTime() {
+  RosValue::ros_time_t start_time;
+  start_time.secs = UINT32_MAX;
+  start_time.nsecs = UINT32_MAX;
+
+  for (const auto& bag : bags_) {
+    const auto& bag_start = bag->chunks_.front().info.start_time;
+    if (bag_start.secs < start_time.secs) {
+      start_time = bag_start;
+    } else if (bag_start.secs == start_time.secs && bag_start.nsecs < start_time.nsecs) {
+      start_time = bag_start;
+    }
+  }
+
+  return start_time;
+}
+
+RosValue::ros_time_t View::getEndTime() {
+  RosValue::ros_time_t end_time;
+  end_time.secs = 0;
+  end_time.nsecs = 0;
+
+  for (const auto& bag : bags_) {
+    const auto& bag_end = bag->chunks_.back().info.end_time;
+    if (bag_end.secs > end_time.secs) {
+      end_time = bag_end;
+    } else if (bag_end.secs == end_time.secs && bag_end.nsecs > end_time.nsecs) {
+      end_time = bag_end;
+    }
+  }
+
+  return end_time;
 }
 
 View View::addBag(std::shared_ptr<Bag> bag) {

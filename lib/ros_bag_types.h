@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ros_value.h"
+
 namespace Embag {
 struct RosBagTypes {
   struct connection_data_t {
@@ -51,19 +53,19 @@ struct RosBagTypes {
   };
 
   struct chunk_info_t {
-    uint64_t start_time;
-    uint64_t end_time;
-    uint32_t message_count;
+    RosValue::ros_time_t start_time;
+    RosValue::ros_time_t end_time;
+    uint32_t message_count = 0;
   };
 
   struct chunk_t {
     uint64_t offset = 0;
     chunk_info_t info;
     std::string compression;
-    uint32_t uncompressed_size;
-    record_t record;
+    uint32_t uncompressed_size = 0;
+    record_t record{};
 
-    chunk_t(record_t r) {
+    explicit chunk_t(record_t r) {
       record = r;
     };
   };

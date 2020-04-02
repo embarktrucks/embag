@@ -91,6 +91,7 @@ class View {
         return false;
       };
     };
+
     std::priority_queue<std::shared_ptr<bag_wrapper_t>, std::vector<std::shared_ptr<bag_wrapper_t>>, compare_t> msg_queue_;
   };
 
@@ -102,6 +103,8 @@ class View {
   View getMessages(const std::string &topic);
   View getMessages(const std::vector<std::string> &topics);
   View getMessages(std::initializer_list<std::string> topics);
+  RosValue::ros_time_t getStartTime();
+  RosValue::ros_time_t getEndTime();
 
   // Bag set manipulation
   View addBag(std::shared_ptr<Bag> bag);
