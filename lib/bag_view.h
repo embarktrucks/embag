@@ -26,9 +26,10 @@ class View {
   struct iterator {
     struct begin_cond_t{};
 
-    View& view_;
-    explicit iterator(View &view) : view_(view) {};
-    iterator(View &view, begin_cond_t begin_cond);
+    View* view_;
+    iterator() : view_(nullptr) {};
+    explicit iterator(View *view) : view_(view) {};
+    iterator(View *view, begin_cond_t begin_cond);
     iterator(const iterator& other) : view_(other.view_) {};
 
     iterator& operator=(const iterator&& other) {

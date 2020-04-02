@@ -6,16 +6,16 @@
 
 namespace Embag {
 View::iterator View::begin() {
-  return iterator{*this, iterator::begin_cond_t{}};
+  return iterator{this, iterator::begin_cond_t{}};
 }
 
 View::iterator View::end() {
-  return iterator{*this};
+  return iterator{this};
 }
 
-View::iterator::iterator(View &view, begin_cond_t begin_cond) : view_(view) {
+View::iterator::iterator(View *view, begin_cond_t begin_cond) : view_(view) {
   // Read a message from each bag into the corresponding bag wrapper
-  for (auto &pair : view_.bag_wrappers_) {
+  for (auto &pair : view_->bag_wrappers_) {
     readMessage(pair.second);
   }
 }
