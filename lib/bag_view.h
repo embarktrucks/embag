@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
@@ -61,11 +62,19 @@ class View {
     // TODO: Move this outside of iterator?
     struct bag_wrapper_t {
       std::shared_ptr<Bag> bag;
-      size_t chunk_index = 0;
       size_t processed_bytes = 0;
       uint32_t uncompressed_size = 0;
       std::string current_buffer;
-      std::vector<const RosBagTypes::chunk_t *> chunks_to_parse;
+
+      // Function for comparing bag offsets
+      struct bag_offset_compare_t {
+        bool operator()(const RosBagTypes::chunk_t *left, const RosBagTypes::chunk_t *right) {
+          return left->offset < right->offset;
+        }
+      };
+
+      std::set<const RosBagTypes::chunk_t *, bag_offset_compare_t> chunks_to_parse;
+      std::set<const RosBagTypes::chunk_t *, bag_offset_compare_t>::iterator chunk_iter;
       std::unordered_set<uint32_t> connection_ids;
 
 
@@ -78,8 +87,8 @@ class View {
     static header_t readHeader(const RosBagTypes::record_t &record);
     void readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper);
 
-    // Lambda that compares message timestamps
-    struct compare_t {
+    // Function for comparing message timestamps
+    struct timestamp_compare_t {
       bool operator()(std::shared_ptr<bag_wrapper_t> &left, std::shared_ptr<bag_wrapper_t> &right) {
         const auto &left_ts = left->current_timestamp;
         const auto &right_ts = right->current_timestamp;
@@ -93,7 +102,7 @@ class View {
       };
     };
 
-    std::priority_queue<std::shared_ptr<bag_wrapper_t>, std::vector<std::shared_ptr<bag_wrapper_t>>, compare_t> msg_queue_;
+    std::priority_queue<std::shared_ptr<bag_wrapper_t>, std::vector<std::shared_ptr<bag_wrapper_t>>, timestamp_compare_t> msg_queue_;
   };
 
   iterator begin();

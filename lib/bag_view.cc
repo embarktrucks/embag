@@ -16,7 +16,10 @@ View::iterator View::end() {
 View::iterator::iterator(View *view, begin_cond_t begin_cond) : view_(view) {
   // Read a message from each bag into the corresponding bag wrapper
   for (auto &pair : view_->bag_wrappers_) {
-    readMessage(pair.second);
+    auto& wrapper = pair.second;
+    wrapper->chunk_iter = wrapper->chunks_to_parse.begin();
+
+    readMessage(wrapper);
   }
 }
 
@@ -82,9 +85,9 @@ View::iterator::header_t View::iterator::readHeader(const RosBagTypes::record_t 
  * read another message from the bag that had its message removed from the queue
  */
 void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
-  while (bag_wrapper->chunk_index < bag_wrapper->chunks_to_parse.size()) {
+  while (bag_wrapper->chunk_iter != bag_wrapper->chunks_to_parse.end()) {
     if (bag_wrapper->current_buffer.empty()) {
-      const auto &chunk = bag_wrapper->chunks_to_parse[bag_wrapper->chunk_index];
+      const auto &chunk = *(bag_wrapper->chunk_iter);
       bag_wrapper->current_buffer.reserve(chunk->uncompressed_size);
       // TODO: this really should be a function in chunks
       bag_wrapper->bag->decompressLz4Chunk(chunk->record.data,
@@ -139,7 +142,7 @@ void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
       }
     }
 
-    bag_wrapper->chunk_index++;
+    bag_wrapper->chunk_iter++;
     bag_wrapper->current_buffer.clear();
     bag_wrapper->processed_bytes = 0;
   }
@@ -161,7 +164,7 @@ View View::getMessages() {
     bag_wrappers_[bag] = std::make_shared<iterator::bag_wrapper_t>();
 
     for (const auto &chunk : bag->chunks_) {
-      bag_wrappers_[bag]->chunks_to_parse.emplace_back(&chunk);
+      bag_wrappers_[bag]->chunks_to_parse.emplace(&chunk);
     }
 
     for (size_t i = 0; i < bag->connections_.size(); i++) {
@@ -190,7 +193,7 @@ View View::getMessages(const std::vector<std::string> &topics) {
 
       const auto connection_record = bag->topic_connection_map_.at(topic);
       for (const auto &block : connection_record->blocks) {
-        bag_wrappers_[bag]->chunks_to_parse.emplace_back(block.into_chunk);
+        bag_wrappers_[bag]->chunks_to_parse.emplace(block.into_chunk);
       }
 
       bag_wrappers_[bag]->connection_ids.emplace(connection_record->id);
