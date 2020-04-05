@@ -85,5 +85,5 @@ pkg_deb(
     homepage = "https://github.com/embarktrucks/embag",
     maintainer = "Jason Snell <jason@embarktrucks.com>",
     package = "embag",
-    version = "0.0.6",
+    version = "0.0.7",
 )
