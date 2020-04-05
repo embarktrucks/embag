@@ -58,19 +58,19 @@ View::iterator::header_t View::iterator::readHeader(const RosBagTypes::record_t 
 
     p += sizeof(uint32_t);
 
-    const auto value = strstr(p, "=");
+    const auto value_p = strstr(p, "=") + 1;
 
-    if (value == nullptr) {
+    if (value_p == nullptr) {
       throw std::runtime_error("Unable to find '=' in header field - perhaps this bag is corrupt...");
     }
 
     // Compare the first char here for optimization reasons since this code gets pretty hot
     if (*p == 'o') {        // op
-      header.op = RosBagTypes::header_t::op(*(value + 1));
+      header.op = RosBagTypes::header_t::op(*value_p);
     } else if (*p == 'c') { // conn
-      header.connection_id = *reinterpret_cast<const uint32_t *>(value + 1);
+      header.connection_id = *reinterpret_cast<const uint32_t *>(value_p);
     } else if (*p == 't') { // time
-      header.timestamp = *reinterpret_cast<const RosValue::ros_time_t *>(value + 1);
+      header.timestamp = *reinterpret_cast<const RosValue::ros_time_t *>(value_p);
     }
 
     p += field_len;
@@ -191,12 +191,13 @@ View View::getMessages(const std::vector<std::string> &topics) {
         continue;
       }
 
-      const auto connection_record = bag->topic_connection_map_.at(topic);
-      for (const auto &block : connection_record->blocks) {
-        bag_wrappers_[bag]->chunks_to_parse.emplace(block.into_chunk);
-      }
+      for (const auto &connection_record : bag->topic_connection_map_.at(topic)) {
+        for (const auto &block : connection_record->blocks) {
+          bag_wrappers_[bag]->chunks_to_parse.emplace(block.into_chunk);
+        }
 
-      bag_wrappers_[bag]->connection_ids.emplace(connection_record->id);
+        bag_wrappers_[bag]->connection_ids.emplace(connection_record->id);
+      }
     }
   }
 

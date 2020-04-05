@@ -334,7 +334,7 @@ bool Bag::readRecords() {
         connections_[connection_id].id = connection_id;
         connections_[connection_id].topic = topic;
         connections_[connection_id].data = connection_data;
-        topic_connection_map_[topic] = &connections_[connection_id];
+        topic_connection_map_[topic].emplace_back(&connections_[connection_id]);
 
         // Parse message definition
         auto ast = std::make_shared<ros_msg_def>();

@@ -118,7 +118,7 @@ class Bag {
 
   // Bag data
   std::vector<RosBagTypes::connection_record_t> connections_;
-  std::unordered_map<std::string, RosBagTypes::connection_record_t *> topic_connection_map_;
+  std::unordered_map<std::string, std::vector<RosBagTypes::connection_record_t *>> topic_connection_map_;
   std::vector<RosBagTypes::chunk_t> chunks_;
   uint64_t index_pos_ = 0;
   std::unordered_map<std::string, std::shared_ptr<ros_msg_def>> message_schemata_;
