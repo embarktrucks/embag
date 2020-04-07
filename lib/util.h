@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/iostreams/stream.hpp>
+
 namespace Embag {
 
 // std::make_unique is not available in c++11 :(

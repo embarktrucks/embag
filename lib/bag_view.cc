@@ -1,7 +1,6 @@
 #include "bag_view.h"
 #include "ros_message.h"
 #include "ros_value.h"
-#include "message_parser.h"
 #include "util.h"
 
 namespace Embag {
@@ -30,18 +29,15 @@ std::unique_ptr<RosMessage> View::iterator::operator*() const {
   const auto &connection = wrapper->bag->connections_[wrapper->current_connection_id];
   const auto &msg_def = wrapper->bag->message_schemata_[connection.topic];
 
-  // TODO: streaming this data means copying it into basic types.  It would be faster to just set pointers...
-  message_stream stream{wrapper->current_message_data, wrapper->current_message_len};
-
   auto message = make_unique<RosMessage>();
-  MessageParser msg{stream, connection.data, msg_def};
 
-  message->data_ = msg.parse();
   message->topic = connection.topic;
   message->timestamp = wrapper->current_timestamp;
   message->md5 = connection.data.md5sum;
   message->raw_data = wrapper->current_message_data;
   message->raw_data_len = wrapper->current_message_len;
+  message->msg_def_ = msg_def;
+  message->scope_ = connection.data.scope;
 
   return message;
 }

@@ -8,7 +8,7 @@
 
 namespace Embag {
 
-Bag::primitive_type_map_t Bag::ros_msg_field::primitive_type_map_ = {
+RosMsgTypes::primitive_type_map_t RosMsgTypes::ros_msg_field::primitive_type_map_ = {
     {"bool", RosValue::ros_bool},
     {"int8", RosValue::int8},
     {"uint8", RosValue::uint8},
@@ -134,27 +134,27 @@ RosBagTypes::header_t Bag::readHeader(const RosBagTypes::record_t &record) {
 // TODO: move this stuff elsewhere?
 // Parser structures and binding - must exist in global namespace
 BOOST_FUSION_ADAPT_STRUCT(
-    Embag::Bag::ros_msg_field,
+    Embag::RosMsgTypes::ros_msg_field,
     type_name,
     array_size,
     field_name,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    Embag::Bag::ros_msg_constant,
+    Embag::RosMsgTypes::ros_msg_constant,
     type_name,
     constant_name,
     value,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    Embag::Bag::ros_embedded_msg_def,
+    Embag::RosMsgTypes::ros_embedded_msg_def,
     type_name,
     members,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    Embag::Bag::ros_msg_def,
+    Embag::RosMsgTypes::ros_msg_def,
     members,
     embedded_types,
 )
@@ -189,7 +189,7 @@ struct ros_msg_skipper : qi::grammar<Iterator> {
 // ROS message parsing
 // See http://wiki.ros.org/msg for details on the format
 template<typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
-struct ros_msg_grammar : qi::grammar<Iterator, Bag::ros_msg_def(), Skipper> {
+struct ros_msg_grammar : qi::grammar<Iterator, RosMsgTypes::ros_msg_def(), Skipper> {
   ros_msg_grammar() : ros_msg_grammar::base_type(msg) {
     // TODO clean these up
     using qi::lit;
@@ -227,17 +227,17 @@ struct ros_msg_grammar : qi::grammar<Iterator, Bag::ros_msg_def(), Skipper> {
         >> *embedded_type;
   }
 
-  qi::rule<Iterator, Bag::ros_msg_def(), Skipper> msg;
-  qi::rule<Iterator, Bag::ros_msg_field(), Skipper> field;
+  qi::rule<Iterator, RosMsgTypes::ros_msg_def(), Skipper> msg;
+  qi::rule<Iterator, RosMsgTypes::ros_msg_field(), Skipper> field;
   qi::rule<Iterator, std::string(), Skipper> type;
   qi::rule<Iterator, int32_t(), Skipper> array_size;
   qi::rule<Iterator, std::string(), Skipper> field_name;
-  qi::rule<Iterator, Bag::ros_embedded_msg_def(), Skipper> embedded_type;
+  qi::rule<Iterator, RosMsgTypes::ros_embedded_msg_def(), Skipper> embedded_type;
   qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
-  qi::rule<Iterator, Bag::ros_msg_constant(), Skipper> constant;
+  qi::rule<Iterator, RosMsgTypes::ros_msg_constant(), Skipper> constant;
   qi::rule<Iterator, std::string(), Skipper> constant_name;
   qi::rule<Iterator, std::string(), Skipper> constant_value;
-  qi::rule<Iterator, Bag::ros_msg_member(), Skipper> member;
+  qi::rule<Iterator, RosMsgTypes::ros_msg_member(), Skipper> member;
 };
 
 bool Bag::readRecords() {
@@ -337,7 +337,7 @@ bool Bag::readRecords() {
         topic_connection_map_[topic].emplace_back(&connections_[connection_id]);
 
         // Parse message definition
-        auto ast = std::make_shared<ros_msg_def>();
+        auto ast = std::make_shared<RosMsgTypes::ros_msg_def>();
 
         std::string::const_iterator iter = connection_data.message_definition.begin();
         std::string::const_iterator end = connection_data.message_definition.end();
