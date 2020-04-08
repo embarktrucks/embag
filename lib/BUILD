@@ -46,6 +46,7 @@ pkg_tar(
         "message_parser.h",
         "ros_bag_types.h",
         "ros_message.h",
+        "ros_msg_types.h",
         "ros_value.h",
         "util.h",
     ],
@@ -86,5 +87,5 @@ pkg_deb(
     homepage = "https://github.com/embarktrucks/embag",
     maintainer = "Jason Snell <jason@embarktrucks.com>",
     package = "embag",
-    version = "0.0.8",
+    version = "0.0.9",
 )

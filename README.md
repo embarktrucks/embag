@@ -26,10 +26,13 @@ To build, run:
     # Embag echo demo binary
     bazel build //embag_echo:embag_echo
     # Run with
-    bazel-bin/embag_echo/embag_echo /path/to/sweet.bag /awesome/topic
+    bazel-bin/embag_echo/embag_echo --bag /path/to/sweet.bag --topic /awesome/topic
 
     # Shared object file
     bazel build //lib:embag.so
+
+    # Debian package
+    bazel build //lib:embag-debian
 
 ## Thank you...
 This library was heavily influenced by:

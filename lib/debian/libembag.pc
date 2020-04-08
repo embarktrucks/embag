@@ -3,7 +3,7 @@
 prefix=/usr
 libdir=/usr/lib/x86_64-linux-gnu
 includedir=${prefix}/include/embag
-version = 0.0.8
+version = 0.0.9
 
 Name: embag
 Description: fast dependecy free ROS bag file reader
