@@ -24,6 +24,14 @@ class RosMessage {
     return data_->get(key);
   }
 
+  bool has(const std::string &key) {
+    if (!parsed_) {
+      hydrate();
+    }
+
+    return data_->has(key);
+  }
+
   void print() {
     if (!parsed_) {
       hydrate();
