@@ -69,6 +69,14 @@ class RosValue {
     return objects[key]->getValueImpl(identity<T>());
   }
 
+  template<typename T>
+  T &as() {
+    if (type == object) {
+      throw std::runtime_error("Value cannot be an object for as");
+    }
+    return getValueImpl(identity<T>());
+  }
+
   void print(const std::string &path = "");
 
  private:
