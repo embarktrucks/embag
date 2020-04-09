@@ -23,77 +23,77 @@ const std::unique_ptr<RosValue> &RosValue::at(const size_t idx) const {
 }
 
 const bool &RosValue::getValueImpl(identity<bool>) const {
-  if (type != bool_value) {
+  if (type != ros_bool) {
     throw std::runtime_error("Value is not a bool");
   }
   return bool_value;
 }
 
 const int8_t &RosValue::getValueImpl(identity<int8_t>) const {
-  if (type != int8_value) {
+  if (type != int8) {
     throw std::runtime_error("Value is not an int8");
   }
   return int8_value;
 }
 
 const uint8_t &RosValue::getValueImpl(identity<uint8_t>) const {
-  if (type != uint8_value) {
+  if (type != uint8) {
     throw std::runtime_error("Value is not a uint8");
   }
   return uint8_value;
 }
 
 const int16_t &RosValue::getValueImpl(identity<int16_t>) const {
-  if (type != int16_value) {
+  if (type != int16) {
     throw std::runtime_error("Value is not an int16");
   }
   return int16_value;
 }
 
 const uint16_t &RosValue::getValueImpl(identity<uint16_t>) const {
-  if (type != uint16_value) {
+  if (type != uint16) {
     throw std::runtime_error("Value is not a uint16");
   }
   return uint16_value;
 }
 
 const int32_t &RosValue::getValueImpl(identity<int32_t>) const {
-  if (type != int32_value) {
+  if (type != int32) {
     throw std::runtime_error("Value is not an int32");
   }
   return int32_value;
 }
 
 const uint32_t &RosValue::getValueImpl(identity<uint32_t>) const {
-  if (type != uint32_value) {
+  if (type != uint32) {
     throw std::runtime_error("Value is not a uint32");
   }
   return uint32_value;
 }
 
 const int64_t &RosValue::getValueImpl(identity<int64_t>) const {
-  if (type != int64_value) {
+  if (type != int64) {
     throw std::runtime_error("Value is not an int64");
   }
   return int64_value;
 }
 
 const uint64_t &RosValue::getValueImpl(identity<uint64_t>) const {
-  if (type != uint64_value) {
+  if (type != uint64) {
     throw std::runtime_error("Value is not a uint64");
   }
   return uint64_value;
 }
 
 const float &RosValue::getValueImpl(identity<float>) const {
-  if (type != uint64_value) {
+  if (type != uint64) {
     throw std::runtime_error("Value is not a float");
   }
   return float32_value;
 }
 
 const double &RosValue::getValueImpl(identity<double>) const {
-  if (type != uint64_value) {
+  if (type != uint64) {
     throw std::runtime_error("Value is not a double");
   }
   return float64_value;
