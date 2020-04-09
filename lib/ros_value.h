@@ -58,9 +58,11 @@ class RosValue {
   explicit RosValue(const Type type) : type(type) {}
 
   // Convenience accessors
-  const std::unique_ptr<RosValue> &operator()(const std::string &key) const;
-  const std::unique_ptr<RosValue> &get(const std::string &key) const;
-  const std::unique_ptr<RosValue> &at(size_t idx) const;
+  const RosValue &operator()(const std::string &key) const;
+  const RosValue &operator[](const std::string &key) const;
+  const RosValue &operator[](const size_t idx) const;
+  const RosValue &get(const std::string &key) const;
+  const RosValue &at(size_t idx) const;
 
   template<typename T>
   const T &getValue(const std::string &key) const {
@@ -83,6 +85,14 @@ class RosValue {
       throw std::runtime_error("Value is not an object");
     }
     return objects.count(key) > 0;
+  }
+
+  size_t size() const {
+    if (type != array) {
+      throw std::runtime_error("Value is not an array");
+    }
+
+    return values.size();
   }
 
   void print(const std::string &path = "") const;

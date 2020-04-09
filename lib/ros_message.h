@@ -16,12 +16,12 @@ class RosMessage {
   char* raw_data = nullptr;
   uint32_t raw_data_len = 0;
 
-  const std::unique_ptr<RosValue> &data(const std::string &key) {
+  const RosValue &data() {
     if (!parsed_) {
       hydrate();
     }
 
-    return data_->get(key);
+    return *data_;
   }
 
   bool has(const std::string &key) {

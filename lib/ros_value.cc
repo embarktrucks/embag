@@ -4,22 +4,31 @@
 
 namespace Embag {
 
-const std::unique_ptr<RosValue> &RosValue::operator()(const std::string &key) const {
+const RosValue &RosValue::operator()(const std::string &key) const {
   return get(key);
 }
 
-const std::unique_ptr<RosValue> &RosValue::get(const std::string &key) const {
+const RosValue &RosValue::operator[](const std::string &key) const {
+  return get(key);
+}
+
+const RosValue &RosValue::operator[](const size_t idx) const {
+  return at(idx);
+}
+
+const RosValue &RosValue::get(const std::string &key) const {
   if (type != object) {
     throw std::runtime_error("Value is not an object");
   }
-  return objects.at(key);
+  return *objects.at(key);
 }
 
-const std::unique_ptr<RosValue> &RosValue::at(const size_t idx) const {
+
+const RosValue &RosValue::at(const size_t idx) const {
   if (type != array) {
     throw std::runtime_error("Value is not an array");
   }
-  return values.at(idx);
+  return *values.at(idx);
 }
 
 const bool &RosValue::getValueImpl(identity<bool>) const {
@@ -86,14 +95,14 @@ const uint64_t &RosValue::getValueImpl(identity<uint64_t>) const {
 }
 
 const float &RosValue::getValueImpl(identity<float>) const {
-  if (type != uint64) {
+  if (type != float32) {
     throw std::runtime_error("Value is not a float");
   }
   return float32_value;
 }
 
 const double &RosValue::getValueImpl(identity<double>) const {
-  if (type != uint64) {
+  if (type != float64) {
     throw std::runtime_error("Value is not a double");
   }
   return float64_value;

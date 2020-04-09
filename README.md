@@ -5,15 +5,16 @@ This library reads [ROS](https://wiki.ros.org) [bag files](http://wiki.ros.org/B
 TBD
 
 ## Usage
+
 ```c++
-Embag reader{filename};
+Embag::View view{};
+auto bag = std::make_shared<Embag::Bag>(filename);
+view.addBag(bag);
 
-for (const auto &message : reader.getView().getMessages({"/fun/topic", "/another/topic"})) {
+for (const auto &message : view.getMessages({"/fun/topic", "/another/topic"})) {
   std::cout << message->timestamp.secs << " : " << message->topic << std::endl;
-  std::cout << message->data("fun_array")->at(0)->getValue<std::string>("fun_field") << std::endl;
+  std::cout << message->data()["fun_array"][0].as<std::string>("fun_field") << std::endl;
 }
-
-reader.close();
 ```
 
 ## Building
