@@ -12,7 +12,6 @@
 #include <lz4frame.h>
 
 #include "ros_value.h"
-#include "bag_view.h"
 #include "ros_bag_types.h"
 #include "ros_msg_types.h"
 
@@ -47,6 +46,14 @@ class Bag {
 
   bool open();
   bool close();
+
+  std::vector<std::string> topics() {
+    std::vector<std::string> topics;
+    for (auto item : topic_connection_map_) {
+      topics.emplace_back(item.first);
+    }
+    return topics;
+  }
 
  private:
   const std::string MAGIC_STRING = "#ROSBAG V";

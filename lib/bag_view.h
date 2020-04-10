@@ -13,9 +13,6 @@
 
 namespace Embag {
 
-// Forward declaration
-class Bag;
-
 class View {
  public:
   View () = default;
@@ -118,6 +115,15 @@ class View {
 
   // Bag set manipulation
   View addBag(std::shared_ptr<Bag> bag);
+
+  std::vector<std::string> topics() {
+    std::vector<std::string> topics;
+    for (auto bag : bags_) {
+      auto new_topics = bag->topics();
+      topics.insert(topics.begin(), new_topics.begin(), new_topics.end());
+    }
+    return topics;
+  }
 
  private:
   std::vector<std::shared_ptr<Bag>> bags_;
