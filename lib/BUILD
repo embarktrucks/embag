@@ -3,13 +3,12 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 cc_library(
     name = "embag",
     srcs = [
-        "bag_view.cc",
         "embag.cc",
         "message_parser.cc",
         "ros_value.cc",
+        "view.cc",
     ],
     hdrs = [
-        "bag_view.h",
         "embag.h",
         "message_parser.h",
         "ros_bag_types.h",
@@ -17,6 +16,7 @@ cc_library(
         "ros_msg_types.h",
         "ros_value.h",
         "util.h",
+        "view.h",
     ],
     visibility = ["//embag_echo:__pkg__"],
     deps = [
@@ -41,7 +41,6 @@ pkg_tar(
 pkg_tar(
     name = "embag-headers",
     srcs = [
-        "bag_view.h",
         "embag.h",
         "message_parser.h",
         "ros_bag_types.h",
@@ -49,6 +48,7 @@ pkg_tar(
         "ros_msg_types.h",
         "ros_value.h",
         "util.h",
+        "view.h",
     ],
     mode = "0644",
     package_dir = "/usr/include/embag",
@@ -87,5 +87,5 @@ pkg_deb(
     homepage = "https://github.com/embarktrucks/embag",
     maintainer = "Jason Snell <jason@embarktrucks.com>",
     package = "embag",
-    version = "0.0.12",
+    version = "0.0.14",
 )

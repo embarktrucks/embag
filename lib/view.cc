@@ -1,4 +1,4 @@
-#include "bag_view.h"
+#include "view.h"
 #include "ros_message.h"
 #include "ros_value.h"
 #include "util.h"
