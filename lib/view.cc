@@ -22,14 +22,14 @@ View::iterator::iterator(View *view, begin_cond_t begin_cond) : view_(view) {
   }
 }
 
-std::unique_ptr<RosMessage> View::iterator::operator*() const {
+std::shared_ptr<RosMessage> View::iterator::operator*() const {
   // Take the first wrapper from the priority queue
   auto wrapper = msg_queue_.top();
 
   const auto &connection = wrapper->bag->connections_[wrapper->current_connection_id];
   const auto &msg_def = wrapper->bag->message_schemata_[connection.topic];
 
-  auto message = make_unique<RosMessage>();
+  auto message = std::make_shared<RosMessage>();
 
   message->topic = connection.topic;
   message->timestamp = wrapper->current_timestamp;
@@ -158,6 +158,7 @@ View View::getMessages() {
 
   for (const auto& bag : bags_) {
     bag_wrappers_[bag] = std::make_shared<iterator::bag_wrapper_t>();
+    bag_wrappers_[bag]->bag = bag;
 
     for (const auto &chunk : bag->chunks_) {
       bag_wrappers_[bag]->chunks_to_parse.emplace(&chunk);

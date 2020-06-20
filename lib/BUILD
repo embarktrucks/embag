@@ -19,7 +19,10 @@ cc_library(
         "util.h",
         "view.h",
     ],
-    visibility = ["//embag_echo:__pkg__"],
+    visibility = [
+        "//embag_echo:__pkg__",
+        "//python:__pkg__",
+    ],
     deps = [
         "@boost//:fusion",
         "@boost//:iostreams",
@@ -89,5 +92,5 @@ pkg_deb(
     homepage = "https://github.com/embarktrucks/embag",
     maintainer = "Jason Snell <jason@embarktrucks.com>",
     package = "embag",
-    version = "0.0.15",
+    version = "0.0.16",
 )

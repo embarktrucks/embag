@@ -41,9 +41,17 @@ class RosMessage {
     data_->print();
   }
 
+  std::string toString() {
+    if (!parsed_) {
+      hydrate();
+    }
+
+    return data_->toString();
+  }
+
  private:
   bool parsed_ = false;
-  std::unique_ptr<RosValue> data_;
+  std::shared_ptr<RosValue> data_;
   std::shared_ptr<RosMsgTypes::ros_msg_def> msg_def_;
   std::string scope_;
 

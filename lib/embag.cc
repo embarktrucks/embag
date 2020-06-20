@@ -9,25 +9,25 @@
 namespace Embag {
 
 RosMsgTypes::primitive_type_map_t RosMsgTypes::ros_msg_field::primitive_type_map_ = {
-    {"bool", RosValue::ros_bool},
-    {"int8", RosValue::int8},
-    {"uint8", RosValue::uint8},
-    {"int16", RosValue::int16},
-    {"uint16", RosValue::uint16},
-    {"uint8", RosValue::uint8},
-    {"int32", RosValue::int32},
-    {"uint32", RosValue::uint32},
-    {"int64", RosValue::int64},
-    {"uint64", RosValue::uint64},
-    {"float32", RosValue::float32},
-    {"float64", RosValue::float64},
-    {"string", RosValue::string},
-    {"time", RosValue::ros_time},
-    {"duration", RosValue::ros_duration},
+    {"bool", RosValue::Type::ros_bool},
+    {"int8", RosValue::Type::int8},
+    {"uint8", RosValue::Type::uint8},
+    {"int16", RosValue::Type::int16},
+    {"uint16", RosValue::Type::uint16},
+    {"uint8", RosValue::Type::uint8},
+    {"int32", RosValue::Type::int32},
+    {"uint32", RosValue::Type::uint32},
+    {"int64", RosValue::Type::int64},
+    {"uint64", RosValue::Type::uint64},
+    {"float32", RosValue::Type::float32},
+    {"float64", RosValue::Type::float64},
+    {"string", RosValue::Type::string},
+    {"time", RosValue::Type::ros_time},
+    {"duration", RosValue::Type::ros_duration},
 
     // Deprecated types
-    {"byte", RosValue::int8},
-    {"char", RosValue::uint8},
+    {"byte", RosValue::Type::int8},
+    {"char", RosValue::Type::uint8},
 };
 
 bool Bag::open() {

@@ -13,7 +13,7 @@ namespace Embag {
 class RosValue {
  public:
 
-  enum Type {
+  enum class Type {
     ros_bool,
     int8,
     uint8,
@@ -38,6 +38,10 @@ class RosValue {
   struct ros_time_t {
     uint32_t secs = 0;
     uint32_t nsecs = 0;
+
+    double to_sec() const {
+      return float(secs) + float(nsecs) / 1e9;
+    }
   };
 
   struct ros_duration_t {
@@ -68,7 +72,7 @@ class RosValue {
 
   template<typename T>
   const T &getValue(const std::string &key) const {
-    if (type != object) {
+    if (type != Type::object) {
       throw std::runtime_error("Value is not an object");
     }
     return objects.at(key)->getValueImpl(identity<T>());
@@ -76,31 +80,48 @@ class RosValue {
 
   template<typename T>
   const T &as() const {
-    if (type == object) {
+    if (type == Type::object) {
       throw std::runtime_error("Value cannot be an object for as");
     }
     return getValueImpl(identity<T>());
   }
 
   bool has(const std::string &key) const {
-    if (type != object) {
+    if (type != Type::object) {
       throw std::runtime_error("Value is not an object");
     }
     return objects.count(key) > 0;
   }
 
   size_t size() const {
-    if (type != array) {
+    if (type != Type::array) {
       throw std::runtime_error("Value is not an array");
     }
 
     return values.size();
   }
 
+  std::unordered_map<std::string, std::shared_ptr<RosValue>> getObjects() const {
+    return objects;
+  }
+
+  std::vector<std::shared_ptr<RosValue>> getValues() const {
+    return values;
+  }
+
+  blob_t getBlob() const {
+    return blob_storage;
+  }
+
+  std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
   const nonstd::span<char> original_buffer() const {
     return original_buffer_;
   }
+
+  // Used for accessor template resolution
+  template<typename T>
+  struct identity { typedef T type; };
 
  private:
 
@@ -125,15 +146,11 @@ class RosValue {
   // Only set when this is a message (type = object)
   nonstd::span<char> original_buffer_;
 
-  std::unordered_map<std::string, std::unique_ptr<RosValue>> objects;
-  std::vector<std::unique_ptr<RosValue>> values;
+  std::unordered_map<std::string, std::shared_ptr<RosValue>> objects;
+  std::vector<std::shared_ptr<RosValue>> values;
 
   // Default type
-  Type type = object;
-
-  // Used for accessor template resolution
-  template<typename T>
-  struct identity { typedef T type; };
+  Type type = Type::object;
 
   // Primitive accessors
   const bool &getValueImpl(identity<bool>) const;
