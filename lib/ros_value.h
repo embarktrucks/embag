@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "span.hpp"
+
 namespace Embag {
 
 class RosValue {
@@ -96,6 +98,9 @@ class RosValue {
   }
 
   void print(const std::string &path = "") const;
+  const nonstd::span<char> original_buffer() const {
+    return original_buffer_;
+  }
 
  private:
 
@@ -116,6 +121,9 @@ class RosValue {
   ros_duration_t duration_value;
 
   blob_t blob_storage;
+
+  // Only set when this is a message (type = object)
+  nonstd::span<char> original_buffer_;
 
   std::unordered_map<std::string, std::unique_ptr<RosValue>> objects;
   std::vector<std::unique_ptr<RosValue>> values;

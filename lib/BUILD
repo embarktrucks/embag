@@ -15,6 +15,7 @@ cc_library(
         "ros_message.h",
         "ros_msg_types.h",
         "ros_value.h",
+        "span.hpp",
         "util.h",
         "view.h",
     ],
@@ -47,6 +48,7 @@ pkg_tar(
         "ros_message.h",
         "ros_msg_types.h",
         "ros_value.h",
+        "span.hpp",
         "util.h",
         "view.h",
     ],
@@ -87,5 +89,5 @@ pkg_deb(
     homepage = "https://github.com/embarktrucks/embag",
     maintainer = "Jason Snell <jason@embarktrucks.com>",
     package = "embag",
-    version = "0.0.14",
+    version = "0.0.15",
 )

@@ -1,3 +1,7 @@
+#include <iostream>
+#include <memory>
+#include <string>
+
 #include <boost/optional.hpp>
 
 #include "message_parser.h"
@@ -7,6 +11,7 @@ namespace Embag {
 
 std::unique_ptr<RosValue> MessageParser::parse() {
   auto parsed_message = make_unique<RosValue>(RosValue::Type::object);
+  parsed_message->original_buffer_ = stream_;
 
   for (const auto &member : msg_def_->members) {
     if (member.which() == 0) {  // ros_msg_field
@@ -26,7 +31,7 @@ std::unique_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ro
     // Undefined number of array objects
     case -1: {
       uint32_t array_len;
-      stream_.read(reinterpret_cast<char *>(&array_len), sizeof(array_len));
+      read_into(&array_len);
 
       parsed_field->type = RosValue::Type::array;
 
@@ -52,6 +57,7 @@ std::unique_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ro
       } else {
         // Embedded type
         parsed_field->type = RosValue::Type::object;
+        parsed_field->original_buffer_ = stream_;
         auto embedded_type = getEmbeddedType(scope, field);
         for (const auto &member : embedded_type.members) {
           if (member.which() == 0) {  // ros_msg_field
@@ -90,6 +96,7 @@ void MessageParser::parseArray(const size_t array_len,
 
 std::unique_ptr<RosValue> MessageParser::parseMembers(RosMsgTypes::ros_embedded_msg_def &embedded_type) {
   auto values = make_unique<RosValue>(RosValue::Type::object);
+  values->original_buffer_ = stream_;
 
   for (const auto &member : embedded_type.members) {
     if (member.which() == 0) {  // ros_msg_field
@@ -164,10 +171,20 @@ std::unique_ptr<RosValue> MessageParser::getPrimitiveBlob(RosMsgTypes::ros_msg_f
   }
 
   value->blob_storage.data.reserve(bytes);
-  value->blob_storage.data = std::string(bytes, 0);
-  stream_.read(&value->blob_storage.data[0], bytes);
+  read_into(value->blob_storage.data, bytes);
 
   return value;
+}
+
+template <typename T>
+void MessageParser::read_into(T* dest) {
+  memcpy(dest, stream_.data(), sizeof(T));
+  stream_ = stream_.subspan(sizeof(T));
+}
+
+void MessageParser::read_into(std::string& dest, size_t size) {
+  dest = {stream_.data(), size};
+  stream_ = stream_.subspan(size);
 }
 
 std::unique_ptr<RosValue> MessageParser::getPrimitiveField(RosMsgTypes::ros_msg_field &field) {
@@ -176,64 +193,64 @@ std::unique_ptr<RosValue> MessageParser::getPrimitiveField(RosMsgTypes::ros_msg_
 
   switch (type) {
     case RosValue::ros_bool: {
-      stream_.read(reinterpret_cast<char *>(&value->bool_value), sizeof(value->bool_value));
+      read_into(&value->bool_value);
       break;
     }
     case RosValue::int8: {
-      stream_.read(reinterpret_cast<char *>(&value->int8_value), sizeof(value->int8_value));
+      read_into(&value->int8_value);
       break;
     }
     case RosValue::uint8: {
-      stream_.read(reinterpret_cast<char *>(&value->uint8_value), sizeof(value->uint8_value));
+      read_into(&value->uint8_value);
       break;
     }
     case RosValue::int16: {
-      stream_.read(reinterpret_cast<char *>(&value->int16_value), sizeof(value->int16_value));
+      read_into(&value->int16_value);
       break;
     }
     case RosValue::uint16: {
-      stream_.read(reinterpret_cast<char *>(&value->uint16_value), sizeof(value->uint16_value));
+      read_into(&value->uint16_value);
       break;
     }
     case RosValue::int32: {
-      stream_.read(reinterpret_cast<char *>(&value->int32_value), sizeof(value->int32_value));
+      read_into(&value->int32_value);
       break;
     }
     case RosValue::uint32: {
-      stream_.read(reinterpret_cast<char *>(&value->uint32_value), sizeof(value->uint32_value));
+      read_into(&value->uint32_value);
       break;
     }
     case RosValue::int64: {
-      stream_.read(reinterpret_cast<char *>(&value->int64_value), sizeof(value->int64_value));
+      read_into(&value->int64_value);
       break;
     }
     case RosValue::uint64: {
-      stream_.read(reinterpret_cast<char *>(&value->uint64_value), sizeof(value->uint64_value));
+      read_into(&value->uint64_value);
       break;
     }
     case RosValue::float32: {
-      stream_.read(reinterpret_cast<char *>(&value->float32_value), sizeof(value->float32_value));
+      read_into(&value->float32_value);
       break;
     }
     case RosValue::float64: {
-      stream_.read(reinterpret_cast<char *>(&value->float64_value), sizeof(value->float64_value));
+      read_into(&value->float64_value);
       break;
     }
     case RosValue::string: {
       uint32_t string_len;
-      stream_.read(reinterpret_cast<char *>(&string_len), sizeof(string_len));
-      value->string_value = std::string(string_len, 0);
-      stream_.read(&value->string_value[0], string_len);
+      read_into(&string_len);
+      value->string_value.reserve(string_len);
+      read_into(value->string_value, string_len);
       break;
     }
     case RosValue::ros_time: {
-      stream_.read(reinterpret_cast<char *>(&value->time_value.secs), sizeof(value->time_value.secs));
-      stream_.read(reinterpret_cast<char *>(&value->time_value.nsecs), sizeof(value->time_value.nsecs));
+      read_into(&value->time_value.secs);
+      read_into(&value->time_value.nsecs);
       break;
     }
     case RosValue::ros_duration: {
-      stream_.read(reinterpret_cast<char *>(&value->duration_value.secs), sizeof(value->duration_value.secs));
-      stream_.read(reinterpret_cast<char *>(&value->duration_value.nsecs), sizeof(value->duration_value.nsecs));
+      read_into(&value->duration_value.secs);
+      read_into(&value->duration_value.nsecs);
       break;
     }
     default: {

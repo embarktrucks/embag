@@ -5,6 +5,7 @@
 #include "ros_value.h"
 #include "message_parser.h"
 #include "ros_msg_types.h"
+#include "span.hpp"
 #include "util.h"
 
 namespace Embag {
