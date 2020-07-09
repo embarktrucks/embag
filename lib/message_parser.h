@@ -5,13 +5,14 @@
 #include "ros_value.h"
 #include "ros_bag_types.h"
 #include "ros_msg_types.h"
+#include "span.hpp"
 #include "util.h"
 
 namespace Embag {
 class MessageParser {
  public:
   MessageParser(
-      message_stream &stream,
+      nonstd::span<char> stream,
       const std::string &scope,
       const std::shared_ptr<RosMsgTypes::ros_msg_def> msg_def
   ) : stream_(stream), scope_(scope), msg_def_(msg_def) {};
@@ -27,7 +28,11 @@ class MessageParser {
   std::unique_ptr<RosValue> getPrimitiveBlob(RosMsgTypes::ros_msg_field &field, uint32_t len);
   std::unique_ptr<RosValue> getPrimitiveField(RosMsgTypes::ros_msg_field &field);
 
-  message_stream &stream_;
+  template <typename T>
+  void read_into(T* dest);
+  void read_into(std::string& dest, size_t size);
+
+  nonstd::span<char> stream_;
   const std::string scope_;
   const std::shared_ptr<RosMsgTypes::ros_msg_def> msg_def_;
 };

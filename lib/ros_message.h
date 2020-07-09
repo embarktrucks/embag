@@ -5,6 +5,7 @@
 #include "ros_value.h"
 #include "message_parser.h"
 #include "ros_msg_types.h"
+#include "span.hpp"
 #include "util.h"
 
 namespace Embag {
@@ -48,7 +49,7 @@ class RosMessage {
 
   void hydrate() {
     // FIXME: streaming this data means copying it into basic types.  It would be faster to just set pointers...
-    message_stream stream{raw_data, raw_data_len};
+    nonstd::span<char> stream{raw_data, raw_data_len};
 
     MessageParser msg{stream, scope_, msg_def_};
 
