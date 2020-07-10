@@ -35,6 +35,9 @@ To build, run:
     # Debian package
     bazel build //lib:embag-debian
 
+    # Python Wheel (Python version must match Databricks python version)
+    PYTHON_BIN_PATH=/usr/local/bin/python3.7.5 bazel build //python:wheel
+
 ## Thank you...
 This library was heavily influenced by:
 - [bag_rdr: a zero-copy ROS bag parser library](https://github.com/starship-technologies/bag_rdr)

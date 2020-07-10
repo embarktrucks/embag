@@ -39,8 +39,8 @@ rules_pkg_dependencies()
 # Pybind11
 http_archive(
     name = "pybind11_bazel",
-    strip_prefix = "pybind11_bazel-16ed1b8f308d2b3dec9d7e6decaad49ce4d28b43",
-    urls = ["https://github.com/pybind/pybind11_bazel/archive/16ed1b8.zip"],
+    strip_prefix = "pybind11_bazel-203508e14aab7309892a1c5f7dd05debda22d9a5",
+    urls = ["https://github.com/pybind/pybind11_bazel/archive/203508e.zip"],
 )
 
 http_archive(
@@ -52,7 +52,11 @@ http_archive(
 
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 
-python_configure(name = "local_config_python")
+python_configure(
+    name = "local_config_python",
+    # Change this to "2" when compiling for Python 2.  I'm unclear if it's possible to have both targets at the same time...
+    python_version = "3",
+)
 
 # Experimental python rules
 git_repository(

@@ -12,14 +12,6 @@ pybind_extension(
     ],
 )
 
-#py_library(
-#    name = "embag",
-#    srcs = ["embag.py"],
-#    data = [":embag_ext.so"],
-#    deps = [
-#    ],
-#)
-
 py_wheel(
     name = "wheel",
     author = "Jason Snell",
@@ -29,7 +21,6 @@ py_wheel(
     license = "MIT",
     # Only pure python wheels are officially supported for now...
     #platform = "linux_x86_64",
-    python_tag = "py2",
     strip_path_prefixes = [
         "python",
     ],
