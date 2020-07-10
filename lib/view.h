@@ -26,11 +26,17 @@ class View {
 
     View* view_;
     iterator() : view_(nullptr) {};
-    explicit iterator(View *view) : view_(view) {};
+
+    // Begin constructor
     iterator(View *view, begin_cond_t begin_cond);
-    iterator(const iterator& other) : view_(other.view_) {};
+    // End constructor
+    explicit iterator(View *view) : view_(view) {};
+
+    // Copy constructor
+    iterator(const iterator& other) : view_(other.view_), msg_queue_(other.msg_queue_) {};
 
     iterator& operator=(const iterator&& other) {
+      view_ = other.view_;
       msg_queue_ = other.msg_queue_;
 
       return *this;
@@ -46,7 +52,7 @@ class View {
       return !(*this == other);
     }
 
-    std::unique_ptr<RosMessage> operator*() const;
+    std::shared_ptr<RosMessage> operator*() const;
 
     iterator& operator++();
 

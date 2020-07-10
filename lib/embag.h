@@ -49,7 +49,7 @@ class Bag {
 
   std::vector<std::string> topics() {
     std::vector<std::string> topics;
-    for (auto item : topic_connection_map_) {
+    for (const auto& item : topic_connection_map_) {
       topics.emplace_back(item.first);
     }
     return topics;
