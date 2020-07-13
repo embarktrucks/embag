@@ -4,9 +4,6 @@ load("@rules_python//experimental/python:wheel.bzl", "py_wheel")
 pybind_extension(
     name = "embag",
     srcs = ["embag.cc"],
-    copts = [
-        "-g",
-    ],
     deps = [
         "//lib:embag",
     ],

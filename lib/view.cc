@@ -84,7 +84,7 @@ void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
   while (bag_wrapper->chunk_iter != bag_wrapper->chunks_to_parse.end()) {
     if (bag_wrapper->current_buffer.empty()) {
       const auto &chunk = *(bag_wrapper->chunk_iter);
-      bag_wrapper->current_buffer.reserve(chunk->uncompressed_size);
+      bag_wrapper->current_buffer.resize(chunk->uncompressed_size);
       // TODO: this really should be a function in chunks
       bag_wrapper->bag->decompressLz4Chunk(chunk->record.data,
                                            chunk->record.data_len,

@@ -35,7 +35,7 @@ To build, run:
     # Debian package
     bazel build //lib:embag-debian
 
-    # Python Wheel (Python version must match Databricks python version)
+    # Python Wheel (Python version must match Databricks Python version)
     PYTHON_BIN_PATH=/usr/local/bin/python3.7.5 bazel build //python:wheel
 
 ## Thank you...

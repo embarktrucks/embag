@@ -172,7 +172,7 @@ std::shared_ptr<RosValue> MessageParser::getPrimitiveBlob(RosMsgTypes::ros_msg_f
         read_into(&string_len);
 
         const auto string = std::make_shared<RosValue>(RosValue::Type::string);
-        value->string_value.reserve(string_len);
+        value->string_value.resize(string_len);
         read_into(value->string_value, string_len);
         value->values.emplace_back(string);
       }
@@ -185,7 +185,7 @@ std::shared_ptr<RosValue> MessageParser::getPrimitiveBlob(RosMsgTypes::ros_msg_f
     };
   }
 
-  value->blob_storage.data.reserve(bytes);
+  value->blob_storage.data.resize(bytes);
   read_into(value->blob_storage.data, bytes);
 
   return value;
@@ -254,7 +254,7 @@ std::shared_ptr<RosValue> MessageParser::getPrimitiveField(RosMsgTypes::ros_msg_
     case RosValue::Type::string: {
       uint32_t string_len;
       read_into(&string_len);
-      value->string_value.reserve(string_len);
+      value->string_value.resize(string_len);
       read_into(value->string_value, string_len);
       break;
     }
