@@ -39,12 +39,12 @@ std::shared_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ro
         return parsed_field;
       }
 
-      if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
+      if (primitive_type_map.count(field.type_name)) {
         // This is a primitive type array
         parsed_field = getPrimitiveBlob(field, array_len);
       } else {
         // This is an array of embedded types
-        auto embedded_type = getEmbeddedType(scope, field);
+        auto embedded_type = msg_def_->getEmbeddedType(scope, field);
         parseArray(array_len, embedded_type, parsed_field);
       }
       break;
@@ -52,13 +52,13 @@ std::shared_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ro
     // Not an array
     case 0: {
       // Primitive type
-      if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
+      if (primitive_type_map.count(field.type_name)) {
         parsed_field = getPrimitiveField(field);
       } else {
         // Embedded type
         parsed_field->type = RosValue::Type::object;
         parsed_field->original_buffer_ = stream_;
-        auto embedded_type = getEmbeddedType(scope, field);
+        auto embedded_type = msg_def_->getEmbeddedType(scope, field);
         for (const auto &member : embedded_type.members) {
           if (member.which() == 0) {  // ros_msg_field
             auto embedded_field = boost::get<RosMsgTypes::ros_msg_field>(member);
@@ -71,10 +71,10 @@ std::shared_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ro
     // Array with fixed size
     default: {
       parsed_field->type = RosValue::Type::array;
-      if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
+      if (primitive_type_map.count(field.type_name)) {
         parsed_field = getPrimitiveBlob(field, field.array_size);
       } else {
-        auto embedded_type = getEmbeddedType(scope, field);
+        auto embedded_type = msg_def_->getEmbeddedType(scope, field);
         parseArray(field.array_size, embedded_type, parsed_field);
       }
 
@@ -106,30 +106,6 @@ std::shared_ptr<RosValue> MessageParser::parseMembers(RosMsgTypes::ros_embedded_
   }
 
   return values;
-}
-
-RosMsgTypes::ros_embedded_msg_def MessageParser::getEmbeddedType(const std::string &scope,
-                                                           const RosMsgTypes::ros_msg_field &field) {
-  // TODO: optimize this with a map or something faster
-  for (const auto &embedded_type : msg_def_->embedded_types) {
-    if (embedded_type.type_name == field.type_name) {
-      return embedded_type;
-    }
-
-    // ROS allows a type to lack its scope
-    if (scope.length() >= embedded_type.type_name.length()) {
-      continue;
-    }
-
-    const size_t scope_pos = embedded_type.type_name.find_first_of(scope);
-    if (scope_pos != std::string::npos) {
-      if (embedded_type.type_name.substr(scope.length() + 1) == field.type_name) {
-        return embedded_type;
-      }
-    }
-  }
-
-  throw std::runtime_error("Unable to find embedded type: " + field.type_name);
 }
 
 std::shared_ptr<RosValue> MessageParser::getPrimitiveBlob(RosMsgTypes::ros_msg_field &field, uint32_t len) {

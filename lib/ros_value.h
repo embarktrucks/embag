@@ -125,18 +125,21 @@ class RosValue {
 
  private:
 
-  // TODO: union these so we use less memory
-  bool bool_value = false;
-  int8_t int8_value = 0;
-  uint8_t uint8_value = 0;
-  int16_t int16_value = 0;
-  uint16_t uint16_value = 0;
-  int32_t int32_value = 0;
-  uint32_t uint32_value = 0;
-  int64_t int64_value = 0;
-  uint64_t uint64_value = 0;
-  float float32_value = 0;
-  double float64_value = 0;
+  // TODO: use boost::variant?
+  union {
+    bool bool_value;
+    int8_t int8_value;
+    uint8_t uint8_value;
+    int16_t int16_value;
+    uint16_t uint16_value;
+    int32_t int32_value;
+    uint32_t uint32_value;
+    int64_t int64_value;
+    uint64_t uint64_value;
+    float float32_value;
+    double float64_value;
+  };
+
   std::string string_value;
   ros_time_t time_value;
   ros_duration_t duration_value;

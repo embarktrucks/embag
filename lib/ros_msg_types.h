@@ -63,6 +63,32 @@ class RosMsgTypes{
   struct ros_msg_def {
     std::vector<ros_msg_member> members;
     std::vector<ros_embedded_msg_def> embedded_types;
+
+    // This speeds up searching for embedded types during parsing.
+    bool map_set = false;
+    std::unordered_map<std::string, const RosMsgTypes::ros_embedded_msg_def*> embedded_type_map_;
+
+    Embag::RosMsgTypes::ros_embedded_msg_def getEmbeddedType(const std::string &scope,
+                                                             const Embag::RosMsgTypes::ros_msg_field &field) {
+      if (!map_set) {
+        for (const auto &embedded_type : embedded_types) {
+          embedded_type_map_[embedded_type.type_name] = &embedded_type;
+        }
+        map_set = true;
+      }
+
+      if (embedded_type_map_.count(field.type_name)) {
+        return *embedded_type_map_[field.type_name];
+      }
+
+      // ROS allows a type to lack its scope when referenced
+      const auto scoped_name = scope + '/' + field.type_name;
+      if (embedded_type_map_.count(scoped_name)) {
+        return *embedded_type_map_[scoped_name];
+      }
+
+      throw std::runtime_error("Unable to find embedded type: " + field.type_name);
+    }
   };
 };
 }

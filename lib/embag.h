@@ -37,8 +37,7 @@ class Bag {
   explicit Bag(const std::string filename) : filename_(filename) {
     const LZ4F_errorCode_t code = LZ4F_createDecompressionContext(&lz4_ctx_.ctx, LZ4F_VERSION);
     if (LZ4F_isError(code)) {
-      // FIXME
-      //std::cout << "Received error code from LZ4F_createDecompressionContext: " << code << std::endl;
+      throw std::runtime_error("Received error code from LZ4F_createDecompressionContext: " + std::to_string(code));
     }
 
     open();
@@ -47,12 +46,24 @@ class Bag {
   bool open();
   bool close();
 
-  std::vector<std::string> topics() {
+  std::vector<std::string> topics() const {
     std::vector<std::string> topics;
     for (const auto& item : topic_connection_map_) {
       topics.emplace_back(item.first);
     }
     return topics;
+  }
+
+  bool topicInBag(const std::string &topic) const {
+    return message_schemata_.count(topic) != 0;
+  }
+
+  std::shared_ptr<RosMsgTypes::ros_msg_def> msgDefForTopic(const std::string &topic) {
+    return message_schemata_[topic];
+  }
+
+  std::vector<RosBagTypes::connection_record_t *> connectionsForTopic(const std::string &topic) {
+    return topic_connection_map_[topic];
   }
 
  private:
