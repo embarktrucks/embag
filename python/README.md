@@ -39,7 +39,7 @@ import pprint
 pp = pprint.PrettyPrinter()
 
 bag = embag.Bag('/path/to/file.bag')
-pp.pprint(bag.getSchema('/cool/topic')))
+pp.pprint(bag.getSchema('/cool/topic'))
 bag.close()
 ```
 
