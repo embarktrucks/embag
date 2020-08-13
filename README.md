@@ -5,7 +5,7 @@ This library reads [ROS](https://wiki.ros.org) [bag files](http://wiki.ros.org/B
 TBD
 
 ## Usage
-
+To use the C++ API:
 ```c++
 Embag::View view{};
 auto bag = std::make_shared<Embag::Bag>(filename);
@@ -16,6 +16,7 @@ for (const auto &message : view.getMessages({"/fun/topic", "/another/topic"})) {
   std::cout << message->data()["fun_array"][0].as<std::string>("fun_field") << std::endl;
 }
 ```
+There's also a Python API.  See the [python directory](https://github.com/embarktrucks/embag/tree/master/python) for details.
 
 ## Building
 First, you'll need [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html#step-1-add-bazel-distribution-uri-as-a-package-source).   You'll also need to install the [lz4](https://github.com/lz4/lz4) dev package:
