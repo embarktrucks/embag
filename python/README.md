@@ -10,6 +10,7 @@ for topic, msg, t in bag.read_messages(topics=['/cool/topic']):
  
 bag.close()
 ```
+
 Unfortunately, this API comes with a few caveats:
 - It's slightly slower than the second, more native API.
 - You can't iterate over more than one bag file (something ROS's C++ API allows you to do.)
@@ -29,3 +30,16 @@ for msg in view.getMessages(['/cool/topic']):
 
 bag.close()
 ```
+
+If you're interested in the schema of a particular topic in a bag, embag offers a simple, machine readable format:
+```python
+import embag
+import pprint
+
+pp = pprint.PrettyPrinter()
+
+bag = embag.Bag('/path/to/file.bag')
+pp.pprint(bag.getSchema('/cool/topic')))
+bag.close()
+```
+
