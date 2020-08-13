@@ -10,8 +10,8 @@ int main(int argc, char *argv[]) {
   po::options_description desc("Usage:");
   desc.add_options()
     ("help", "produce this help message")
-    ("topic,t", po::value<std::vector<std::string> >(), "topic to print")
-    ("bag,b", po::value<std::vector<std::string> >(), "bag file to read")
+    ("topic,t", po::value<std::vector<std::string>>(), "topic to print")
+    ("bag,b", po::value<std::vector<std::string>>(), "bag file to read")
     ;
 
   po::variables_map vm;
