@@ -25,7 +25,8 @@ PYBIND11_MODULE(embag, m) {
       .def("getSchema", [](std::shared_ptr<Embag::Bag> &bag, const std::string &topic) {
         auto builder = SchemaBuilder{bag};
         return builder.generateSchema(topic);
-      });
+      })
+      .def("close", &Embag::Bag::close);
 
   py::class_<Embag::View>(m, "View")
       .def(py::init())
