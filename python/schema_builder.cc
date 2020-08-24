@@ -1,7 +1,7 @@
 #include "schema_builder.h"
 
-py::dict SchemaBuilder::generateSchema(const std::string &topic) {
-  py::dict schema{};
+py::object SchemaBuilder::generateSchema(const std::string &topic) {
+  auto schema = ordered_dict_();
 
   if (!bag_->topicInBag(topic)) {
     throw std::runtime_error(topic + " not found in bag!");
@@ -31,7 +31,7 @@ py::dict SchemaBuilder::schemaForField(const std::string &scope, const Embag::Ro
       field_def["type"] = field.type_name;
     } else {
       // Embedded type
-      auto children = py::dict{};
+      auto children = ordered_dict_();
       auto embedded_type = msg_def_->getEmbeddedType(scope, field);
       for (const auto &member : embedded_type.members) {
         if (member.which() == 0) {  // ros_msg_field
@@ -50,7 +50,7 @@ py::dict SchemaBuilder::schemaForField(const std::string &scope, const Embag::Ro
       field_def["member_type"] = field.type_name;
     } else {
       // This is an array of embedded types
-      auto children = py::dict{};
+      auto children = ordered_dict_();
       auto embedded_type = msg_def_->getEmbeddedType(scope, field);
       for (const auto &member : embedded_type.members) {
         if (member.which() == 0) {  // ros_msg_field
