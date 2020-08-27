@@ -168,7 +168,7 @@ py::dict rosValueToDict(const Embag::RosValue &ros_value) {
       }
       case Type::blob: {
         const auto &blob = value->getBlob();
-        dict[key] = py::bytes(blob.data.c_str(), blob.size);
+        dict[key] = py::bytes(blob.data.c_str(), blob.byte_size);
         break;
       }
       default: {

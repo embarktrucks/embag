@@ -79,8 +79,8 @@ py::object msgCompat(const Embag::RosValue &value) {
             break;
           }
           case Type::blob: {
-            const auto &blob = value.getBlob();
-            py_msg.attr(name) = py::bytes(blob.data.c_str(), blob.size);
+            const auto &blob = ros_value->getBlob();
+            py_msg.attr(name) = py::bytes(blob.data.c_str(), blob.byte_size);
             break;
           }
           default: {

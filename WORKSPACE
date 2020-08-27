@@ -74,3 +74,11 @@ py_repositories()
 load("@rules_python//python:pip.bzl", "pip_repositories")
 
 pip_repositories()
+
+# GTest
+git_repository(
+    name = "gtest",
+    commit = "6a7ed316a5cdc07b6d26362c90770787513822d4",
+    remote = "https://github.com/google/googletest",
+    shallow_since = "1583246693 -0500",
+)

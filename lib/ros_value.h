@@ -42,6 +42,13 @@ class RosValue {
     double to_sec() const {
       return float(secs) + float(nsecs) / 1e9;
     }
+
+    ros_time_t() {};
+    ros_time_t(const uint32_t secs, const uint32_t nsecs) : secs(secs), nsecs(nsecs) {}
+
+    bool operator==(const ros_time_t &other) const {
+      return secs == other.secs && nsecs == other.nsecs;
+    }
   };
 
   struct ros_duration_t {
@@ -51,6 +58,7 @@ class RosValue {
 
   struct blob_t {
     std::string data;
+    size_t byte_size = 0;
     size_t size = 0;
     Type type = Type::uint8;
   };
@@ -110,6 +118,10 @@ class RosValue {
   }
 
   blob_t getBlob() const {
+    if (type != Type::blob) {
+      throw std::runtime_error("Value is not blob");
+    }
+
     return blob_storage;
   }
 

@@ -161,6 +161,7 @@ std::shared_ptr<RosValue> MessageParser::getPrimitiveBlob(RosMsgTypes::ros_msg_f
     };
   }
 
+  value->blob_storage.byte_size = bytes;
   value->blob_storage.data.resize(bytes);
   read_into(value->blob_storage.data, bytes);
 

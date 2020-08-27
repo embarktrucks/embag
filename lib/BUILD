@@ -22,6 +22,7 @@ cc_library(
     visibility = [
         "//embag_echo:__pkg__",
         "//python:__pkg__",
+        "//test:__pkg__",
     ],
     deps = [
         "@boost//:fusion",
