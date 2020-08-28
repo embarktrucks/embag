@@ -144,9 +144,12 @@ TEST_F(BagTest, Messages) {
       unseen_topics.erase(message->topic);
     }
 
+    // For each topic, we'll test a few fields to make sure they're read from the bag correctly
     if (message->topic == "/base_scan") {
       ASSERT_EQ(message->md5, "90c7ef2dc6895d81024acba2ac42f369");
       ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), base_scan_seq++);
+      ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "base_laser_link");
+      ASSERT_EQ(message->data()["scan_time"].as<float>(), 0.0);
 
       // Arrays are exposed at blobs
       ASSERT_EQ(message->data()["ranges"].getType(), Embag::RosValue::Type::blob);
@@ -156,16 +159,23 @@ TEST_F(BagTest, Messages) {
       ASSERT_EQ(blob.size, 90);
       ASSERT_EQ(blob.byte_size, 90 * sizeof(float));
 
-      float ranges[blob.size];
-      std::memcpy(ranges, blob.data.data(), blob.byte_size);
-      for (const auto range : ranges) {
-        ASSERT_NE(range, 0.0);
+      auto *ranges = (float *) blob.data.data();
+      for (size_t i = 0; i < blob.size; i++) {
+        ASSERT_NE(*(ranges + i), 0.0);
       }
     }
 
     if (message->topic == "/base_pose_ground_truth") {
       ASSERT_EQ(message->md5, "cd5e73d190d741a2f92e81eda573aca7");
       ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), base_pose_seq++);
+      ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "odom");
+      ASSERT_NE(message->data()["pose"]["pose"]["position"]["x"].as<double>(), 0.0);
+
+      const auto blob = message->data()["pose"]["covariance"].getBlob();
+      auto *values = (float *) blob.data.data();
+      for (size_t i = 0; i < blob.size; i++) {
+        ASSERT_EQ(*(values + i), 0.0);
+      }
     }
   }
 
