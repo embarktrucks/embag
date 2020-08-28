@@ -151,11 +151,11 @@ py::dict rosValueToDict(const Embag::RosValue &ros_value) {
         break;
       }
       case Type::ros_time: {
-        dict[key] = value->as<Embag::RosValue::ros_time_t>();
+        dict[key] = value->as<Embag::RosValue::ros_time_t>().to_sec();
         break;
       }
       case Type::ros_duration: {
-        dict[key] = value->as<Embag::RosValue::ros_duration_t>();
+        dict[key] = value->as<Embag::RosValue::ros_duration_t>().to_sec();
         break;
       }
       case Type::object: {

@@ -66,11 +66,11 @@ py::object msgCompat(const Embag::RosValue &value) {
             break;
           }
           case Type::ros_time: {
-            py_msg.attr(name) = ros_value->as<Embag::RosValue::ros_time_t>();
+            py_msg.attr(name) = ros_value->as<Embag::RosValue::ros_time_t>().to_sec();
             break;
           }
           case Type::ros_duration: {
-            py_msg.attr(name) = ros_value->as<Embag::RosValue::ros_duration_t>();
+            py_msg.attr(name) = ros_value->as<Embag::RosValue::ros_duration_t>().to_sec();
             break;
           }
           case Type::object:

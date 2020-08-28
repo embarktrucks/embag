@@ -40,7 +40,7 @@ class RosValue {
     uint32_t nsecs = 0;
 
     double to_sec() const {
-      return float(secs) + float(nsecs) / 1e9;
+      return double(secs) + double(nsecs) / 1e9;
     }
 
     ros_time_t() {};
@@ -54,6 +54,17 @@ class RosValue {
   struct ros_duration_t {
     int32_t secs = 0;
     int32_t nsecs = 0;
+
+    double to_sec() const {
+      return double(secs) + double(nsecs) / 1e9;
+    }
+
+    ros_duration_t() {};
+    ros_duration_t(const uint32_t secs, const uint32_t nsecs) : secs(secs), nsecs(nsecs) {}
+
+    bool operator==(const ros_duration_t &other) const {
+      return secs == other.secs && nsecs == other.nsecs;
+    }
   };
 
   struct blob_t {
