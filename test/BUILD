@@ -6,7 +6,7 @@ cc_test(
     deps = [
         "//lib:embag",
         "@gtest",
-        "@gtest//:gtest_main",  # Only if hello_test.cc has no main()
+        "@gtest//:gtest_main",
     ],
 )
 
@@ -16,7 +16,5 @@ py_test(
     data = [
         "test.bag",
         "//python:embag.so",
-    ],
-    deps = [
     ],
 )
