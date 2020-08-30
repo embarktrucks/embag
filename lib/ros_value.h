@@ -43,6 +43,10 @@ class RosValue {
       return double(secs) + double(nsecs) / 1e9;
     }
 
+    long to_nsec() const {
+      return long(secs) * long(1e9) + long(nsecs);
+    }
+
     ros_time_t() {};
     ros_time_t(const uint32_t secs, const uint32_t nsecs) : secs(secs), nsecs(nsecs) {}
 
@@ -57,6 +61,10 @@ class RosValue {
 
     double to_sec() const {
       return double(secs) + double(nsecs) / 1e9;
+    }
+
+    long to_nsec() const {
+      return long(secs) * long(1e9) + long(nsecs);
     }
 
     ros_duration_t() {};

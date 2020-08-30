@@ -72,13 +72,13 @@ PYBIND11_MODULE(embag, m) {
       .def_readonly("nsecs", &Embag::RosValue::ros_time_t::nsecs)
       .def("to_sec", &Embag::RosValue::ros_time_t::to_sec)
       .def("__str__", [](Embag::RosValue::ros_time_t &v) {
-        return std::to_string(v.secs) + "s " + std::to_string(v.nsecs) + "ns";
+        return std::to_string(v.to_nsec());
       });
 
   py::class_<Embag::RosValue::ros_duration_t>(m, "RosDuration")
       .def_readonly("secs", &Embag::RosValue::ros_duration_t::secs)
       .def_readonly("nsecs", &Embag::RosValue::ros_duration_t::nsecs)
       .def("__str__", [](Embag::RosValue::ros_duration_t &v) {
-        return std::to_string(v.secs) + "s " + std::to_string(v.nsecs) + "ns";
+        return std::to_string(v.to_nsec());
       });
 }

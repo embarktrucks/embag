@@ -13,12 +13,13 @@ bag.close()
 
 Unfortunately, this API comes with a few caveats:
 - It's slightly slower than the second, more native API.
-- You can't iterate over more than one bag file (something ROS's C++ API allows you to do.)
-- Special ROS primitives (such as `Time` and `Duration`) haven't been built out yet.  You can call `to_sec()` on them but arithmetic operators won't work.
+- You can't iterate over more than one bag file (something ROS's C++ API allows you to do).
+- Special ROS primitives (such as `Time` and `Duration`) haven't been built out yet.  For now, these values are provided as doubles.
 
 Embag also offers an API more like the [C++ API](http://wiki.ros.org/rosbag/Code%20API#C.2B-.2B-_API):
 ```python
 import embag
+import struct
 
 bag1 = embag.Bag('/path/to/file1.bag')
 bag2 = embag.Bag('/path/to/file2.bag')
@@ -27,6 +28,16 @@ view = rosbag.View().addBag(bag1).addBag(bag2)
 for msg in view.getMessages(['/cool/topic']):
     print(msg.timestamp.to_sec())
     print(msg)
+
+    # There are a few ways to access fields, the first returns a dict of the message
+    print(msg.dict())
+    # You can also access individual fields much faster this way
+    print(msg.data()['cool_field'])
+
+    # Arrays are returned as Python bytes for performance reasons.
+    # Assuming an array of floats (4 bytes per value), you can unpack them using:
+    values = struct.unpack('<%df' % (len(msg.data()['field']) / 4), msg.data()['field'])
+
 
 bag.close()
 ```
