@@ -14,5 +14,5 @@ additional_languages:
   # Uncomment any additional languages you want supported
   # dart
   # javascript
-  # python
+  python
   # typescript
