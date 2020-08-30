@@ -181,7 +181,7 @@ struct IteratorCompat {
 
   py::tuple operator*() const {
     const auto msg = *iterator_;
-    return py::make_tuple(msg->topic, msgCompat(msg->data()), msg->timestamp);
+    return py::make_tuple(msg->topic, msgCompat(msg->data()), msg->timestamp.to_sec());
   }
 
   bool operator==(const IteratorCompat &other) const {

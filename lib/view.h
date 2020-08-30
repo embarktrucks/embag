@@ -123,12 +123,13 @@ class View {
   View addBag(std::shared_ptr<Bag> bag);
 
   std::vector<std::string> topics() {
-    std::vector<std::string> topics;
-    for (auto bag : bags_) {
-      auto new_topics = bag->topics();
-      topics.insert(topics.begin(), new_topics.begin(), new_topics.end());
+    std::unordered_set<std::string> topics;
+    for (const auto& bag : bags_) {
+      const auto new_topics = bag->topics();
+      topics.insert(new_topics.begin(), new_topics.end());
     }
-    return topics;
+
+    return std::vector<std::string>(topics.begin(), topics.end());
   }
 
  private:

@@ -10,6 +10,9 @@ pybind_extension(
         "schema_builder.cc",
         "schema_builder.h",
     ],
+    visibility = [
+        "//test:__pkg__",
+    ],
     deps = [
         "//lib:embag",
     ],
@@ -27,9 +30,8 @@ py_wheel(
     strip_path_prefixes = [
         "python",
     ],
-    version = "0.0.3",
+    version = "0.0.4",
     deps = [
-        #        ":embag",
         ":embag.so",
     ],
 )

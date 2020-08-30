@@ -124,19 +124,27 @@ TEST_F(BagTest, View) {
 
   ASSERT_EQ(view_.getStartTime(), start_time);
   ASSERT_EQ(view_.getEndTime(), end_time);
+
+  const auto topics = view_.topics();
+  const auto topic_set = std::unordered_set<std::string>(topics.begin(), topics.end());
+
+  ASSERT_EQ(topic_set.size(), 2);
+  ASSERT_EQ(topic_set.count("/base_pose_ground_truth"), 1);
+  ASSERT_EQ(topic_set.count("/base_scan"), 1);
 }
 
-TEST_F(BagTest, Messages) {
+TEST_F(BagTest, AllMessages) {
   std::unordered_set<std::string> unseen_topics = {
       "/base_pose_ground_truth",
       "/base_scan",
   };
 
-  size_t base_scan_seq = 601;
-  size_t base_pose_seq = 601;
+  size_t scan_seq = 601;
+  size_t pose_seq = 601;
+  double last_scan_ts = 0;
+  double last_pose_ts = 0;
   for (const auto &message : view_.getMessages()) {
     ASSERT_NE(message->topic, "");
-    ASSERT_GT(message->timestamp.to_sec(), 0);
     ASSERT_NE(message->raw_data, nullptr);
     ASSERT_GT(message->raw_data_len, 0);
 
@@ -146,8 +154,10 @@ TEST_F(BagTest, Messages) {
 
     // For each topic, we'll test a few fields to make sure they're read from the bag correctly
     if (message->topic == "/base_scan") {
+      ASSERT_GE(message->timestamp.to_sec(), last_scan_ts);
+      last_scan_ts = message->timestamp.to_sec();
       ASSERT_EQ(message->md5, "90c7ef2dc6895d81024acba2ac42f369");
-      ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), base_scan_seq++);
+      ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), scan_seq++);
       ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "base_laser_link");
       ASSERT_EQ(message->data()["scan_time"].as<float>(), 0.0);
 
@@ -159,20 +169,23 @@ TEST_F(BagTest, Messages) {
       ASSERT_EQ(blob.size, 90);
       ASSERT_EQ(blob.byte_size, 90 * sizeof(float));
 
-      auto *ranges = (float *) blob.data.data();
+      const auto *ranges = (float *) blob.data.data();
       for (size_t i = 0; i < blob.size; i++) {
         ASSERT_NE(*(ranges + i), 0.0);
       }
     }
 
     if (message->topic == "/base_pose_ground_truth") {
+      ASSERT_GE(message->timestamp.to_sec(), last_pose_ts);
+      last_pose_ts = message->timestamp.to_sec();
       ASSERT_EQ(message->md5, "cd5e73d190d741a2f92e81eda573aca7");
-      ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), base_pose_seq++);
+      ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), pose_seq++);
       ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "odom");
       ASSERT_NE(message->data()["pose"]["pose"]["position"]["x"].as<double>(), 0.0);
 
+      ASSERT_EQ(message->data()["pose"]["covariance"].getType(), Embag::RosValue::Type::blob);
       const auto blob = message->data()["pose"]["covariance"].getBlob();
-      auto *values = (float *) blob.data.data();
+      const auto *values = (float *) blob.data.data();
       for (size_t i = 0; i < blob.size; i++) {
         ASSERT_EQ(*(values + i), 0.0);
       }
@@ -181,3 +194,15 @@ TEST_F(BagTest, Messages) {
 
   ASSERT_EQ(unseen_topics.size(), 0);
 }
+
+TEST_F(BagTest, MessagesForTopic) {
+  for (const auto &message : view_.getMessages("/base_scan")) {
+    ASSERT_EQ(message->topic, "/base_scan");
+  }
+
+  for (const auto &message : view_.getMessages({"/base_scan"})) {
+    ASSERT_EQ(message->topic, "/base_scan");
+  }
+}
+
+// TODO: test multi-bag message sorting

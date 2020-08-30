@@ -1,13 +1,22 @@
 cc_test(
-    name = "embag-test",
-    srcs = ["embag-test.cc"],
+    name = "embag_test",
+    srcs = ["embag_test.cc"],
     copts = ["-Iexternal/gtest/include"],
-    data = [
-        "test.bag",
-    ],
+    data = ["test.bag"],
     deps = [
         "//lib:embag",
         "@gtest",
         "@gtest//:gtest_main",  # Only if hello_test.cc has no main()
+    ],
+)
+
+py_test(
+    name = "embag_test_python",
+    srcs = ["embag_test_python.py"],
+    data = [
+        "test.bag",
+        "//python:embag.so",
+    ],
+    deps = [
     ],
 )
