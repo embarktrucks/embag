@@ -49,7 +49,7 @@ Unfortunately, it's not possible to decode messages using the ROS C++ API withou
 |--------------------|---------------|---------------|
 | rospy              | 57.898s       | 1.815s        |
 | embag (Python API) | 3.655s        | 1.093s        |
-| embag (C++ API)    | 3.763s        | 1.015s        |
+| embag (C++ API)    | 3.300s        | 1.007s        |
 
 
 ## Thank you...
