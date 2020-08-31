@@ -30,8 +30,8 @@ To test, run:
 ## Usage
 To use the C++ API:
 ```c++
-Embag::View view{filename}
-view.addBag("another.bag")  # Views support reading from multiple bags
+Embag::View view{filename};
+view.addBag("another.bag");  # Views support reading from multiple bags
 
 for (const auto &message : view.getMessages({"/fun/topic", "/another/topic"})) {
   std::cout << message->timestamp.to_sec() << " : " << message->topic << std::endl;
