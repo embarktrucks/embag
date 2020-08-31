@@ -30,9 +30,8 @@ To test, run:
 ## Usage
 To use the C++ API:
 ```c++
-Embag::View view{};
-auto bag = std::make_shared<Embag::Bag>(filename);
-view.addBag(bag);
+Embag::View view{filename}
+view.addBag("another.bag")  # Views support reading from multiple bags
 
 for (const auto &message : view.getMessages({"/fun/topic", "/another/topic"})) {
   std::cout << message->timestamp.to_sec() << " : " << message->topic << std::endl;
@@ -40,6 +39,18 @@ for (const auto &message : view.getMessages({"/fun/topic", "/another/topic"})) {
 }
 ```
 There's also a Python API.  See the [python directory](https://github.com/embarktrucks/embag/tree/master/python) for details.
+See the [tests](https://github.com/embarktrucks/embag/tree/master/test) for more usage examples.
+
+## Benchmarks
+These tests were performed on a 473M bag file compressed with lz4.  The bag contains a number of complex topics and each library was asked to print the topic, timestamp, and deserialized message.
+Unfortunately, it's not possible to decode messages using the ROS C++ API without precompiled message definitions.
+
+| Library            | 6128 messages | 1000 messages |
+|--------------------|---------------|---------------|
+| rospy              | 57.898s       | 1.815s        |
+| embag (Python API) | 3.655s        | 1.093s        |
+| embag (C++ API)    | 3.763s        | 1.015s        |
+
 
 ## Thank you...
 This library was heavily influenced by:

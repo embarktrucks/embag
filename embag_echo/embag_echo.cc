@@ -32,8 +32,7 @@ int main(int argc, char *argv[]) {
 
   for (const auto& filename : vm["bag"].as<std::vector<std::string>>()) {
     std::cout << "Opening " << filename << std::endl;
-    auto bag = std::make_shared<Embag::Bag>(filename);
-    view.addBag(bag);
+    view.addBag(filename);
   }
 
   const auto start_time = view.getStartTime();

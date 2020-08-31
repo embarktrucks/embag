@@ -43,6 +43,10 @@ class Bag {
     open();
   }
 
+  ~Bag() {
+    close();
+  }
+
   bool open();
   bool close();
 

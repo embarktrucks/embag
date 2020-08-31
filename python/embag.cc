@@ -13,7 +13,7 @@ PYBIND11_MODULE(embag, m) {
   m.doc() = "Python bindings for Embag";
 
   py::class_<Embag::Bag, std::shared_ptr<Embag::Bag>>(m, "Bag")
-      .def(py::init<std::string>())
+      .def(py::init<const std::string>())
       .def("topics", &Embag::Bag::topics)
       .def("read_messages", [](std::shared_ptr<Embag::Bag> &bag, const std::vector<std::string>& topics) {
         Embag::View view{};
@@ -30,7 +30,10 @@ PYBIND11_MODULE(embag, m) {
 
   py::class_<Embag::View>(m, "View")
       .def(py::init())
-      .def("addBag", &Embag::View::addBag)
+      .def(py::init<std::shared_ptr<Embag::Bag>>())
+      .def(py::init<const std::string&>())
+      .def("addBag", (Embag::View (Embag::View::*)(const std::string &)) &Embag::View::addBag)
+      .def("addBag", (Embag::View (Embag::View::*)(std::shared_ptr<Embag::Bag>)) &Embag::View::addBag)
       .def("getStartTime", &Embag::View::getStartTime)
       .def("getEndTime", &Embag::View::getEndTime)
       .def("getMessages", (Embag::View (Embag::View::*)(void)) &Embag::View::getMessages)

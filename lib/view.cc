@@ -239,6 +239,12 @@ RosValue::ros_time_t View::getEndTime() {
   return end_time;
 }
 
+View View::addBag(const std::string &filename) {
+  auto bag = std::make_shared<Embag::Bag>(filename);
+  addBag(bag);
+  return *this;
+}
+
 View View::addBag(std::shared_ptr<Bag> bag) {
   bags_.emplace_back(bag);
   return *this;

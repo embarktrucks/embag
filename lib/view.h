@@ -21,6 +21,10 @@ class View {
     bags_.emplace_back(bag);
   };
 
+  explicit View(const std::string& filename) {
+    addBag(filename);
+  }
+
   struct iterator {
     struct begin_cond_t{};
 
@@ -120,6 +124,7 @@ class View {
   RosValue::ros_time_t getEndTime();
 
   // Bag set manipulation
+  View addBag(const std::string &filename);
   View addBag(std::shared_ptr<Bag> bag);
 
   std::vector<std::string> topics() {

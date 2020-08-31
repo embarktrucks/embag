@@ -7,19 +7,14 @@
 #include <vector>
 
 TEST(EmbagTest, OpenCloseBag) {
-  auto bag = std::make_shared<Embag::Bag>("test/test.bag");
-  ASSERT_TRUE(bag->close());
+  Embag::Bag bag{"test/test.bag"};
+  ASSERT_TRUE(bag.close());
 }
 
 class BagTest : public ::testing::Test {
  protected:
-  void SetUp() override {
-    bag_ = std::make_shared<Embag::Bag>("test/test.bag");
-    view_ = Embag::View{bag_};
-  }
+  Embag::Bag bag_{"test/test.bag"};
 
-  std::shared_ptr<Embag::Bag> bag_;
-  Embag::View view_;
   const std::set<std::string> known_topics_ = {
       "/base_pose_ground_truth",
       "/base_scan",
@@ -28,7 +23,7 @@ class BagTest : public ::testing::Test {
 
 TEST_F(BagTest, TopicsInBag) {
   std::set<std::string> topic_set;
-  for (const auto& topic : bag_->topics()) {
+  for (const auto& topic : bag_.topics()) {
     topic_set.emplace(topic);
   }
 
@@ -37,7 +32,7 @@ TEST_F(BagTest, TopicsInBag) {
 
 TEST_F(BagTest, TopicInBag) {
   for (const auto& topic : known_topics_) {
-    ASSERT_TRUE(bag_->topicInBag(topic));
+    ASSERT_TRUE(bag_.topicInBag(topic));
   }
 }
 
@@ -57,7 +52,7 @@ void validateSchema(testSchema& test_schema, const std::vector<Embag::RosMsgType
 }
 
 TEST_F(BagTest, MsgDefForTopic) {
-  const auto def = bag_->msgDefForTopic("/base_scan");
+  const auto def = bag_.msgDefForTopic("/base_scan");
 
   const testSchema top_level_types = {
       {"header", "Header"},
@@ -91,7 +86,7 @@ TEST_F(BagTest, MsgDefForTopic) {
 }
 
 TEST_F(BagTest, ConnectionsForTopic) {
-  const auto connection_records = bag_->connectionsForTopic("/base_scan");
+  const auto connection_records = bag_.connectionsForTopic("/base_scan");
   ASSERT_EQ(connection_records.size(), 1);
 
   const auto &record = connection_records[0];
@@ -118,7 +113,13 @@ TEST_F(BagTest, ConnectionsForTopic) {
   ASSERT_EQ(record->data.latching, false);
 }
 
-TEST_F(BagTest, View) {
+class ViewTest : public ::testing::Test {
+ protected:
+  Embag::View view_{"test/test.bag"};
+};
+
+
+TEST_F(ViewTest, View) {
   const Embag::RosValue::ros_time_t start_time{60, 200000000};
   const Embag::RosValue::ros_time_t end_time{232, 800000000};
 
@@ -133,7 +134,7 @@ TEST_F(BagTest, View) {
   ASSERT_EQ(topic_set.count("/base_scan"), 1);
 }
 
-TEST_F(BagTest, AllMessages) {
+TEST_F(ViewTest, AllMessages) {
   std::unordered_set<std::string> unseen_topics = {
       "/base_pose_ground_truth",
       "/base_scan",
@@ -195,7 +196,7 @@ TEST_F(BagTest, AllMessages) {
   ASSERT_EQ(unseen_topics.size(), 0);
 }
 
-TEST_F(BagTest, MessagesForTopic) {
+TEST_F(ViewTest, MessagesForTopic) {
   for (const auto &message : view_.getMessages("/base_scan")) {
     ASSERT_EQ(message->topic, "/base_scan");
   }

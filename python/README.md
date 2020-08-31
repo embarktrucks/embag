@@ -21,10 +21,7 @@ Embag also offers an API more like the [C++ API](http://wiki.ros.org/rosbag/Code
 import embag
 import struct
 
-bag1 = embag.Bag('/path/to/file1.bag')
-bag2 = embag.Bag('/path/to/file2.bag')
-
-view = rosbag.View().addBag(bag1).addBag(bag2)
+view = embag.View().addBag('/path/to/file1.bag').addBag('/path/to/file2.bag')
 for msg in view.getMessages(['/cool/topic']):
     print(msg.timestamp.to_sec())
     print(msg)

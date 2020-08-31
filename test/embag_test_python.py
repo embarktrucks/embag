@@ -7,7 +7,7 @@ import unittest
 class EmbagTest(unittest.TestCase):
     def setUp(self):
         self.bag = embag.Bag('test/test.bag')
-        self.view = embag.View().addBag(self.bag)
+        self.view = embag.View('test/test.bag')
         self.known_topics = {"/base_pose_ground_truth", "/base_scan"}
 
     def tearDown(self):
