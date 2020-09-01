@@ -49,4 +49,4 @@ jobs:
           
       - name: Build Python package
         run: |
-          "${GITHUB_WORKSPACE}/bin/bazel" build ////python:wheel
+          "${GITHUB_WORKSPACE}/bin/bazel" build //python:wheel
