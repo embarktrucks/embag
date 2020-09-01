@@ -34,6 +34,10 @@ jobs:
           mkdir -p "${GITHUB_WORKSPACE}/bin/"
           mv bazelisk-linux-amd64 "${GITHUB_WORKSPACE}/bin/bazel"
           chmod +x "${GITHUB_WORKSPACE}/bin/bazel"
+          
+      - name: Install lz4
+        run: |
+          sudo apt install liblz4-dev
 
       - name: Test
         run: |
