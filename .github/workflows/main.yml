@@ -37,7 +37,7 @@ jobs:
           
       - name: Install lz4
         run: |
-          sudo apt install liblz4-dev
+          sudo apt-get install -y liblz4-dev
 
       - name: Test
         run: |
