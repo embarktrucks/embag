@@ -37,7 +37,7 @@ jobs:
           
       - name: Install lz4
         run: |
-          sudo apt install liblz4-dev
+          sudo apt-get install -y liblz4-dev
 
       - name: Test
         run: |
@@ -50,3 +50,17 @@ jobs:
       - name: Build Python package
         run: |
           "${GITHUB_WORKSPACE}/bin/bazel" build //python:wheel
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v2.1.4
+        with:
+          name: Debian package
+          path: bazel-bin/lib/embag_0.0.18_amd64.deb
+
+      - name: Upload .whl artifact
+        uses: actions/upload-artifact@v2.1.4
+        with:
+          name: Python wheel
+          path: bazel-bin/python/embag-*-py3-none-any.whl 
+          
+      
