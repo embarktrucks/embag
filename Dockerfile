@@ -1,6 +1,6 @@
 FROM quay.io/pypa/manylinux2014_x86_64
 
-RUN yum install npm lz4-devel git -y -q && npm install -g @bazel/bazelisk
+RUN yum install npm git -y -q && npm install -g @bazel/bazelisk
 
 RUN mkdir -p /tmp/embag /tmp/pip_build /tmp/out
 COPY WORKSPACE /tmp/embag
