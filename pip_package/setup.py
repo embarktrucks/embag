@@ -1,10 +1,11 @@
 from setuptools import setup, Distribution
 from setuptools.command.install import install as InstallCommandBase
-import os
+
 
 class BinaryDistribution(Distribution):
     def has_ext_modules(foo):
         return True
+
 
 class InstallCommand(InstallCommandBase):
     """Override the dir where the headers go."""
@@ -14,12 +15,25 @@ class InstallCommand(InstallCommandBase):
         self.install_lib = self.install_platlib
         return ret
 
+
+long_description = """
+# Embag: A really fast, simple bag file reader
+.. image:: https://github.com/embarktrucks/embag/workflows/pypi_build/badge.svg)
+    :target: https://github.com/embarktrucks/embag/actions
+
+This library reads `ROS <https://wiki.ros.org>` `bag files <http://wiki.ros.org/Bags/Format/2.0>` quickly without their
+`message descriptions`<http://wiki.ros.org/msg>` and without any dependencies.
+
+See the `API README <https://github.com/embarktrucks/embag/tree/master/python>` for usage details.
+"""
+
 setup(
     name='embag',
     packages=['embag'],
     version='0.0.19',
     license='MIT',
     description='Fast ROS bag reader',
+    long_description=long_description,
     author='Jason Snell',
     author_email='jason@embarktrucks.com',
     distclass=BinaryDistribution,

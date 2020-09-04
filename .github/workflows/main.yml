@@ -21,10 +21,10 @@ jobs:
           docker build -t embag .
           docker run -v $PWD:/tmp/cp --rm -t embag bash -c "cp /tmp/out/*.whl /tmp/cp"
 
-      - name: Upload .whl artifact
+      - name: Upload .whl artifacts
         uses: actions/upload-artifact@v2.1.4
         with:
-          name: Python wheel
+          name: python_wheels
           path: embag-*.whl 
           
       
