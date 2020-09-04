@@ -1,66 +1,30 @@
-# This is a basic workflow to help you get started with Actions
+# This is a flow that builds binary wheels for PyPI
 
-name: CI
+name: PyPI Build
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
+# Trigger the workflow on push or pull request events master
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         
-      - name: Mount bazel cache
-        uses: actions/cache@v1
-        with:
-          path: "/home/runner/.cache/bazel"
-          key: bazel
-
-      - name: Install bazelisk
+      - name: Build manylinux image
         run: |
-          curl -LO "https://github.com/bazelbuild/bazelisk/releases/download/v1.1.0/bazelisk-linux-amd64"
-          mkdir -p "${GITHUB_WORKSPACE}/bin/"
-          mv bazelisk-linux-amd64 "${GITHUB_WORKSPACE}/bin/bazel"
-          chmod +x "${GITHUB_WORKSPACE}/bin/bazel"
-          
-      - name: Install lz4
-        run: |
-          sudo apt-get install -y liblz4-dev
-
-      - name: Test
-        run: |
-          "${GITHUB_WORKSPACE}/bin/bazel" test test:* --test_output=all
-
-      - name: Build Debian package
-        run: |
-          "${GITHUB_WORKSPACE}/bin/bazel" build //lib:embag-debian
-          
-      - name: Build Python package
-        run: |
-          "${GITHUB_WORKSPACE}/bin/bazel" build //python:wheel
-
-      - name: Upload .deb artifact
-        uses: actions/upload-artifact@v2.1.4
-        with:
-          name: Debian package
-          path: bazel-bin/lib/embag_0.0.18_amd64.deb
+          docker build -t embag .
+          docker run -v $PWD:/tmp/out --rm -t embag bash -c "cp /tmp/pip_build/wheelhouse/*.whl /tmp/out"
 
       - name: Upload .whl artifact
         uses: actions/upload-artifact@v2.1.4
         with:
           name: Python wheel
-          path: bazel-bin/python/embag-*-py3-none-any.whl 
+          path: embag-*.whl 
           
       

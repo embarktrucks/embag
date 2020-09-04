@@ -15,6 +15,6 @@ py_test(
     srcs = ["embag_test_python.py"],
     data = [
         "test.bag",
-        "//python:embag.so",
+        "//python:libembag.so",
     ],
 )

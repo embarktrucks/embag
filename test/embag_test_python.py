@@ -1,4 +1,4 @@
-import python.embag as embag
+import python.libembag as embag
 from collections import OrderedDict
 import struct
 import unittest

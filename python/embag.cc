@@ -9,7 +9,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(embag, m) {
+PYBIND11_MODULE(libembag, m) {
   m.doc() = "Python bindings for Embag";
 
   py::class_<Embag::Bag, std::shared_ptr<Embag::Bag>>(m, "Bag")
