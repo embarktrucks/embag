@@ -19,7 +19,7 @@ jobs:
       - name: Build manylinux image
         run: |
           docker build -t embag .
-          docker run -v $PWD:/tmp/out --rm -t embag bash -c "cp /tmp/pip_build/wheelhouse/*.whl /tmp/out"
+          docker run -v $PWD:/tmp/cp --rm -t embag bash -c "cp /tmp/out/*.whl /tmp/cp"
 
       - name: Upload .whl artifact
         uses: actions/upload-artifact@v2.1.4
