@@ -1,4 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//lib:version.bzl", "EMBAG_VERSION")
 
 cc_library(
     name = "embag",
@@ -19,17 +20,17 @@ cc_library(
         "util.h",
         "view.h",
     ],
-    visibility = [
-        "//embag_echo:__pkg__",
-        "//python:__pkg__",
-        "//test:__pkg__",
+    # This is required to build in the manylinux image
+    linkopts = [
+        "-lstdc++",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "@boost//:fusion",
         "@boost//:iostreams",
         "@boost//:spirit",
         "@boost//:variant",
-        "@system_libs//:liblz4",
+        "@liblz4//:lz4_frame",
     ],
 )
 
@@ -93,5 +94,5 @@ pkg_deb(
     homepage = "https://github.com/embarktrucks/embag",
     maintainer = "Jason Snell <jason@embarktrucks.com>",
     package = "embag",
-    version = "0.0.18",
+    version = EMBAG_VERSION,
 )

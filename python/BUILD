@@ -1,8 +1,9 @@
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_python//experimental/python:wheel.bzl", "py_wheel")
+load("//lib:version.bzl", "EMBAG_VERSION")
 
 pybind_extension(
-    name = "embag",
+    name = "libembag",
     srcs = [
         "adapters.h",
         "embag.cc",
@@ -10,9 +11,7 @@ pybind_extension(
         "schema_builder.cc",
         "schema_builder.h",
     ],
-    visibility = [
-        "//test:__pkg__",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         "//lib:embag",
     ],
@@ -30,8 +29,8 @@ py_wheel(
     strip_path_prefixes = [
         "python",
     ],
-    version = "0.0.4",
+    version = EMBAG_VERSION,
     deps = [
-        ":embag.so",
+        ":libembag.so",
     ],
 )

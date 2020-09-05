@@ -1,13 +1,11 @@
 # Embag: A really fast, simple bag file reader
-![embag CI status](https://github.com/embarktrucks/embag/workflows/CI/badge.svg)
+[![embag CI status](https://github.com/embarktrucks/embag/workflows/pypi_build/badge.svg)](https://github.com/embarktrucks/embag/actions)
+[![PyPI version](https://badge.fury.io/py/embag.svg)](https://badge.fury.io/py/embag)
 
-This library reads [ROS](https://wiki.ros.org) [bag files](http://wiki.ros.org/Bags/Format/2.0) quickly without their [message descriptions](http://wiki.ros.org/msg) and without any ROS dependencies.  In fact, its only dependency is [lz4](https://github.com/lz4/lz4).
+This library reads [ROS](https://wiki.ros.org) [bag files](http://wiki.ros.org/Bags/Format/2.0) quickly without their [message descriptions](http://wiki.ros.org/msg) and without any dependencies.
 
 ## Building
-First, you'll need [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html#step-1-add-bazel-distribution-uri-as-a-package-source).   You'll also need to install the [lz4](https://github.com/lz4/lz4) dev package:
-
-    sudo apt install liblz4-dev
-
+First, you'll need [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html#step-1-add-bazel-distribution-uri-as-a-package-source).
 To build, run:
 
     # Embag echo demo binary
@@ -16,7 +14,7 @@ To build, run:
     bazel-bin/embag_echo/embag_echo --bag /path/to/sweet.bag --topic /awesome/topic
 
     # Shared object file
-    bazel build //lib:embag.so
+    bazel build //lib:libembag.so
 
     # Debian package
     bazel build //lib:embag-debian

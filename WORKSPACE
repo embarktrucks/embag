@@ -11,18 +11,6 @@ load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 
 boost_deps()
 
-new_local_repository(
-    name = "system_libs",
-    build_file_content = """
-cc_library(
-	name = "liblz4",
-	srcs = ["liblz4.so"],
-	visibility = ["//visibility:public"],
-)
-""",
-    path = "/usr/lib/x86_64-linux-gnu",
-)
-
 # .deb building bits
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
@@ -39,6 +27,7 @@ rules_pkg_dependencies()
 # Pybind11
 http_archive(
     name = "pybind11_bazel",
+    sha256 = "75922da3a1bdb417d820398eb03d4e9bd067c4905a4246d35a44c01d62154d91",
     strip_prefix = "pybind11_bazel-203508e14aab7309892a1c5f7dd05debda22d9a5",
     urls = ["https://github.com/pybind/pybind11_bazel/archive/203508e.zip"],
 )
@@ -46,6 +35,7 @@ http_archive(
 http_archive(
     name = "pybind11",
     build_file = "@pybind11_bazel//:pybind11.BUILD",
+    sha256 = "97504db65640570f32d3fdf701c25a340c8643037c3b69aec469c10c93dc8504",
     strip_prefix = "pybind11-2.5.0",
     urls = ["https://github.com/pybind/pybind11/archive/v2.5.0.tar.gz"],
 )
@@ -81,4 +71,13 @@ git_repository(
     commit = "6a7ed316a5cdc07b6d26362c90770787513822d4",
     remote = "https://github.com/google/googletest",
     shallow_since = "1583246693 -0500",
+)
+
+# LZ4
+http_archive(
+    name = "liblz4",
+    build_file = "@//lz4:BUILD",
+    sha256 = "658ba6191fa44c92280d4aa2c271b0f4fbc0e34d249578dd05e50e76d0e5efcc",
+    strip_prefix = "lz4-1.9.2",
+    urls = ["https://github.com/lz4/lz4/archive/v1.9.2.tar.gz"],
 )
