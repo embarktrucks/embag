@@ -1,6 +1,5 @@
 from setuptools import setup, Distribution
 from setuptools.command.install import install as InstallCommandBase
-import pathlib
 
 
 class BinaryDistribution(Distribution):
@@ -21,6 +20,7 @@ long_description = """
 Embag: A really fast, simple bag file reader
 
 .. image:: https://github.com/embarktrucks/embag/workflows/pypi_build/badge.svg
+    :alt: GitHub Actions status
     :target: https://github.com/embarktrucks/embag/actions
 
 This library reads `ROS <https://wiki.ros.org>`_ `bag files <http://wiki.ros.org/Bags/Format/2.0>`_ quickly without their

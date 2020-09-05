@@ -1,6 +1,6 @@
 # This is a flow that builds binary wheels for PyPI
 
-name: PyPI Build
+name: pypi_build
 
 # Trigger the workflow on push or pull request events master
 on:
