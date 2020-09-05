@@ -21,7 +21,7 @@ long_description = """
 Embag: A really fast, simple bag file reader
 
 .. image:: https://github.com/embarktrucks/embag/workflows/pypi_build/badge.svg
-  :target: https://github.com/embarktrucks/embag/actions
+    :target: https://github.com/embarktrucks/embag/actions
 
 This library reads `ROS <https://wiki.ros.org>`_ `bag files <http://wiki.ros.org/Bags/Format/2.0>`_ quickly without their
 `message descriptions <http://wiki.ros.org/msg>`_ and without any dependencies.
