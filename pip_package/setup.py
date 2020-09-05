@@ -18,14 +18,15 @@ class InstallCommand(InstallCommandBase):
 
 
 long_description = """
-# Embag: A really fast, simple bag file reader
-.. image:: https://github.com/embarktrucks/embag/workflows/pypi_build/badge.svg)
-    :target: https://github.com/embarktrucks/embag/actions
+Embag: A really fast, simple bag file reader
 
-This library reads `ROS <https://wiki.ros.org>` `bag files <http://wiki.ros.org/Bags/Format/2.0>` quickly without their
-`message descriptions`<http://wiki.ros.org/msg>` and without any dependencies.
+.. image:: https://github.com/embarktrucks/embag/workflows/pypi_build/badge.svg
+  :target: https://github.com/embarktrucks/embag/actions
 
-See the `API README <https://github.com/embarktrucks/embag/tree/master/python>` for usage details.
+This library reads `ROS <https://wiki.ros.org>`_ `bag files <http://wiki.ros.org/Bags/Format/2.0>`_ quickly without their
+`message descriptions <http://wiki.ros.org/msg>`_ and without any dependencies.
+
+See the `API README <https://github.com/embarktrucks/embag/tree/master/python>`_ for usage details.
 """
 
 version = open('/tmp/embag/lib/version.bzl').readline().split('"')[1]
@@ -37,6 +38,7 @@ setup(
     license='MIT',
     description='Fast ROS bag reader',
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     author='Jason Snell',
     author_email='jason@embarktrucks.com',
     distclass=BinaryDistribution,
@@ -56,7 +58,6 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',

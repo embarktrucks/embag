@@ -1,5 +1,5 @@
 # Embag: A really fast, simple bag file reader
-![embag CI status](https://github.com/embarktrucks/embag/workflows/pypi_build/badge.svg)
+[![embag CI status](https://github.com/embarktrucks/embag/workflows/pypi_build/badge.svg)](https://github.com/embarktrucks/embag/actions)
 [![PyPI version](https://badge.fury.io/py/embag.svg)](https://badge.fury.io/py/embag)
 
 This library reads [ROS](https://wiki.ros.org) [bag files](http://wiki.ros.org/Bags/Format/2.0) quickly without their [message descriptions](http://wiki.ros.org/msg) and without any dependencies.
