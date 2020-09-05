@@ -1,5 +1,6 @@
 from setuptools import setup, Distribution
 from setuptools.command.install import install as InstallCommandBase
+import pathlib
 
 
 class BinaryDistribution(Distribution):
@@ -27,10 +28,12 @@ This library reads `ROS <https://wiki.ros.org>` `bag files <http://wiki.ros.org/
 See the `API README <https://github.com/embarktrucks/embag/tree/master/python>` for usage details.
 """
 
+version = open('/tmp/embag/lib/version.bzl').readline().split('"')[1]
+
 setup(
     name='embag',
     packages=['embag'],
-    version='0.0.19',
+    version=version,
     license='MIT',
     description='Fast ROS bag reader',
     long_description=long_description,
