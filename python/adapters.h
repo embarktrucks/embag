@@ -2,6 +2,8 @@
 
 #include <pybind11/pybind11.h>
 
+#include "utils.h"
+
 namespace py = pybind11;
 
 py::dict rosValueToDict(const Embag::RosValue &ros_value);
@@ -59,7 +61,7 @@ py::list rosValueToList(const Embag::RosValue &ros_value) {
         break;
       }
       case Type::string: {
-        list.append(value->as<std::string>());
+        list.append(encodeStrLatin1(value->as<std::string>()));
         break;
       }
       case Type::ros_time: {
@@ -147,7 +149,7 @@ py::dict rosValueToDict(const Embag::RosValue &ros_value) {
         break;
       }
       case Type::string: {
-        dict[key] = value->as<std::string>();
+        dict[key] = encodeStrLatin1(value->as<std::string>());
         break;
       }
       case Type::ros_time: {

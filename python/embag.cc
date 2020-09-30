@@ -6,6 +6,7 @@
 #include "schema_builder.h"
 #include "adapters.h"
 #include "ros_compat.h"
+#include "utils.h"
 
 namespace py = pybind11;
 
@@ -45,7 +46,9 @@ PYBIND11_MODULE(libembag, m) {
 
   py::class_<Embag::RosMessage, std::shared_ptr<Embag::RosMessage>>(m, "RosMessage", py::dynamic_attr())
       .def(py::init())
-      .def("__str__", &Embag::RosMessage::toString)
+      .def("__str__", [](std::shared_ptr<Embag::RosMessage> &m) {
+        return encodeStrLatin1(m->toString());
+      })
       .def("data", &Embag::RosMessage::data)
       .def("dict", [](std::shared_ptr<Embag::RosMessage> &m) {
         if (m->data().getType() != Embag::RosValue::Type::object) {
@@ -61,8 +64,10 @@ PYBIND11_MODULE(libembag, m) {
   auto ros_value = py::class_<Embag::RosValue, std::shared_ptr<Embag::RosValue>>(m, "RosValue", py::dynamic_attr())
       .def(py::init())
       .def("get", &Embag::RosValue::get)
-      .def("__str__", &Embag::RosValue::toString, py::arg("path") = "")
-      .def("__getitem__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &key){
+      .def("__str__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &path) {
+        return encodeStrLatin1(v->toString());
+      }, py::arg("path") = "")
+      .def("__getitem__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &key) {
         if (v->getType() != Embag::RosValue::Type::object) {
           throw std::runtime_error("Element is not an object");
         }

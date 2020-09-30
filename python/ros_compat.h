@@ -1,7 +1,9 @@
 #pragma once
 
 #include <pybind11/pybind11.h>
+
 #include "lib/view.h"
+#include "utils.h"
 
 namespace py = pybind11;
 
@@ -62,7 +64,7 @@ py::object msgCompat(const Embag::RosValue &value) {
             break;
           }
           case Type::string: {
-            py_msg.attr(name) = ros_value->as<std::string>();
+            py_msg.attr(name) = encodeStrLatin1(ros_value->as<std::string>());
             break;
           }
           case Type::ros_time: {
@@ -141,7 +143,7 @@ py::object msgCompat(const Embag::RosValue &value) {
             break;
           }
           case Type::string: {
-            list.append(ros_value->as<std::string>());
+            list.append(encodeStrLatin1(ros_value->as<std::string>()));
             break;
           }
           case Type::ros_time: {

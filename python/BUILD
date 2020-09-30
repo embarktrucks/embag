@@ -10,6 +10,7 @@ pybind_extension(
         "ros_compat.h",
         "schema_builder.cc",
         "schema_builder.h",
+        "utils.h",
     ],
     visibility = ["//visibility:public"],
     deps = [
