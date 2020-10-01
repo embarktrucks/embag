@@ -59,7 +59,7 @@ jobs:
     #    uses a compiled language
 
     - run: |
-       sudo apt-get install npm git -y -q && npm install -g @bazel/bazelisk
+       sudo apt-get install npm git -y -q && sudo npm install -g @bazel/bazelisk
        bazel build //lib:* //embag_echo:* //python:*
 
     - name: Perform CodeQL Analysis
