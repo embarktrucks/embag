@@ -10,6 +10,7 @@ cc_library(
         "view.cc",
     ],
     hdrs = [
+        "decompression.h",
         "embag.h",
         "message_parser.h",
         "ros_bag_types.h",
@@ -30,6 +31,7 @@ cc_library(
         "@boost//:iostreams",
         "@boost//:spirit",
         "@boost//:variant",
+        "@libbz2//:bz2",
         "@liblz4//:lz4_frame",
     ],
 )

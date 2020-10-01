@@ -280,7 +280,7 @@ bool Bag::readRecords() {
         header.getField("compression", chunk.compression);
         header.getField("size", chunk.uncompressed_size);
 
-        if (chunk.compression != "lz4") {
+        if (!(chunk.compression == "lz4" || chunk.compression == "bz2")) {
           throw std::runtime_error("Unsupported compression type: " + chunk.compression);
         }
 
@@ -397,29 +397,5 @@ bool Bag::readRecords() {
   }
 
   return true;
-}
-
-// TODO: this should be a function in chunks
-void Bag::decompressLz4Chunk(const char *src, const size_t src_size, char *dst, const size_t dst_size) {
-  size_t src_bytes_left = src_size;
-  size_t dst_bytes_left = dst_size;
-
-  while (dst_bytes_left && src_bytes_left) {
-    size_t src_bytes_read = src_bytes_left;
-    size_t dst_bytes_written = dst_bytes_left;
-    const size_t ret = LZ4F_decompress(lz4_ctx_, dst, &dst_bytes_written, src, &src_bytes_read, nullptr);
-    if (LZ4F_isError(ret)) {
-      throw std::runtime_error("chunk::decompress: lz4 decompression returned " + std::to_string(ret) + ", expected "
-                                   + std::to_string(src_bytes_read));
-    }
-
-    src_bytes_left -= src_bytes_read;
-    dst_bytes_left -= dst_bytes_written;
-  }
-
-  if (src_bytes_left || dst_bytes_left) {
-    throw std::runtime_error("chunk::decompress: lz4 decompression left " + std::to_string(src_bytes_left) + "/"
-                                 + std::to_string(dst_bytes_left) + " bytes in buffer");
-  }
 }
 }

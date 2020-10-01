@@ -81,3 +81,12 @@ http_archive(
     strip_prefix = "lz4-1.9.2",
     urls = ["https://github.com/lz4/lz4/archive/v1.9.2.tar.gz"],
 )
+
+# Bz2
+http_archive(
+    name = "libbz2",
+    build_file = "@//bz2:BUILD",
+    sha256 = "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+    strip_prefix = "bzip2-1.0.8",
+    urls = ["https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"],
+)

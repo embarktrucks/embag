@@ -83,13 +83,9 @@ View::iterator::header_t View::iterator::readHeader(const RosBagTypes::record_t 
 void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
   while (bag_wrapper->chunk_iter != bag_wrapper->chunks_to_parse.end()) {
     if (bag_wrapper->current_buffer.empty()) {
-      const auto &chunk = *(bag_wrapper->chunk_iter);
+      const auto& chunk = *(bag_wrapper->chunk_iter);
       bag_wrapper->current_buffer.resize(chunk->uncompressed_size);
-      // TODO: this really should be a function in chunks
-      bag_wrapper->bag->decompressLz4Chunk(chunk->record.data,
-                                           chunk->record.data_len,
-                                           &bag_wrapper->current_buffer[0],
-                                           chunk->uncompressed_size);
+      chunk->decompress(&bag_wrapper->current_buffer[0]);
       bag_wrapper->uncompressed_size = chunk->uncompressed_size;
     }
 
