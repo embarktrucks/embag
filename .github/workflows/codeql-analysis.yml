@@ -60,7 +60,7 @@ jobs:
 
     - run: |
        sudo apt-get install npm git python3 -y -q && sudo npm install -g @bazel/bazelisk
-       bazel //embag_echo:embag_echo
+       bazel build //embag_echo:embag_echo
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
