@@ -8,6 +8,7 @@ COPY lib /tmp/embag/lib
 COPY python /tmp/embag/python
 COPY embag_echo /tmp/embag/embag_echo
 COPY lz4 /tmp/embag/lz4
+COPY bz2 /tmp/embag/bz2
 COPY test /tmp/embag/test
 COPY pip_package README.md LICENSE /tmp/pip_build/
 
