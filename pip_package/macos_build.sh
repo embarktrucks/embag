@@ -5,7 +5,7 @@ cp -r lib /tmp/embag
 cp -r pip_package/* README.md LICENSE /tmp/pip_build
 
 # Build embag for various version of Python
-for version in 3.8
+for version in 3.5 3.6 3.7 3.8
   do
     # Build embag libs and echo test binary
     PYTHON_PATH=`which python$version`
