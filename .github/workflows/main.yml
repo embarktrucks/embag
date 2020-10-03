@@ -30,9 +30,7 @@ jobs:
       - uses: actions/checkout@v2
         
       - name: Build macos image
-        run: |
-          npm install -g @bazel/bazelisk
-          pip_package/macos_build.sh
+        run: pip_package/macos_build.sh
 
       - name: Upload .whl artifacts
         uses: actions/upload-artifact@v2.1.4
