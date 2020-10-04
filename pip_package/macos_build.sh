@@ -11,7 +11,7 @@ bazel test test:* --test_output=all
 
 # Build wheel
 cp bazel-bin/python/libembag.so /tmp/pip_build/embag
-(cd /tmp/pip_build && $PYTHON_PATH setup.py bdist_wheel && \
+(cd /tmp/pip_build && python setup.py bdist_wheel && \
  python -m pip install dist/embag*.whl && \
  python -c 'import embag; embag.View(); print("Successfully loaded embag!")' &&\
  cp dist/* /tmp/out && \
