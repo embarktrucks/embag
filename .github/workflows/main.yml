@@ -37,7 +37,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - run: pip_package/macos_build.sh
+      - run: |
+          bazel clean --expunge
+          pip_package/macos_build.sh
 
       - name: Upload .whl artifacts
         uses: actions/upload-artifact@v2.1.4
