@@ -1,5 +1,4 @@
 # This is a flow that builds binary wheels for PyPI
-
 name: pypi_build
 
 # Trigger the workflow on push or pull request events master
@@ -10,9 +9,8 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  manylinux_build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
         
@@ -25,6 +23,31 @@ jobs:
         uses: actions/upload-artifact@v2.1.4
         with:
           name: python_wheels
-          path: embag-*.whl 
+          path: embag-*.whl
+  macos_build:
+    runs-on: macos-10.15
+    strategy:
+      matrix:
+        python-version: [ 3.5, 3.6, 3.7, 3.8, 3.9.0-rc.2 ]
+    name: Mac build for Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Mount bazel cache
+        uses: actions/cache@v2
+        with:
+          path: "/Users/runner/.cache/bazel"
+          key: ${{ runner.os }}-bazel
+      - run: pip_package/macos_build.sh
+
+      - name: Upload .whl artifacts
+        uses: actions/upload-artifact@v2.1.4
+        with:
+          name: python_wheels
+          path: /tmp/out/embag-*.whl
           
       
