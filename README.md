@@ -16,7 +16,7 @@ The [tests](https://github.com/embarktrucks/embag/tree/master/test) include more
 ## C++ API
 Embag is a native library and is available from Gemfury as a Debian package.  You can also build it from source.  To install the `.deb` package for the first time:
 
-    sudo echo "deb [trusted=yes] https://apt.fury.io/embark/ /" >> /etc/apt/sources.list.d/fury.list
+    sudo sh -c "echo 'deb [trusted=yes] https://apt.fury.io/embark/ /' >> /etc/apt/sources.list.d/fury.list"
     sudo apt update
     sudo apt install embag
 
