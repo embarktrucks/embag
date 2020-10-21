@@ -90,7 +90,6 @@ pkg_deb(
     depends = [
         "zlib1g-dev",
         "unzip",
-        "liblz4-dev",
     ],
     description_file = "debian/description",
     homepage = "https://github.com/embarktrucks/embag",
