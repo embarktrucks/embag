@@ -4,7 +4,23 @@
 
 This library reads [ROS](https://wiki.ros.org) [bag files](http://wiki.ros.org/Bags/Format/2.0) quickly without their [message descriptions](http://wiki.ros.org/msg) and without any dependencies.
 
-## Building
+## Python API
+Embag is available on [PyPI](https://pypi.org/project/embag/) and supports Linux and MacOS.  To use it, simply install with `pip`:
+
+    pip install embag
+    
+### Usage
+See the [python directory](https://github.com/embarktrucks/embag/tree/master/python) for details.
+The [tests](https://github.com/embarktrucks/embag/tree/master/test) include more usage examples.
+
+## C++ API
+Embag is a native library and is available from Gemfury as a Debian package.  You can also build it from source.  To install the `.deb` package for the first time:
+
+    sudo echo "deb [trusted=yes] https://apt.fury.io/embark/ /" >> /etc/apt/sources.list.d/fury.list
+    sudo apt update
+    sudo apt install embag
+
+### Building
 First, you'll need [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html#step-1-add-bazel-distribution-uri-as-a-package-source).
 To build, run:
 
@@ -27,7 +43,7 @@ To test, run:
     # This will run both the C++ and Python tests against a small bag file
     bazel test test:* --test_output=all
 
-## Usage
+### Usage
 To use the C++ API:
 ```c++
 Embag::View view{filename};
