@@ -21,7 +21,7 @@ Embag is a native library and is available from Gemfury as a Debian package.  Yo
     sudo apt install embag
 
 ### Building
-First, you'll need [Bazel](https://docs.bazel.build/versions/master/install-ubuntu.html#step-1-add-bazel-distribution-uri-as-a-package-source).
+First, you'll need [Bazel](https://bazel.build).  It's often easiest to use [Bazelisk](https://github.com/bazelbuild/bazelisk), a convenient wrapper that installs it for you.
 To build, run:
 
     # Embag echo demo binary
