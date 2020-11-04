@@ -55,7 +55,7 @@ py::dict SchemaBuilder::schemaForField(const std::string &scope, const Embag::Ro
       for (const auto &member : embedded_type.members) {
         if (member.which() == 0) {  // ros_msg_field
           auto embedded_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(member);
-          children[embedded_field.type_name.c_str()] = schemaForField(embedded_type.getScope(), embedded_field);
+          children[embedded_field.field_name.c_str()] = schemaForField(embedded_type.getScope(), embedded_field);
         }
       }
 
