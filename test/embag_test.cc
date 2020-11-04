@@ -18,6 +18,7 @@ class BagTest : public ::testing::Test {
   const std::set<std::string> known_topics_ = {
       "/base_pose_ground_truth",
       "/base_scan",
+      "/luminar_pointcloud",
   };
 };
 
@@ -90,7 +91,7 @@ TEST_F(BagTest, ConnectionsForTopic) {
   ASSERT_EQ(connection_records.size(), 1);
 
   const auto &record = connection_records[0];
-  ASSERT_EQ(record->blocks.size(), 4);
+  ASSERT_EQ(record->blocks.size(), 1);
   for (const auto &block : record->blocks) {
     const auto &chunk = block.into_chunk;
     ASSERT_NE(chunk, nullptr);
@@ -109,7 +110,7 @@ TEST_F(BagTest, ConnectionsForTopic) {
   ASSERT_EQ(record->data.scope, "sensor_msgs");
   ASSERT_EQ(record->data.md5sum, "90c7ef2dc6895d81024acba2ac42f369");
   ASSERT_EQ(record->data.message_definition.size(), 2123);
-  ASSERT_EQ(record->data.callerid, "");
+  ASSERT_EQ(record->data.callerid, "/play_1604515197096283663");
   ASSERT_EQ(record->data.latching, false);
 }
 
@@ -120,8 +121,8 @@ class ViewTest : public ::testing::Test {
 
 
 TEST_F(ViewTest, View) {
-  const Embag::RosValue::ros_time_t start_time{60, 200000000};
-  const Embag::RosValue::ros_time_t end_time{232, 800000000};
+  const Embag::RosValue::ros_time_t start_time{1604515190, 231374463};
+  const Embag::RosValue::ros_time_t end_time{1604515197, 820012098};
 
   ASSERT_EQ(view_.getStartTime(), start_time);
   ASSERT_EQ(view_.getEndTime(), end_time);
@@ -129,7 +130,7 @@ TEST_F(ViewTest, View) {
   const auto topics = view_.topics();
   const auto topic_set = std::unordered_set<std::string>(topics.begin(), topics.end());
 
-  ASSERT_EQ(topic_set.size(), 2);
+  ASSERT_EQ(topic_set.size(), 3);
   ASSERT_EQ(topic_set.count("/base_pose_ground_truth"), 1);
   ASSERT_EQ(topic_set.count("/base_scan"), 1);
 }

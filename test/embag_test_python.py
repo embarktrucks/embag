@@ -8,31 +8,38 @@ class EmbagTest(unittest.TestCase):
     def setUp(self):
         self.bag = embag.Bag('test/test.bag')
         self.view = embag.View('test/test.bag')
-        self.known_topics = {"/base_pose_ground_truth", "/base_scan"}
+        self.known_topics = {
+            "/base_pose_ground_truth",
+            "/base_scan",
+            "/luminar_pointcloud",
+        }
 
     def tearDown(self):
         self.assertTrue(self.bag.close())
 
     def testSchema(self):
         known_schema = OrderedDict([
-            ('header', {'type': 'object',
-                        'children': OrderedDict([
-                            ('seq', {'type': 'uint32'}),
-                            ('stamp', {'type': 'time'}),
-                            ('frame_id', {'type': 'string'})
-                        ])}),
-            ('angle_min', {'type': 'float32'}),
-            ('angle_max', {'type': 'float32'}),
-            ('angle_increment', {'type': 'float32'}),
-            ('time_increment', {'type': 'float32'}),
-            ('scan_time', {'type': 'float32'}),
-            ('range_min', {'type': 'float32'}),
-            ('range_max', {'type': 'float32'}),
-            ('ranges', {'member_type': 'float32', 'type': 'array'}),
-            ('intensities', {'member_type': 'float32', 'type': 'array'})
+            ('header',
+             {'type': 'object',
+              'children': OrderedDict([('seq', {'type': 'uint32'}),
+                                       ('stamp', {'type': 'time'}),
+                                       ('frame_id', {'type': 'string'})])}),
+            ('height', {'type': 'uint32'}),
+            ('width', {'type': 'uint32'}),
+            ('fields',
+             {'type': 'array',
+              'children': OrderedDict([('name', {'type': 'string'}),
+                                       ('offset', {'type': 'uint32'}),
+                                       ('datatype', {'type': 'uint8'}),
+                                       ('count', {'type': 'uint32'})])}),
+            ('is_bigendian', {'type': 'bool'}),
+            ('point_step', {'type': 'uint32'}),
+            ('row_step', {'type': 'uint32'}),
+            ('data', {'member_type': 'uint8', 'type': 'array'}),
+            ('is_dense', {'type': 'bool'})
         ])
 
-        schema = self.bag.getSchema('/base_scan')
+        schema = self.bag.getSchema('/luminar_pointcloud')
         self.assertDictEqual(schema, known_schema)
 
     def testTopicsInBag(self):
