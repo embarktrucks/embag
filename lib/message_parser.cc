@@ -148,8 +148,8 @@ std::shared_ptr<RosValue> MessageParser::getPrimitiveBlob(RosMsgTypes::ros_msg_f
         read_into(&string_len);
 
         const auto string = std::make_shared<RosValue>(RosValue::Type::string);
-        value->string_value.resize(string_len);
-        read_into(value->string_value, string_len);
+        string->string_value.resize(string_len);
+        read_into(string->string_value, string_len);
         value->values.emplace_back(string);
       }
 

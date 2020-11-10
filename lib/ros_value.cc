@@ -204,7 +204,7 @@ std::string RosValue::toString(const std::string &path) const {
       size_t i = 0;
       for (const auto &item : values) {
         const std::string array_path = path + "[" + std::to_string(i++) + "]";
-        output << item->toString(array_path);
+        output << item->toString(array_path) << std::endl;
       }
 
       return output.str();
