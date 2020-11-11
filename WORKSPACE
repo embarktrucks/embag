@@ -44,8 +44,6 @@ load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 
 python_configure(
     name = "local_config_python",
-    # Change this to "2" when compiling for Python 2.  I'm unclear if it's possible to have both targets at the same time...
-    python_version = "3",
 )
 
 # Experimental python rules

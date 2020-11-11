@@ -17,4 +17,5 @@ py_test(
         "test.bag",
         "//python:libembag.so",
     ],
+    python_version = "PY2",
 )
