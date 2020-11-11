@@ -1,6 +1,6 @@
 FROM quay.io/pypa/manylinux2014_x86_64
 
-RUN yum install npm git -y -q && npm install -g @bazel/bazelisk
+RUN yum install npm git python-devel python2-pip -y -q && npm install -g @bazel/bazelisk && pip install wheel && pip install --upgrade pip
 
 RUN mkdir -p /tmp/embag /tmp/pip_build /tmp/out
 COPY WORKSPACE /tmp/embag

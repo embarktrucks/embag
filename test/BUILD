@@ -11,10 +11,23 @@ cc_test(
 )
 
 py_test(
-    name = "embag_test_python",
+    name = "embag_test_python3",
+    main = "embag_test_python.py",
     srcs = ["embag_test_python.py"],
     data = [
         "test.bag",
         "//python:libembag.so",
     ],
+    python_version = "PY3",
+)
+
+py_test(
+    name = "embag_test_python2",
+    main = "embag_test_python.py",
+    srcs = ["embag_test_python.py"],
+    data = [
+        "test.bag",
+        "//python:libembag.so",
+    ],
+    python_version = "PY2",
 )
