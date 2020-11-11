@@ -2,11 +2,12 @@
 
 function build() {
   PYTHON_PATH=$1
+  PYTHON_VERSION=$2
 
   # Build embag libs and echo test binary
   (cd /tmp/embag &&
     PYTHON_BIN_PATH="$PYTHON_PATH/python" bazel build //python:libembag.so //embag_echo:embag_echo &&
-    bazel test //test:* --cache_test_results=no)
+    bazel test //test:embag_test "//test:embag_test_python$PYTHON_VERSION" --cache_test_results=no --test_output=all)
 
   # Build wheel
   cp /tmp/embag/bazel-bin/python/libembag.so /tmp/pip_build/embag
@@ -20,7 +21,7 @@ function build() {
 }
 
 # Build embag for Python 2 (soon to be deprecated)
-build "/usr/bin"
+build "/usr/bin" 2
 
 # Build embag for various version of Python 3
 for version in cp35-cp35m \
@@ -31,5 +32,5 @@ for version in cp35-cp35m \
   # Link the correct version of python
   ln -sf /opt/python/$version/bin/python /usr/bin/python3
 
-  build "/opt/python/$version/bin"
+  build "/opt/python/$version/bin" 3
 done
