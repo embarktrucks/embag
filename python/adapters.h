@@ -181,3 +181,125 @@ py::dict rosValueToDict(const Embag::RosValue &ros_value) {
 
   return dict;
 }
+
+template <typename T>
+py::list rosBlobToList(T blob_p, size_t size) {
+  py::list list{size};
+
+  for (size_t i = 0; i < size; i++) {
+    list[i] = *(blob_p + i);
+  }
+
+  return list;
+}
+
+py::list rosBlobToList(const Embag::RosValue::blob_t& blob) {
+  using Type = Embag::RosValue::Type;
+
+  switch (blob.type) {
+    case Type::ros_bool: {
+      const auto* blob_p = reinterpret_cast<const bool*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::int8: {
+      const auto* blob_p = reinterpret_cast<const int8_t*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::uint8: {
+      const auto* blob_p = reinterpret_cast<const uint8_t*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::int16: {
+      const auto* blob_p = reinterpret_cast<const int16_t*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::uint16: {
+      const auto* blob_p = reinterpret_cast<const uint16_t*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::int32: {
+      const auto* blob_p = reinterpret_cast<const int32_t*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::uint32: {
+      const auto* blob_p = reinterpret_cast<const uint32_t*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::int64: {
+      const auto* blob_p = reinterpret_cast<const int64_t*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::uint64: {
+      const auto* blob_p = reinterpret_cast<const uint64_t*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::float32: {
+      const auto* blob_p = reinterpret_cast<const float*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    case Type::float64: {
+      const auto* blob_p = reinterpret_cast<const double*>(blob.data.data());
+      return rosBlobToList(blob_p, blob.size);
+    }
+    default: {
+      throw std::runtime_error("Unhandled blob type");
+    }
+  }
+}
+
+py::list rosBlobToValue(const Embag::RosValue::blob_t& blob, const size_t idx) {
+  using Type = Embag::RosValue::Type;
+
+  auto value = std::make_shared<Embag::RosValue>(blob.type);
+  value.
+
+  switch (blob.type) {
+  case Type::ros_bool: {
+    const auto* blob_p = reinterpret_cast<const bool*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::int8: {
+    const auto* blob_p = reinterpret_cast<const int8_t*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::uint8: {
+    const auto* blob_p = reinterpret_cast<const uint8_t*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::int16: {
+    const auto* blob_p = reinterpret_cast<const int16_t*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::uint16: {
+    const auto* blob_p = reinterpret_cast<const uint16_t*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::int32: {
+    const auto* blob_p = reinterpret_cast<const int32_t*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::uint32: {
+    const auto* blob_p = reinterpret_cast<const uint32_t*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::int64: {
+    const auto* blob_p = reinterpret_cast<const int64_t*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::uint64: {
+    const auto* blob_p = reinterpret_cast<const uint64_t*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::float32: {
+    const auto* blob_p = reinterpret_cast<const float*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  case Type::float64: {
+    const auto* blob_p = reinterpret_cast<const double*>(blob.data.data());
+    return rosBlobToList(blob_p, blob.size);
+  }
+  default: {
+    throw std::runtime_error("Unhandled blob type");
+  }
+  }
+}
