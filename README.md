@@ -54,7 +54,6 @@ for (const auto &message : view.getMessages({"/fun/topic", "/another/topic"})) {
   std::cout << message->data()["fun_array"][0]["fun_field"].as<std::string>() << std::endl;
 }
 ```
-There's also a Python API.  See the [python directory](https://github.com/embarktrucks/embag/tree/master/python) for details.
 See the [tests](https://github.com/embarktrucks/embag/tree/master/test) for more usage examples.
 
 ## Benchmarks
