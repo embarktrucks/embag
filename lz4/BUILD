@@ -8,6 +8,7 @@ cc_library(
     hdrs = [
         "lib/lz4.h",
     ],
+    deps = [":hdrs"],
     strip_include_prefix = "lib/",
     visibility = ["//visibility:public"],
 )
@@ -18,6 +19,7 @@ cc_library(
     hdrs = [
         "lib/lz4.c",
     ],
+    deps = [":hdrs"],
     strip_include_prefix = "lib/",
     visibility = ["//visibility:private"],
 )
@@ -33,6 +35,7 @@ cc_library(
     strip_include_prefix = "lib/",
     visibility = ["//visibility:public"],
     deps = [
+        ":hdrs",
         ":lz4",
         ":lz4_lz4c_include",
     ],
@@ -50,7 +53,13 @@ cc_library(
     strip_include_prefix = "lib/",
     visibility = ["//visibility:public"],
     deps = [
+        ":hdrs",
         ":lz4",
         ":lz4_hc",
     ],
+)
+
+cc_library(
+    name = "hdrs",
+    hdrs = glob(["lib/*.h"]) + ["lib/lz4.c"],
 )
