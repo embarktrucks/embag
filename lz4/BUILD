@@ -50,10 +50,10 @@ cc_library(
     hdrs = [
         "lib/lz4frame.h",
     ],
-    deps = [":hdrs"],
     strip_include_prefix = "lib/",
     visibility = ["//visibility:public"],
     deps = [
+        ":hdrs",
         ":lz4",
         ":lz4_hc",
     ],
