@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -76,6 +77,8 @@ struct RosBagTypes {
         decompressLz4Chunk(dst);
       } else if (compression == "bz2") {
         decompressBz2Chunk(dst);
+      } else if (compression == "none") {
+        memcpy(dst, record.data, uncompressed_size);
       }
     }
 
