@@ -75,7 +75,7 @@ class View {
 
       // Function for comparing bag offsets
       struct bag_offset_compare_t {
-        bool operator()(const RosBagTypes::chunk_t *left, const RosBagTypes::chunk_t *right) {
+        bool operator()(const RosBagTypes::chunk_t *left, const RosBagTypes::chunk_t *right) const {
           return left->offset < right->offset;
         }
       };
