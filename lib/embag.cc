@@ -280,7 +280,7 @@ bool Bag::readRecords() {
         header.getField("compression", chunk.compression);
         header.getField("size", chunk.uncompressed_size);
 
-        if (!(chunk.compression == "lz4" || chunk.compression == "bz2")) {
+        if (!(chunk.compression == "lz4" || chunk.compression == "bz2" || chunk.compression == "none")) {
           throw std::runtime_error("Unsupported compression type: " + chunk.compression);
         }
 
