@@ -114,9 +114,7 @@ class EmbagTest(unittest.TestCase):
                 self.assertEqual(msg_dict['header']['frame_id'], "base_laser_link")
                 self.assertEqual(msg_dict['scan_time'], 0.0)
 
-                # Test binary data
-                values = struct.unpack('<%df' % (len(msg_dict['ranges']) / 4), msg_dict['ranges'])
-                for v in values:
+                for v in msg_dict['ranges']:
                     self.assertNotEqual(v, 0)
 
             # We can also access fields directly with data() - this is the fastest option
@@ -127,8 +125,7 @@ class EmbagTest(unittest.TestCase):
                 self.assertEqual(msg_data['header']['frame_id'], "odom")
                 self.assertNotEqual(msg_data['pose']['pose']['position']['x'], 0.0)
 
-                values = struct.unpack('<%df' % (len(msg_data['pose']['covariance']) / 4), msg_data['pose']['covariance'])
-                for v in values:
+                for v in msg_data['pose']['covariance']:
                     self.assertEqual(v, 0)
 
 

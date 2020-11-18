@@ -9,6 +9,61 @@ namespace py = pybind11;
 py::dict rosValueToDict(const Embag::RosValue &ros_value);
 py::list rosValueToList(const Embag::RosValue &ros_value);
 
+py::list unpackBlob(const Embag::RosValue::blob_t &blob) {
+  using Type = Embag::RosValue::Type;
+
+  py::list list{};
+  for (size_t i = 0; i < blob.size; i++) {
+    switch (blob.type) {
+      case Type::ros_bool: {
+        list.append(*(reinterpret_cast<const bool *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::int8: {
+        list.append(*(reinterpret_cast<const int8_t *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::int16: {
+        list.append(*(reinterpret_cast<const int16_t *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::uint16: {
+        list.append(*(reinterpret_cast<const uint16_t *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::int32: {
+        list.append(*(reinterpret_cast<const int32_t *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::uint32: {
+        list.append(*(reinterpret_cast<const uint32_t *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::int64: {
+        list.append(*(reinterpret_cast<const int64_t *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::uint64: {
+        list.append(*(reinterpret_cast<const uint64_t *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::float32: {
+        list.append(*(reinterpret_cast<const float *>(blob.data.data()) + i));
+        break;
+      }
+      case Type::float64: {
+        list.append(*(reinterpret_cast<const double *>(blob.data.data()) + i));
+        break;
+      }
+      default: {
+        throw std::runtime_error("Unable to deserialize blob");
+      }
+    }
+  }
+
+  return list;
+}
+
 py::list rosValueToList(const Embag::RosValue &ros_value) {
   using Type = Embag::RosValue::Type;
 
@@ -82,7 +137,12 @@ py::list rosValueToList(const Embag::RosValue &ros_value) {
       }
       case Type::blob: {
         const auto &blob = value->getBlob();
-        list.append(py::bytes(blob.data.c_str(), blob.size));
+        // Binary data is usually stored as arrays of uint8s
+        if (blob.type == Type::uint8) {
+          list.append(py::bytes(blob.data.c_str(), blob.byte_size));
+        } else {
+          list.append(unpackBlob(blob));
+        }
         break;
       }
       default: {
@@ -99,7 +159,7 @@ py::dict rosValueToDict(const Embag::RosValue &ros_value) {
 
   py::dict dict{};
 
-  for (const auto& element : ros_value.getObjects()) {
+  for (const auto &element : ros_value.getObjects()) {
     const auto &key = element.first.c_str();
     const auto &value = element.second;
 
@@ -170,7 +230,12 @@ py::dict rosValueToDict(const Embag::RosValue &ros_value) {
       }
       case Type::blob: {
         const auto &blob = value->getBlob();
-        dict[key] = py::bytes(blob.data.c_str(), blob.byte_size);
+        // Binary data is usually stored as arrays of uint8s
+        if (blob.type == Type::uint8) {
+          dict[key] = py::bytes(blob.data.c_str(), blob.byte_size);
+        } else {
+          dict[key] = unpackBlob(blob);
+        }
         break;
       }
       default: {
