@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <iostream>
@@ -43,10 +44,10 @@ class Bag {
   bool open();
   bool close();
 
-  std::vector<std::string> topics() const {
-    std::vector<std::string> topics;
+  std::unordered_set<std::string> topics() const {
+    std::unordered_set<std::string> topics;
     for (const auto& item : topic_connection_map_) {
-      topics.emplace_back(item.first);
+      topics.emplace(item.first);
     }
     return topics;
   }
