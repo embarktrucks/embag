@@ -59,7 +59,8 @@ PYBIND11_MODULE(libembag, m) {
       })
       .def_readonly("topic", &Embag::RosMessage::topic)
       .def_readonly("timestamp", &Embag::RosMessage::timestamp)
-      .def_readonly("md5", &Embag::RosMessage::md5);
+      .def_readonly("md5", &Embag::RosMessage::md5)
+      .def_readonly("raw_data_len", &Embag::RosMessage::raw_data_len);
 
   auto ros_value = py::class_<Embag::RosValue, std::shared_ptr<Embag::RosValue>>(m, "RosValue", py::dynamic_attr())
       .def(py::init())
