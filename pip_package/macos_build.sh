@@ -11,8 +11,8 @@ bazel test //test:embag_test //test:embag_test_python3 --test_output=all
 # Build wheel
 cp bazel-bin/python/libembag.so /tmp/pip_build/embag
 python -m pip install wheel
-(cd /tmp/pip_build && MACOSX_DEPLOYMENT_TARGET=10.15 python setup.py bdist_wheel && \
- python -m pip install dist/embag*.whl && \
+(cd /tmp/pip_build && MACOSX_DEPLOYMENT_TARGET=11.0 python setup.py bdist_wheel && \
+ MACOSX_DEPLOYMENT_TARGET=11.0 python -m pip install dist/embag*.whl && \
  python -c 'import embag; embag.View(); print("Successfully loaded embag!")' &&\
  cp dist/* /tmp/out && \
  rm -rf build dist)
