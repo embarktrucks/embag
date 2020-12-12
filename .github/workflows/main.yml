@@ -42,7 +42,7 @@ jobs:
           path: bazel-bin/lib/embag_*.deb
   
   macos_build:
-    runs-on: macos-10.15
+    runs-on: macos-11.0
     strategy:
       matrix:
         python-version: [ 3.5, 3.6, 3.7, 3.8, 3.9.0 ]
