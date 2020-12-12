@@ -65,6 +65,7 @@ PYBIND11_MODULE(libembag, m) {
   auto ros_value = py::class_<Embag::RosValue, std::shared_ptr<Embag::RosValue>>(m, "RosValue", py::dynamic_attr())
       .def(py::init())
       .def("get", &Embag::RosValue::get)
+      .def("getType", &Embag::RosValue::getType)
       .def("__str__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &path) {
         return encodeStrLatin1(v->toString());
       }, py::arg("path") = "")
@@ -75,6 +76,26 @@ PYBIND11_MODULE(libembag, m) {
 
         return rosValueToDict(v->get(key));
       });
+
+  py::enum_<Embag::RosValue::Type>(m, "RosValueType")
+    .value("bool", Embag::RosValue::Type::ros_bool)
+    .value("uint8", Embag::RosValue::Type::uint8)
+    .value("int8", Embag::RosValue::Type::int8)
+    .value("uint16", Embag::RosValue::Type::uint16)
+    .value("int16", Embag::RosValue::Type::int16)
+    .value("uint32", Embag::RosValue::Type::uint32)
+    .value("int32", Embag::RosValue::Type::int32)
+    .value("uint64", Embag::RosValue::Type::uint64)
+    .value("int64", Embag::RosValue::Type::int64)
+    .value("float32", Embag::RosValue::Type::float32)
+    .value("float64", Embag::RosValue::Type::float64)
+    .value("blob", Embag::RosValue::Type::blob)
+    .value("array", Embag::RosValue::Type::array)
+    .value("object", Embag::RosValue::Type::object)
+    .value("string", Embag::RosValue::Type::string)
+    .value("time", Embag::RosValue::Type::ros_time)
+    .value("duration", Embag::RosValue::Type::ros_duration)
+    .export_values();
 
   py::class_<Embag::RosValue::ros_time_t>(m, "RosTime")
       .def_readonly("secs", &Embag::RosValue::ros_time_t::secs)
