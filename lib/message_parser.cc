@@ -35,10 +35,6 @@ std::shared_ptr<RosValue> MessageParser::parseField(const std::string &scope, Ro
 
       parsed_field->type = RosValue::Type::array;
 
-      if (array_len == 0) {
-        return parsed_field;
-      }
-
       if (primitive_type_map.count(field.type_name)) {
         // This is a primitive type array
         parsed_field = getPrimitiveBlob(field, array_len);
