@@ -176,14 +176,16 @@ struct ros_msg_skipper : qi::grammar<Iterator> {
     comment = *space >> "#" >> *(char_ - eol);
     separator = repeat(80)['='] - eol;
     blank_lines = *lit(' ') >> eol;
+    line_noise = eol >> *space;
 
-    skip = comment | separator | eol | blank_lines;
+    skip = line_noise | comment | separator | eol | blank_lines;
   }
 
   qi::rule<Iterator> skip;
   qi::rule<Iterator> comment;
   qi::rule<Iterator> separator;
   qi::rule<Iterator> blank_lines;
+  qi::rule<Iterator> line_noise;
 };
 
 // ROS message parsing
