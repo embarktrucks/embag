@@ -27,7 +27,7 @@ std::shared_ptr<RosMessage> View::iterator::operator*() const {
   auto wrapper = msg_queue_.top();
 
   const auto &connection = wrapper->bag->connections_[wrapper->current_connection_id];
-  const auto &msg_def = wrapper->bag->message_schemata_[connection.topic];
+  const auto &msg_def = wrapper->bag->msgDefForTopic(connection.topic);
 
   auto message = std::make_shared<RosMessage>();
 

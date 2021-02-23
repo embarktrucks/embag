@@ -53,11 +53,17 @@ class Bag {
   }
 
   bool topicInBag(const std::string &topic) const {
-    return message_schemata_.count(topic) != 0;
+    return topic_connection_map_.count(topic) != 0;
   }
 
   std::shared_ptr<RosMsgTypes::ros_msg_def> msgDefForTopic(const std::string &topic) {
-    return message_schemata_[topic];
+    const auto it = message_schemata_.find(topic);
+    if (it == message_schemata_.end()) {
+      parseMsgDefForTopic(topic);
+      return message_schemata_[topic];
+    } else {
+      return it->second;
+    }
   }
 
   std::vector<RosBagTypes::connection_record_t *> connectionsForTopic(const std::string &topic) {
@@ -71,6 +77,7 @@ class Bag {
   RosBagTypes::record_t readRecord();
   static std::unique_ptr<std::unordered_map<std::string, std::string>> readFields(const char *p, uint64_t len);
   static RosBagTypes::header_t readHeader(const RosBagTypes::record_t &record);
+  void parseMsgDefForTopic(const std::string &topic);
 
   std::string filename_;
   boost::iostreams::stream<boost::iostreams::mapped_file_source> bag_stream_;

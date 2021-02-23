@@ -342,22 +342,6 @@ bool Bag::readRecords() {
         connections_[connection_id].data = connection_data;
         topic_connection_map_[topic].emplace_back(&connections_[connection_id]);
 
-        // Parse message definition
-        auto ast = std::make_shared<RosMsgTypes::ros_msg_def>();
-
-        std::string::const_iterator iter = connection_data.message_definition.begin();
-        std::string::const_iterator end = connection_data.message_definition.end();
-        const bool r = phrase_parse(iter, end, grammar, skipper, *ast);
-
-        if (r && iter == end) {
-          message_schemata_[topic] = std::move(ast);
-        } else {
-          const std::string::const_iterator some = iter + std::min(30, int(end - iter));
-          const std::string context(iter, (some > end) ? end : some);
-
-          throw std::runtime_error("Message definition parsing failed at: " + context);
-        }
-
         break;
       }
       case RosBagTypes::header_t::op::MESSAGE_DATA: {
@@ -399,5 +383,36 @@ bool Bag::readRecords() {
   }
 
   return true;
+}
+
+void Bag::parseMsgDefForTopic(const std::string &topic) {
+  const auto it = topic_connection_map_.find(topic);
+  if (it == topic_connection_map_.end()) {
+    throw std::runtime_error("Unable to find topic in bag: " + topic);
+  }
+
+  const auto connections = it->second;
+  if (connections.empty()) {
+    throw std::runtime_error("No connection data for topic: " + topic);
+  }
+
+  const auto connection_data = connections.front()->data;
+
+  std::string::const_iterator iter = connection_data.message_definition.begin();
+  std::string::const_iterator end = connection_data.message_definition.end();
+
+  ros_msg_grammar<std::string::const_iterator> grammar;
+  ros_msg_skipper<std::string::const_iterator> skipper;
+  auto ast = std::make_shared<RosMsgTypes::ros_msg_def>();
+  const bool r = phrase_parse(iter, end, grammar, skipper, *ast);
+
+  if (r && iter == end) {
+    message_schemata_[topic] = std::move(ast);
+  } else {
+    const std::string::const_iterator some = iter + std::min(30, int(end - iter));
+    const std::string context(iter, (some > end) ? end : some);
+
+    throw std::runtime_error("Message definition parsing failed at: " + context);
+  }
 }
 }
