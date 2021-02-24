@@ -3,27 +3,6 @@ load("//lib:version.bzl", "EMBAG_VERSION")
 
 cc_library(
     name = "embag",
-    include_prefix = "embag",
-    visibility = ["//visibility:public"],
-    hdrs = [
-        "decompression.h",
-        "embag.h",
-        "message_parser.h",
-        "ros_bag_types.h",
-        "ros_message.h",
-        "ros_msg_types.h",
-        "ros_value.h",
-        "span.hpp",
-        "view.h",
-        "util.h",
-    ],
-    deps = [
-        ":embag_internal",
-    ],
-)
-
-cc_library(
-    name = "embag_internal",
     srcs = [
         "embag.cc",
         "message_parser.cc",
@@ -46,6 +25,7 @@ cc_library(
     linkopts = [
         "-lstdc++",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "@boost//:fusion",
         "@boost//:iostreams",

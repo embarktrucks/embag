@@ -9,5 +9,5 @@ Name: embag
 Description: fast dependecy free ROS bag file reader
 URL: https://github.com/embarktrucks/embag
 Version: ${version}
-Libs: -L${libdir} -lembag -llz4 -lboost_iostreams
+Libs: -L${libdir} -lembag -lboost_iostreams
 Cflags: -I/usr/include/embag
