@@ -5,6 +5,7 @@ cc_library(
     name = "embag",
     srcs = [
         "embag.cc",
+        "message_def_parser.cc",
         "message_parser.cc",
         "ros_value.cc",
         "view.cc",
@@ -12,6 +13,7 @@ cc_library(
     hdrs = [
         "decompression.h",
         "embag.h",
+        "message_def_parser.h",
         "message_parser.h",
         "ros_bag_types.h",
         "ros_message.h",
