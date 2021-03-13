@@ -51,7 +51,9 @@ pkg_tar(
 pkg_tar(
     name = "embag-headers",
     srcs = [
+        "decompression.h",
         "embag.h",
+        "message_def_parser.h",
         "message_parser.h",
         "ros_bag_types.h",
         "ros_message.h",
