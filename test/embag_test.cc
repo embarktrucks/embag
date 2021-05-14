@@ -8,7 +8,7 @@
 
 TEST(EmbagTest, OpenCloseBag) {
   Embag::Bag bag{"test/test.bag"};
-  ASSERT_TRUE(bag.close());
+  bag.close();
 }
 
 class BagTest : public ::testing::Test {

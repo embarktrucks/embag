@@ -28,71 +28,88 @@ RosMsgTypes::primitive_type_map_t RosMsgTypes::ros_msg_field::primitive_type_map
     {"char", RosValue::Type::uint8},
 };
 
-bool Bag::open() {
-  boost::iostreams::mapped_file_source mapped_file_source{filename_};
+void Bag::BagFromFile::open(const std::string &path) {
+  boost::iostreams::mapped_file_source mapped_file_source{path};
   bag_stream_.open(mapped_file_source);
 
-  // First, check for the magic string indicating this is indeed a bag file
-  std::string buffer(MAGIC_STRING.size(), 0);
+  bag_->readStream(bag_stream_, bag_stream_->data(), bag_stream_->size());
+}
 
-  bag_stream_.read(&buffer[0], MAGIC_STRING.size());
-
-  if (buffer != MAGIC_STRING) {
+void Bag::BagFromFile::close() {
+  if (bag_stream_.is_open()) {
     bag_stream_.close();
-    throw std::runtime_error("This file doesn't appear to be a bag file... ");
+  }
+}
+
+void Bag::BagFromBytes::open(const char *bytes, size_t length) {
+  boost::iostreams::array_source array_source{bytes, length};
+  bag_stream_.open(array_source);
+
+  bag_->readStream(bag_stream_, bytes, length);
+}
+
+void Bag::BagFromBytes::close() {
+  if (bag_stream_.is_open()) {
+    bag_stream_.close();
+  }
+}
+
+template <typename T>
+bool Bag::readStream(boost::iostreams::stream<T> &stream, const char* buffer, size_t buffer_size) {
+  bag_bytes_ = const_cast<char *>(buffer);
+  bag_bytes_size_ = buffer_size;
+
+  // First, check for the magic string indicating this is indeed a bag file
+  std::string temp(MAGIC_STRING.size(), 0);
+
+  stream.read(&temp[0], MAGIC_STRING.size());
+
+  if (temp != MAGIC_STRING) {
+    throw std::runtime_error("This file doesn't appear to be a bag file...");
   }
 
   // Next, parse the version
-  buffer.resize(3);
-  bag_stream_.read(&buffer[0], 3);
+  temp.resize(3);
+  stream.read(&temp[0], 3);
 
   // Only version 2.0 is supported at the moment
-  if ("2.0" != buffer) {
-    bag_stream_.close();
-    throw std::runtime_error("Unsupported bag file version: " + buffer);
+  if ("2.0" != temp) {
+    throw std::runtime_error("Unsupported bag file version: " + temp);
   }
 
   // The version is followed by a newline
-  buffer.resize(1);
-  bag_stream_.read(&buffer[0], 1);
-  if ("\n" != buffer) {
+  temp.resize(1);
+  stream.read(&temp[0], 1);
+  if ("\n" != temp) {
     throw std::runtime_error("Unable to find newline after version string, perhaps this bag file is corrupted?");
   }
 
-  readRecords();
+  readRecords(stream);
 
   return true;
 }
 
-bool Bag::close() {
-  if (bag_stream_.is_open()) {
-    bag_stream_.close();
-    return true;
-  }
-
-  return false;
-}
-
-RosBagTypes::record_t Bag::readRecord() {
+template <typename T>
+RosBagTypes::record_t Bag::readRecord(boost::iostreams::stream<T> &stream) {
   RosBagTypes::record_t record{};
   // Read header length
-  bag_stream_.read(reinterpret_cast<char *>(&record.header_len), sizeof(record.header_len));
+  stream.read(reinterpret_cast<char *>(&record.header_len), sizeof(record.header_len));
 
   // Set the header data pointer and skip to the next section
-  record.header = bag_stream_->data() + bag_stream_.tellg();
-  bag_stream_.seekg(record.header_len, std::ios_base::cur);
+  record.header = bag_bytes_ + stream.tellg();
+  stream.seekg(record.header_len, std::ios_base::cur);
 
   // Read data length
-  bag_stream_.read(reinterpret_cast<char *>(&record.data_len), sizeof(record.data_len));
+  stream.read(reinterpret_cast<char *>(&record.data_len), sizeof(record.data_len));
 
   // Set the data pointer and skip to the next record
-  record.data = bag_stream_->data() + bag_stream_.tellg();
-  bag_stream_.seekg(record.data_len, std::ios_base::cur);
+  record.data = bag_bytes_ + stream.tellg();
+  stream.seekg(record.data_len, std::ios_base::cur);
 
   return record;
 }
 
-std::unique_ptr<std::unordered_map<std::string, std::string>> Bag::readFields(const char *p, const uint64_t len) {
+std::unique_ptr<std::unordered_map<std::string, std::string>> Bag::readFields(const char *p, uint64_t len) {
   auto fields = make_unique<std::unordered_map<std::string, std::string>>();
   const char *end = p + len;
 
@@ -128,15 +145,14 @@ RosBagTypes::header_t Bag::readHeader(const RosBagTypes::record_t &record) {
   return header;
 }
 
-bool Bag::readRecords() {
-  const int64_t file_size = bag_stream_->size();
-
+template <typename T>
+bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
   while (true) {
-    const auto pos = bag_stream_.tellg();
-    if (pos == -1 || pos == file_size) {
+    const auto pos = stream.tellg();
+    if (pos == -1 || pos == std::streampos(bag_bytes_size_)) {
       break;
     }
-    const auto record = readRecord();
+    const auto record = readRecord(stream);
     const auto header = readHeader(record);
 
     const auto op = header.getOp();

@@ -6,8 +6,9 @@ import unittest
 
 class EmbagTest(unittest.TestCase):
     def setUp(self):
-        self.bag = embag.Bag('test/test.bag')
-        self.view = embag.View('test/test.bag')
+        self.bag_path = 'test/test.bag'
+        self.bag = embag.Bag(self.bag_path)
+        self.view = embag.View(self.bag_path)
         self.known_topics = {
             "/base_pose_ground_truth",
             "/base_scan",
@@ -15,7 +16,7 @@ class EmbagTest(unittest.TestCase):
         }
 
     def tearDown(self):
-        self.assertTrue(self.bag.close())
+        self.bag.close()
 
     def testSchema(self):
         known_schema = OrderedDict([
@@ -128,6 +129,14 @@ class EmbagTest(unittest.TestCase):
                 for v in msg_data['pose']['covariance']:
                     self.assertEqual(v, 0)
 
+    def testBagFromBytes(self):
+        bag_stream = open(self.bag_path, 'rb')
+        bag_bytes = bag_stream.read()
+        bag = embag.Bag(bag_bytes, len(bag_bytes))
+        self.view = embag.View(bag)
+
+        self.testViewMessages()
+        bag_stream.close()
 
 if __name__ == "__main__":
     unittest.main()

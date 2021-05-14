@@ -13,36 +13,68 @@
 #include "ros_value.h"
 #include "ros_bag_types.h"
 #include "ros_msg_types.h"
+#include "util.h"
 
 namespace Embag {
-
-// TODO: move to threaded decompression to make things even faster
-struct lz4f_ctx {
-  LZ4F_decompressionContext_t ctx{nullptr};
-  ~lz4f_ctx() {
-    if (ctx)
-      LZ4F_freeDecompressionContext(ctx);
-  }
-  operator LZ4F_decompressionContext_t() {
-    return ctx;
-  }
-};
 
 // Forward declaration
 class View;
 
 class Bag {
  public:
-  explicit Bag(const std::string filename) : filename_(filename) {
-    open();
+  Bag(const std::string &path) {
+    bag_impl_ = make_unique<BagFromFile>(this, path);
+  }
+
+  Bag(std::shared_ptr<std::string>bytes, uint64_t length) {
+    bag_impl_ = make_unique<BagFromBytes>(this, bytes, length);
   }
 
   ~Bag() {
-    close();
+    bag_impl_->close();
   }
 
-  bool open();
-  bool close();
+  void close() {
+    bag_impl_->close();
+  }
+
+  class BagImpl {
+   public:
+    explicit BagImpl(Bag *bag) : bag_(bag) {}
+
+    virtual void open() {};
+    virtual void close() {};
+
+   protected:
+    Bag *bag_ = nullptr;
+  };
+
+  class BagFromFile : public BagImpl {
+   public:
+    BagFromFile(Bag *bag, const std::string &path) : BagImpl(bag) {
+      open(path);
+    }
+
+    void open(const std::string &path);
+    void close();
+
+   private:
+    boost::iostreams::stream<boost::iostreams::mapped_file_source> bag_stream_;
+  };
+
+  class BagFromBytes : public BagImpl {
+   public:
+    BagFromBytes(Bag *bag, std::shared_ptr<std::string>bytes, size_t length) : BagImpl(bag), bytes_(bytes) {
+      open(bytes->data(), length);
+    }
+
+    void open(const char* bytes, uint64_t length);
+    void close();
+
+   private:
+    std::shared_ptr<std::string> bytes_;
+    boost::iostreams::stream<boost::iostreams::array_source> bag_stream_;
+  };
 
   std::unordered_set<std::string> topics() const {
     std::unordered_set<std::string> topics;
@@ -73,14 +105,20 @@ class Bag {
  private:
   const std::string MAGIC_STRING = "#ROSBAG V";
 
-  bool readRecords();
-  RosBagTypes::record_t readRecord();
+  template <typename T>
+  bool readStream(boost::iostreams::stream<T> &stream, const char* buffer, const uint64_t buffer_size);
+  template <typename T>
+  bool readRecords(boost::iostreams::stream<T> &stream);
+  template <typename T>
+  RosBagTypes::record_t readRecord(boost::iostreams::stream<T> &stream);
   static std::unique_ptr<std::unordered_map<std::string, std::string>> readFields(const char *p, uint64_t len);
   static RosBagTypes::header_t readHeader(const RosBagTypes::record_t &record);
   void parseMsgDefForTopic(const std::string &topic);
 
-  std::string filename_;
-  boost::iostreams::stream<boost::iostreams::mapped_file_source> bag_stream_;
+  char* bag_bytes_ = nullptr;
+  size_t bag_bytes_size_ = 0;
+
+  std::unique_ptr<BagImpl> bag_impl_;
 
   // Bag data
   std::vector<RosBagTypes::connection_record_t> connections_;
