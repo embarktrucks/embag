@@ -68,7 +68,7 @@ class Bag {
       open(bytes->data(), length);
     }
 
-    void open(const char* bytes, uint64_t length);
+    void open(const char* bytes, size_t length);
     void close();
 
    private:
@@ -106,7 +106,7 @@ class Bag {
   const std::string MAGIC_STRING = "#ROSBAG V";
 
   template <typename T>
-  bool readStream(boost::iostreams::stream<T> &stream, const char* buffer, const uint64_t buffer_size);
+  bool readStream(boost::iostreams::stream<T> &stream, const char* buffer, const size_t buffer_size);
   template <typename T>
   bool readRecords(boost::iostreams::stream<T> &stream);
   template <typename T>
