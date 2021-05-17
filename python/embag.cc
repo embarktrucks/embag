@@ -16,7 +16,7 @@ PYBIND11_MODULE(libembag, m) {
   py::class_<Embag::Bag, std::shared_ptr<Embag::Bag>>(m, "Bag")
       .def(py::init<const std::string>())
       .def(py::init([](const std::string &bytes, size_t length) {
-        return std::make_shared<Embag::Bag>(std::make_shared<std::string>(bytes), length);
+        return std::make_shared<Embag::Bag>(std::make_shared<const std::string>(bytes));
       }))
       .def("topics", &Embag::Bag::topics)
       .def("read_messages", [](std::shared_ptr<Embag::Bag> &bag, const std::vector<std::string>& topics) {

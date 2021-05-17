@@ -5,6 +5,7 @@
 #include <set>
 #include <unordered_set>
 #include <vector>
+#include <fstream>
 
 TEST(EmbagTest, OpenCloseBag) {
   Embag::Bag bag{"test/test.bag"};
@@ -205,6 +206,28 @@ TEST_F(ViewTest, MessagesForTopic) {
   for (const auto &message : view_.getMessages({"/base_scan"})) {
     ASSERT_EQ(message->topic, "/base_scan");
   }
+}
+
+class StreamTest : public ::testing::Test {
+ protected:
+  std::string bag_path_ = "test/test.bag";
+};
+
+TEST_F(StreamTest, BagFromStream) {
+  std::ifstream ifs{bag_path_};
+  auto bytes = std::make_shared<const std::string>((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
+  auto bag = std::make_shared<Embag::Bag>(bytes);
+  auto view = Embag::View{bag};
+
+  for (const auto &message : view.getMessages("/base_scan")) {
+    ASSERT_EQ(message->topic, "/base_scan");
+  }
+
+  for (const auto &message : view.getMessages({"/base_scan"})) {
+    ASSERT_EQ(message->topic, "/base_scan");
+  }
+
+  bag->close();
 }
 
 // TODO: test multi-bag message sorting

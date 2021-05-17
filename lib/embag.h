@@ -26,8 +26,8 @@ class Bag {
     bag_impl_ = make_unique<BagFromFile>(this, path);
   }
 
-  Bag(std::shared_ptr<std::string>bytes, uint64_t length) {
-    bag_impl_ = make_unique<BagFromBytes>(this, bytes, length);
+  Bag(std::shared_ptr<const std::string>bytes) {
+    bag_impl_ = make_unique<BagFromBytes>(this, bytes);
   }
 
   ~Bag() {
@@ -42,7 +42,6 @@ class Bag {
    public:
     explicit BagImpl(Bag *bag) : bag_(bag) {}
 
-    virtual void open() {};
     virtual void close() {};
 
    protected:
@@ -64,15 +63,15 @@ class Bag {
 
   class BagFromBytes : public BagImpl {
    public:
-    BagFromBytes(Bag *bag, std::shared_ptr<std::string>bytes, size_t length) : BagImpl(bag), bytes_(bytes) {
-      open(bytes->data(), length);
+    BagFromBytes(Bag *bag, std::shared_ptr<const std::string>bytes) : BagImpl(bag), bytes_(bytes) {
+      open(bytes->data(), bytes->size());
     }
 
     void open(const char* bytes, size_t length);
     void close();
 
    private:
-    std::shared_ptr<std::string> bytes_;
+    std::shared_ptr<const std::string> bytes_;
     boost::iostreams::stream<boost::iostreams::array_source> bag_stream_;
   };
 
