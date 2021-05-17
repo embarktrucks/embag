@@ -58,7 +58,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: "/Users/runner/.cache/bazel"
-          key: ${{ runner.os }}-bazel
+          key: ${{ runner.os }}-${{ matrix.python-version }}-bazel
       - run: pip_package/macos_build.sh
 
       - name: Upload .whl artifacts
