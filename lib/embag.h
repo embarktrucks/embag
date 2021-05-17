@@ -38,11 +38,42 @@ class Bag {
     bag_impl_->close();
   }
 
+  std::unordered_set<std::string> topics() const {
+    std::unordered_set<std::string> topics;
+    for (const auto& item : topic_connection_map_) {
+      topics.emplace(item.first);
+    }
+    return topics;
+  }
+
+  bool topicInBag(const std::string &topic) const {
+    return topic_connection_map_.count(topic) != 0;
+  }
+
+  std::shared_ptr<RosMsgTypes::ros_msg_def> msgDefForTopic(const std::string &topic) {
+    const auto it = message_schemata_.find(topic);
+    if (it == message_schemata_.end()) {
+      parseMsgDefForTopic(topic);
+      return message_schemata_[topic];
+    } else {
+      return it->second;
+    }
+  }
+
+  std::vector<RosBagTypes::connection_record_t *> connectionsForTopic(const std::string &topic) {
+    return topic_connection_map_[topic];
+  }
+
+ private:
+  const std::string MAGIC_STRING = "#ROSBAG V";
+
   class BagImpl {
    public:
     explicit BagImpl(Bag *bag) : bag_(bag) {}
 
     virtual void close() {};
+
+    virtual ~BagImpl() = default;
 
    protected:
     Bag *bag_ = nullptr;
@@ -74,35 +105,6 @@ class Bag {
     std::shared_ptr<const std::string> bytes_;
     boost::iostreams::stream<boost::iostreams::array_source> bag_stream_;
   };
-
-  std::unordered_set<std::string> topics() const {
-    std::unordered_set<std::string> topics;
-    for (const auto& item : topic_connection_map_) {
-      topics.emplace(item.first);
-    }
-    return topics;
-  }
-
-  bool topicInBag(const std::string &topic) const {
-    return topic_connection_map_.count(topic) != 0;
-  }
-
-  std::shared_ptr<RosMsgTypes::ros_msg_def> msgDefForTopic(const std::string &topic) {
-    const auto it = message_schemata_.find(topic);
-    if (it == message_schemata_.end()) {
-      parseMsgDefForTopic(topic);
-      return message_schemata_[topic];
-    } else {
-      return it->second;
-    }
-  }
-
-  std::vector<RosBagTypes::connection_record_t *> connectionsForTopic(const std::string &topic) {
-    return topic_connection_map_[topic];
-  }
-
- private:
-  const std::string MAGIC_STRING = "#ROSBAG V";
 
   template <typename T>
   bool readStream(boost::iostreams::stream<T> &stream, const char* buffer, const size_t buffer_size);
