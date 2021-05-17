@@ -24,7 +24,7 @@ function build() {
 build "/usr/bin" 2
 
 # Build embag for various version of Python 3
-for version in cp35-cp35m \
+for version in \
   cp36-cp36m \
   cp37-cp37m \
   cp38-cp38 \
