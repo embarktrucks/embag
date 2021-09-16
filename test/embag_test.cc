@@ -12,6 +12,13 @@ TEST(EmbagTest, OpenCloseBag) {
   bag.close();
 }
 
+TEST(EmbagTest, OpenCloseOddPaddingBag) {
+  // In some very rare cases rosbags will contain padding between the CHUNK and INDEX section of the file.
+  // This bagfile is one such case.
+  Embag::Bag oddly_padded_bag{"test/test_2.bag"};
+  oddly_padded_bag.close();
+}
+
 class BagTest : public ::testing::Test {
  protected:
   Embag::Bag bag_{"test/test.bag"};

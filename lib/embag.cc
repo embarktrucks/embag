@@ -172,8 +172,8 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
   index_pos_ = index_pos;
 
   /**
-   * Read the CONNECTION records. As per the docs, these are located immediately after the
-   * CHUNK section of the rosbag. The location is denoted by the index_pos field of the bag header
+   * Read the CONNECTION records. As per the docs, these are located at the start of the "INDEX" section,
+   * which is denoted by the index_pos field of the bag header
    */
   stream.seekg(index_pos_, std::ios_base::beg);
   for (size_t i = 0; i < connection_count; i++) {
