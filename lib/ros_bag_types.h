@@ -56,6 +56,7 @@ struct RosBagTypes {
   };
 
   struct chunk_info_t {
+    uint64_t chunk_pos;
     RosValue::ros_time_t start_time;
     RosValue::ros_time_t end_time;
     uint32_t message_count = 0;
