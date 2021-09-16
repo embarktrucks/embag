@@ -212,7 +212,7 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
     connections_[connection_id].id = connection_id;
     connections_[connection_id].topic = topic;
     connections_[connection_id].data = connection_data;
-    topic_connection_map_[topic].emplace_back(&connections_[connection_id]);
+    topic_connection_map_[topic].push_back(&connections_[connection_id]);
   }
 
   /**
@@ -270,7 +270,7 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
 
     chunk.info = info;
 
-    chunks_.emplace_back(chunk);
+    chunks_.push_back(chunk);
 
     // Each chunk is followed by an INDEX_DATA record, so parse that out here
     const auto index_data_record = readRecord(stream);
@@ -292,7 +292,7 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
     //       if you use &chunk, all `into_chunk` values will be exactly the same
     index_block.into_chunk = &chunks_[i];
 
-    connections_[connection_id].blocks.emplace_back(index_block);
+    connections_[connection_id].blocks.push_back(index_block);
   }
 
   return true;
