@@ -137,6 +137,31 @@ class View {
     return std::vector<std::string>(topics.begin(), topics.end());
   }
 
+  std::unordered_map<std::string, std::vector<RosBagTypes::connection_record_t *>> connectionsByTopicMap() const {
+    std::unordered_map<std::string, std::vector<RosBagTypes::connection_record_t *>> connections_by_topic;
+    for (const auto &bag : bags_) {
+      for (const auto &item : bag->connectionsByTopicMap()) {
+        const auto &topic = item.first;
+        const auto &new_connections = item.second;
+        auto &existing_connections = connections_by_topic[topic];
+        for (auto *new_c : new_connections) {
+          bool already_exists = std::any_of(
+              existing_connections.cbegin(), existing_connections.cend(),
+              [new_c](RosBagTypes::connection_record_t *existing_c) {
+                return new_c->data.type == existing_c->data.type &&
+                       new_c->data.md5sum == existing_c->data.md5sum &&
+                       new_c->data.callerid == existing_c->data.callerid &&
+                       new_c->data.latching == existing_c->data.latching;
+              });
+          if (!already_exists) {
+            existing_connections.push_back(new_c);
+          }
+        }
+      }
+    }
+    return connections_by_topic;
+  }
+
  private:
   std::vector<std::shared_ptr<Bag>> bags_;
   std::unordered_map<std::shared_ptr<Bag>, std::shared_ptr<iterator::bag_wrapper_t>> bag_wrappers_;
