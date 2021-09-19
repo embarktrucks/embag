@@ -14,6 +14,17 @@ class EmbagTest(unittest.TestCase):
             "/base_scan",
             "/luminar_pointcloud",
         }
+        self.known_connections = {
+            "/base_pose_ground_truth": {'type': 'nav_msgs/Odometry',
+                                        'scope': 'nav_msgs', 'md5sum': 'cd5e73d190d741a2f92e81eda573aca7',
+                                        'callerid': '/play_1604515197096283663', 'latching': False},
+            "/base_scan": {'type': 'sensor_msgs/LaserScan', 'scope': 'sensor_msgs',
+                           'md5sum': '90c7ef2dc6895d81024acba2ac42f369', 'callerid': '/play_1604515197096283663',
+                           'latching': False},
+            "/luminar_pointcloud": {'type': 'sensor_msgs/PointCloud2',
+                                    'scope': 'sensor_msgs', 'md5sum': '1158d486dd51d683ce2f1be655c3c181',
+                                    'callerid': '/play_1604515189845695821', 'latching': False},
+        }
 
     def tearDown(self):
         self.bag.close()
@@ -46,6 +57,20 @@ class EmbagTest(unittest.TestCase):
     def testTopicsInBag(self):
         topics = set(self.bag.topics())
         self.assertSetEqual(topics, self.known_topics)
+
+    def testConnectionsInBag(self):
+        self.checkConnectionsByTopic(self.bag.connectionsByTopic(), self.known_connections)
+
+    def checkConnectionsByTopic(self, connections_from_bag, known_connections):
+        as_dict = {}
+        for topic, connections in connections_from_bag.items():
+            self.assertEqual(len(connections), 1)
+            c = connections[0]
+            self.assertIn("MSG: ", c.message_definition)
+            self.assertEqual(c.topic, topic)
+            as_dict[topic] = dict(type=c.type, scope=c.scope, md5sum=c.md5sum,
+                                  callerid=c.callerid, latching=c.latching)
+        self.assertDictEqual(as_dict, known_connections)
 
     def testROSMessages(self):
         unseen_topics = self.known_topics.copy()
@@ -129,6 +154,13 @@ class EmbagTest(unittest.TestCase):
                 for v in msg_data['pose']['covariance']:
                     self.assertEqual(v, 0)
 
+    def testTopicsInView(self):
+        topics = set(self.view.topics())
+        self.assertSetEqual(topics, self.known_topics)
+
+    def testConnectionsInView(self):
+        self.checkConnectionsByTopic(self.view.connectionsByTopic(), self.known_connections)
+
     def testBagFromBytes(self):
         bag_stream = open(self.bag_path, 'rb')
         bag_bytes = bag_stream.read()
@@ -136,6 +168,8 @@ class EmbagTest(unittest.TestCase):
         self.view = embag.View(bag)
 
         self.testViewMessages()
+        self.testTopicsInView()
+        self.testConnectionsInView()
         bag_stream.close()
 
 if __name__ == "__main__":
