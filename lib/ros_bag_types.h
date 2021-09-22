@@ -19,6 +19,14 @@ struct RosBagTypes {
     std::string message_definition;
     std::string callerid;
     bool latching = false;
+
+    bool operator==(const connection_data_t &other) const {
+      return other.topic == topic &&
+          other.type == type &&
+          other.md5sum == md5sum &&
+          other.callerid == callerid &&
+          other.latching == latching;
+    }
   };
 
   struct record_t {

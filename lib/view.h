@@ -148,10 +148,7 @@ class View {
           bool already_exists = std::any_of(
               existing_connections.cbegin(), existing_connections.cend(),
               [new_c](RosBagTypes::connection_record_t *existing_c) {
-                return new_c->data.type == existing_c->data.type &&
-                       new_c->data.md5sum == existing_c->data.md5sum &&
-                       new_c->data.callerid == existing_c->data.callerid &&
-                       new_c->data.latching == existing_c->data.latching;
+                return new_c->data == existing_c->data;
               });
           if (!already_exists) {
             existing_connections.push_back(new_c);
