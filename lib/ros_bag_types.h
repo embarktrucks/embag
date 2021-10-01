@@ -60,6 +60,7 @@ struct RosBagTypes {
     RosValue::ros_time_t start_time;
     RosValue::ros_time_t end_time;
     uint32_t message_count = 0;
+    uint32_t connection_count = 0;
   };
 
   struct chunk_t {
