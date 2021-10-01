@@ -249,7 +249,7 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
    * earlier in the file. Each CHUNK_INFO knows the position of its corresponding chunk.
    */
   for (size_t i = 0; i < chunk_count; i++) {
-    auto info = chunk_infos_[i];
+    auto& info = chunk_infos_[i];
 
     // TODO: The chunk infos are not necessarily Revisit this logic if seeking back and forth across the file causes a slowdown
     stream.seekg(info.chunk_pos, std::ios_base::beg);
@@ -266,10 +266,6 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
     if (!(chunk.compression == "lz4" || chunk.compression == "bz2" || chunk.compression == "none")) {
       throw std::runtime_error("Unsupported compression type: " + chunk.compression);
     }
-
-    chunk.info = info;
-
-    chunks_.push_back(chunk);
 
     // Each chunk is followed by multiple INDEX_DATA records, so parse those out here
     for (size_t j = 0; j < info.connection_count; j++) {
@@ -295,6 +291,9 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
       info.message_count += msg_count;
       connections_[connection_id].blocks.push_back(index_block);
     }
+
+    chunk.info = info;
+    chunks_.push_back(chunk);
   }
 
   return true;

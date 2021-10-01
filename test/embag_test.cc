@@ -125,6 +125,12 @@ TEST_F(BagTest, ConnectionsForTopic) {
 class ViewTest : public ::testing::Test {
  protected:
   Embag::View view_{"test/test.bag"};
+
+  const std::set<std::string> known_topics_ = {
+      "/base_pose_ground_truth",
+      "/base_scan",
+      "/luminar_pointcloud",
+  };
 };
 
 
@@ -206,12 +212,21 @@ TEST_F(ViewTest, AllMessages) {
 }
 
 TEST_F(ViewTest, MessagesForTopic) {
-  for (const auto &message : view_.getMessages("/base_scan")) {
-    ASSERT_EQ(message->topic, "/base_scan");
-  }
+  uint32_t count;
+  for (const auto &topic : known_topics_) {
+    count = 0;
+    for (const auto &message : view_.getMessages(topic)) {
+      ASSERT_EQ(message->topic, topic);
+      ++count;
+    }
+    ASSERT_GT(count, 0);
 
-  for (const auto &message : view_.getMessages({"/base_scan"})) {
-    ASSERT_EQ(message->topic, "/base_scan");
+    count = 0;
+    for (const auto &message : view_.getMessages({topic})) {
+      ASSERT_EQ(message->topic, topic);
+      ++count;
+    }
+    ASSERT_GT(count, 0);
   }
 }
 
