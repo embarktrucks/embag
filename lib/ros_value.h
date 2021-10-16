@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -32,7 +33,6 @@ class RosValue {
     // Custom types
     object,
     array,
-    blob,
   };
 
   struct ros_time_t {
@@ -75,20 +75,32 @@ class RosValue {
     }
   };
 
-  struct blob_t {
-    std::string data;
-    size_t byte_size = 0;
-    size_t size = 0;
-    Type type = Type::uint8;
-  };
-
   Type getType() const {
     return type;
   }
 
   // Constructors
-  RosValue() = default;
-  explicit RosValue(const Type type) : type(type) {}
+  RosValue(const Type type) : type(type), primitive_info({}) {
+    if (type == Type::object || type == Type::array) {
+      throw std::runtime_error("Cannot create an object or array with this constructor");
+    }
+  }
+ private:
+  struct _object_identifier {};
+  struct _array_identifier {};
+ public:
+  RosValue(const _object_identifier &i) : type(Type::object), objects({}) {}
+  RosValue(const _array_identifier &i) : type(Type::array), values({0}) {}
+  ~RosValue() {
+    if (type == Type::object) {
+      objects.~unordered_map();
+    } else if (type == Type::array) {
+      values.~vector();
+    } else {
+      primitive_info.~primitive_info_t();
+    }
+  }
+
 
   // Convenience accessors
   const RosValue &operator()(const std::string &key) const;
@@ -102,15 +114,27 @@ class RosValue {
     if (type != Type::object) {
       throw std::runtime_error("Value is not an object");
     }
-    return objects.at(key)->getValueImpl(identity<T>());
+    return objects.at(key).as<T>();
   }
 
   template<typename T>
-  const T &as() const {
-    if (type == Type::object) {
-      throw std::runtime_error("Value cannot be an object for as");
+  const T as() const {
+    if (type == Type::object || type == Type::array) {
+      throw std::runtime_error("Value cannot be an object or array for as");
     }
-    return getValueImpl(identity<T>());
+
+    // FIXME: Add check that the underlying type aligns with T
+    return *reinterpret_cast<const T*>(getPrimitivePointer());
+  }
+
+  const std::string as() const {
+    if (type != Type::string) {
+      throw std::runtime_error("Cannot call as<std::string> for a non string");
+    }
+
+    const uint32_t string_length = *reinterpret_cast<const uint32_t* const>(getPrimitivePointer());
+    const char* const string_loc = reinterpret_cast<const char* const>(getPrimitivePointer() + sizeof(uint32_t));
+    return std::string(string_loc, string_loc + string_length);
   }
 
   bool has(const std::string &key) const {
@@ -128,80 +152,42 @@ class RosValue {
     return values.size();
   }
 
-  std::unordered_map<std::string, std::shared_ptr<RosValue>> getObjects() const {
+  std::unordered_map<std::string, std::shared_ptr<const RosValue>> getObjects() const {
     return objects;
   }
 
-  std::vector<std::shared_ptr<RosValue>> getValues() const {
+  std::vector<std::shared_ptr<const RosValue>> getValues() const {
     return values;
-  }
-
-  blob_t getBlob() const {
-    if (type != Type::blob) {
-      throw std::runtime_error("Value is not blob");
-    }
-
-    return blob_storage;
   }
 
   std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
-  const nonstd::span<char> original_buffer() const {
-    return original_buffer_;
-  }
 
   // Used for accessor template resolution
   template<typename T>
   struct identity { typedef T type; };
 
  private:
+  struct primitive_info_t {
+    size_t offset;
+    std::shared_ptr<std::vector<char>> message_buffer;
 
-  // TODO: use boost::variant?
-  union {
-    bool bool_value;
-    int8_t int8_value;
-    uint8_t uint8_value;
-    int16_t int16_value;
-    uint16_t uint16_value;
-    int32_t int32_value;
-    uint32_t uint32_value;
-    int64_t int64_value;
-    uint64_t uint64_value;
-    float float32_value;
-    double float64_value;
+    primitive_info_t() : offset(0), message_buffer(nullptr) {}
   };
 
-  std::string string_value;
-  ros_time_t time_value;
-  ros_duration_t duration_value;
+  Type type;
+  union {
+    // If this is a primitive
+    primitive_info_t primitive_info;
+    // If this is an object
+    std::unordered_map<std::string, std::shared_ptr<const RosValue>> objects;
+    // If this is an array
+    std::vector<std::shared_ptr<const RosValue>> values;
+  };
 
-  blob_t blob_storage;
-
-  // Only set when this is a message (type = object)
-  nonstd::span<char> original_buffer_;
-
-  std::unordered_map<std::string, std::shared_ptr<RosValue>> objects;
-  std::vector<std::shared_ptr<RosValue>> values;
-
-  // Default type
-  Type type = Type::object;
-
-  // Primitive accessors
-  const bool &getValueImpl(identity<bool>) const;
-  const int8_t &getValueImpl(identity<int8_t>) const;
-  const uint8_t &getValueImpl(identity<uint8_t>) const;
-  const int16_t &getValueImpl(identity<int16_t>) const;
-  const uint16_t &getValueImpl(identity<uint16_t>) const;
-  const int32_t &getValueImpl(identity<int32_t>) const;
-  const uint32_t &getValueImpl(identity<uint32_t>) const;
-  const int64_t &getValueImpl(identity<int64_t>) const;
-  const uint64_t &getValueImpl(identity<uint64_t>) const;
-  const float &getValueImpl(identity<float>) const;
-  const double &getValueImpl(identity<double>) const;
-  const std::string &getValueImpl(identity<std::string>) const;
-  const ros_time_t &getValueImpl(identity<ros_time_t>) const;
-  const ros_duration_t &getValueImpl(identity<ros_duration_t>) const;
-  const blob_t &getValueImpl(identity<blob_t>) const;
+  const char* const getPrimitivePointer() const {
+    return &primitive_info.message_buffer->at(primitive_info.offset);
+  }
 
   friend class MessageParser;
 };

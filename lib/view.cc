@@ -29,12 +29,11 @@ std::shared_ptr<RosMessage> View::iterator::operator*() const {
   const auto &connection = wrapper->bag->connections_[wrapper->current_connection_id];
   const auto &msg_def = wrapper->bag->msgDefForTopic(connection.topic);
 
-  auto message = std::make_shared<RosMessage>();
+  auto message = std::make_shared<RosMessage>(wrapper->current_message_buffer, wrapper->current_message_data_offset);
 
   message->topic = connection.topic;
   message->timestamp = wrapper->current_timestamp;
   message->md5 = connection.data.md5sum;
-  message->raw_data = wrapper->current_message_data;
   message->raw_data_len = wrapper->current_message_len;
   message->msg_def_ = msg_def;
   message->scope_ = connection.data.scope;
@@ -82,10 +81,10 @@ View::iterator::header_t View::iterator::readHeader(const RosBagTypes::record_t 
  */
 void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
   while (bag_wrapper->chunk_iter != bag_wrapper->chunks_to_parse.end()) {
-    if (bag_wrapper->current_buffer.empty()) {
+    if (!bag_wrapper->current_buffer) {
       const auto& chunk = *(bag_wrapper->chunk_iter);
-      bag_wrapper->current_buffer.resize(chunk->uncompressed_size);
-      chunk->decompress(&bag_wrapper->current_buffer[0]);
+      bag_wrapper->current_buffer = std::make_shared<std::vector<char>>(chunk->uncompressed_size);
+      chunk->decompress(&bag_wrapper->current_buffer->at(0));
       bag_wrapper->uncompressed_size = chunk->uncompressed_size;
     }
 
@@ -94,17 +93,17 @@ void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
 
       // TODO: just use pointers instead of copying memory?
       std::memcpy(&record.header_len,
-                  bag_wrapper->current_buffer.c_str() + bag_wrapper->processed_bytes,
+                  &bag_wrapper->current_buffer->at(bag_wrapper->processed_bytes),
                   sizeof(record.header_len));
       bag_wrapper->processed_bytes += sizeof(record.header_len);
-      record.header = &bag_wrapper->current_buffer.c_str()[bag_wrapper->processed_bytes];
+      record.header = &bag_wrapper->current_buffer->at(bag_wrapper->processed_bytes);
       bag_wrapper->processed_bytes += record.header_len;
 
       std::memcpy(&record.data_len,
-                  bag_wrapper->current_buffer.c_str() + bag_wrapper->processed_bytes,
+                  &bag_wrapper->current_buffer->at(bag_wrapper->processed_bytes),
                   sizeof(record.data_len));
       bag_wrapper->processed_bytes += sizeof(record.data_len);
-      record.data = &bag_wrapper->current_buffer.c_str()[bag_wrapper->processed_bytes];
+      record.data = &bag_wrapper->current_buffer->at(bag_wrapper->processed_bytes);
       bag_wrapper->processed_bytes += record.data_len;
 
       const auto header = readHeader(record);
@@ -116,7 +115,8 @@ void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
             continue;
           }
 
-          bag_wrapper->current_message_data = const_cast<char *>(record.data);
+          bag_wrapper->current_message_buffer = bag_wrapper->current_buffer;
+          bag_wrapper->current_message_data_offset = record.data - &bag_wrapper->current_message_buffer->at(0);
           bag_wrapper->current_message_len = record.data_len;
           bag_wrapper->current_connection_id = header.connection_id;
           bag_wrapper->current_timestamp = header.timestamp;
@@ -125,7 +125,7 @@ void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
           return;
         }
         case RosBagTypes::header_t::op::CONNECTION: {
-          // FIXME: not entirely sure what to do with these so we'll move to the next record...
+          // TODO: not entirely sure what to do with these so we'll move to the next record...
           continue;
         }
         default: {
@@ -135,7 +135,7 @@ void View::iterator::readMessage(std::shared_ptr<bag_wrapper_t> bag_wrapper) {
     }
 
     bag_wrapper->chunk_iter++;
-    bag_wrapper->current_buffer.clear();
+    bag_wrapper->current_buffer.reset();
     bag_wrapper->processed_bytes = 0;
   }
 }

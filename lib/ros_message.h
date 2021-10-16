@@ -14,8 +14,15 @@ class RosMessage {
   std::string topic;
   RosValue::ros_time_t timestamp;
   std::string md5;
-  char* raw_data = nullptr;
+  const std::shared_ptr<std::vector<char>> raw_buffer;
+  const size_t raw_buffer_offset;
   uint32_t raw_data_len = 0;
+
+  RosMessage(const std::shared_ptr<std::vector<char>> raw_buffer, const size_t offset)
+    : raw_buffer(raw_buffer)
+    , raw_buffer_offset(offset)
+  {
+  }
 
   const RosValue &data() {
     if (!parsed_) {
@@ -56,10 +63,7 @@ class RosMessage {
   std::string scope_;
 
   void hydrate() {
-    // FIXME: streaming this data means copying it into basic types.  It would be faster to just set pointers...
-    nonstd::span<char> stream{raw_data, raw_data_len};
-
-    MessageParser msg{stream, scope_, msg_def_};
+    MessageParser msg(raw_buffer, raw_buffer_offset, scope_, *msg_def_);
 
     data_ = msg.parse();
 

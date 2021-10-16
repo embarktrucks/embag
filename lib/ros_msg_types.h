@@ -38,9 +38,41 @@ class RosMsgTypes{
 
   typedef boost::variant<ros_msg_field, ros_msg_constant> ros_msg_member;
 
-  struct ros_embedded_msg_def {
-    std::string type_name;
+  struct ros_msg_def_base {
+   private:
+    std::unordered_map<std::string, const ros_msg_member*> member_map_;
+
+    const std::string& getMemberName(const ros_msg_member &member) {
+      switch (member.which()) {
+        case 0:
+          return boost::get<RosMsgTypes::ros_msg_field>(member).field_name;
+        case 1:
+          return boost::get<RosMsgTypes::ros_msg_constant>(member).constant_name;
+      }
+    }
+
+   public:
     std::vector<ros_msg_member> members;
+
+    ros_msg_member getMember(const std::string &member_name) {
+      if (member_map_.size() != members.size()) {
+        member_map_.reserve(members.size());
+        for (const auto &member : members) {
+          member_map_[getMemberName(member)] = &member;
+        }
+      }
+
+      if (member_map_.count(member_name)) {
+        return *member_map_[member_name];
+      }
+
+      throw std::runtime_error("Unable to find member: " + member_name);
+    }
+  };
+
+  struct ros_embedded_msg_def : public ros_msg_def_base {
+   public:
+    std::string type_name;
     std::string scope;
     bool scope_set = false;
 
@@ -60,8 +92,8 @@ class RosMsgTypes{
     }
   };
 
-  struct ros_msg_def {
-    std::vector<ros_msg_member> members;
+  struct ros_msg_def : public ros_msg_def_base {
+   public:
     std::vector<ros_embedded_msg_def> embedded_types;
 
     // This speeds up searching for embedded types during parsing.
@@ -87,7 +119,7 @@ class RosMsgTypes{
         return *embedded_type_map_[scoped_name];
       }
 
-      throw std::runtime_error("Unable to find embedded type: " + field.type_name);
+      throw std::runtime_error("Unable to find embedded type: " + field.type_name + " in scope " + scope);
     }
   };
 };
