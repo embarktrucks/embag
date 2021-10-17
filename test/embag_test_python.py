@@ -17,13 +17,13 @@ class EmbagTest(unittest.TestCase):
         self.known_connections = {
             "/base_pose_ground_truth": {'type': 'nav_msgs/Odometry',
                                         'scope': 'nav_msgs', 'md5sum': 'cd5e73d190d741a2f92e81eda573aca7',
-                                        'callerid': '/play_1604515197096283663', 'latching': False},
+                                        'callerid': '/play_1604515197096283663', 'latching': False, 'message_count': 5},
             "/base_scan": {'type': 'sensor_msgs/LaserScan', 'scope': 'sensor_msgs',
                            'md5sum': '90c7ef2dc6895d81024acba2ac42f369', 'callerid': '/play_1604515197096283663',
-                           'latching': False},
+                           'latching': False, 'message_count': 5},
             "/luminar_pointcloud": {'type': 'sensor_msgs/PointCloud2',
                                     'scope': 'sensor_msgs', 'md5sum': '1158d486dd51d683ce2f1be655c3c181',
-                                    'callerid': '/play_1604515189845695821', 'latching': False},
+                                    'callerid': '/play_1604515189845695821', 'latching': False, 'message_count': 5},
         }
 
     def tearDown(self):
@@ -68,8 +68,8 @@ class EmbagTest(unittest.TestCase):
             c = connections[0]
             self.assertIn("MSG: ", c.message_definition)
             self.assertEqual(c.topic, topic)
-            as_dict[topic] = dict(type=c.type, scope=c.scope, md5sum=c.md5sum,
-                                  callerid=c.callerid, latching=c.latching)
+            as_dict[topic] = dict(type=c.type, scope=c.scope, md5sum=c.md5sum, callerid=c.callerid,
+                                  latching=c.latching, message_count=c.message_count)
         self.assertDictEqual(as_dict, known_connections)
 
     def testROSMessages(self):

@@ -137,21 +137,20 @@ class View {
     return std::vector<std::string>(topics.begin(), topics.end());
   }
 
-  std::unordered_map<std::string, std::vector<RosBagTypes::connection_record_t *>> connectionsByTopicMap() const {
-    std::unordered_map<std::string, std::vector<RosBagTypes::connection_record_t *>> connections_by_topic;
+  std::unordered_map<std::string, std::vector<RosBagTypes::connection_data_t>> connectionsByTopicMap() const {
+    std::unordered_map<std::string, std::vector<RosBagTypes::connection_data_t>> connections_by_topic;
     for (const auto &bag : bags_) {
       for (const auto &item : bag->connectionsByTopicMap()) {
         const auto &topic = item.first;
         const auto &new_connections = item.second;
         auto &existing_connections = connections_by_topic[topic];
         for (auto *new_c : new_connections) {
-          bool already_exists = std::any_of(
-              existing_connections.cbegin(), existing_connections.cend(),
-              [new_c](RosBagTypes::connection_record_t *existing_c) {
-                return new_c->data == existing_c->data;
-              });
-          if (!already_exists) {
-            existing_connections.push_back(new_c);
+          auto existing_it = std::find(existing_connections.begin(),
+                                       existing_connections.end(), new_c->data);
+          if (existing_it == existing_connections.end()) {
+            existing_connections.push_back(new_c->data);
+          } else {
+            existing_it->message_count += new_c->data.message_count;
           }
         }
       }

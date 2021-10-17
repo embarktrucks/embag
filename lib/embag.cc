@@ -284,12 +284,13 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
 
       RosBagTypes::index_block_t index_block{};
       // NOTE: It seems like it would be simpler to just do &chunk here right? WRONG.
-      //       C++ resuses the same memory location for the chunk variable for each loop, so
+      //       C++ reuses the same memory location for the chunk variable for each loop, so
       //       if you use &chunk, all `into_chunk` values will be exactly the same
       index_block.into_chunk = &chunks_[i];
 
       info.message_count += msg_count;
       connections_[connection_id].blocks.push_back(index_block);
+      connections_[connection_id].data.message_count += msg_count;
     }
 
     chunk.info = info;
