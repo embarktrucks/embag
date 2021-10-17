@@ -30,16 +30,7 @@ PYBIND11_MODULE(libembag, m) {
         auto builder = SchemaBuilder{bag};
         return builder.generateSchema(topic);
       })
-      .def("connectionsByTopic", [](std::shared_ptr<Embag::Bag> &bag) {
-        std::unordered_map<std::string, std::vector<Embag::RosBagTypes::connection_data_t>> connections_by_topic;
-        for (const auto &item: bag->connectionsByTopicMap()) {
-          auto &connections = connections_by_topic[item.first];
-          for (auto *c: item.second) {
-            connections.emplace_back(c->data);
-          }
-        }
-        return connections_by_topic;
-      })
+      .def("connectionsByTopic", &Embag::Bag::connectionsByTopicMap)
       .def("close", &Embag::Bag::close);
 
   py::class_<Embag::View>(m, "View")

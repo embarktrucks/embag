@@ -142,15 +142,14 @@ class View {
     for (const auto &bag : bags_) {
       for (const auto &item : bag->connectionsByTopicMap()) {
         const auto &topic = item.first;
-        const auto &new_connections = item.second;
-        auto &existing_connections = connections_by_topic[topic];
-        for (auto *new_c : new_connections) {
-          auto existing_it = std::find(existing_connections.begin(),
-                                       existing_connections.end(), new_c->data);
-          if (existing_it == existing_connections.end()) {
-            existing_connections.push_back(new_c->data);
+        const auto &new_conns = item.second;
+        auto &existing_conns = connections_by_topic[topic];
+        for (const auto &new_c : new_conns) {
+          auto existing_it = std::find(existing_conns.begin(), existing_conns.end(), new_c);
+          if (existing_it == existing_conns.end()) {
+            existing_conns.push_back(new_c);
           } else {
-            existing_it->message_count += new_c->data.message_count;
+            existing_it->message_count += new_c.message_count;
           }
         }
       }
