@@ -153,7 +153,6 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
    * Read the BAG_HEADER record. So long as the file is not corrupted, this is guaranteed
    * to be the first record in the bag
    */
-  const auto pos = stream.tellg();
   uint32_t connection_count;
   uint32_t chunk_count;
   uint64_t index_pos;
@@ -240,7 +239,7 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
     chunk_info.chunk_pos = chunk_pos;
     chunk_info.start_time = start_time;
     chunk_info.end_time = end_time;
-    chunk_info.message_count = count;
+    chunk_info.connection_count = count;
 
     chunk_infos_[i] = chunk_info;
   }
@@ -250,7 +249,7 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
    * earlier in the file. Each CHUNK_INFO knows the position of its corresponding chunk.
    */
   for (size_t i = 0; i < chunk_count; i++) {
-    const auto info = chunk_infos_[i];
+    auto& info = chunk_infos_[i];
 
     // TODO: The chunk infos are not necessarily Revisit this logic if seeking back and forth across the file causes a slowdown
     stream.seekg(info.chunk_pos, std::ios_base::beg);
@@ -268,31 +267,33 @@ bool Bag::readRecords(boost::iostreams::stream<T> &stream) {
       throw std::runtime_error("Unsupported compression type: " + chunk.compression);
     }
 
+    // Each chunk is followed by multiple INDEX_DATA records, so parse those out here
+    for (size_t j = 0; j < info.connection_count; j++) {
+      // TODO: An INDEX_DATA record contains each message's timestamp and offset within the chunk.
+      // We currently don't save this information, but we potentially could to speed up accesses
+      // that only want data after a certain time.
+      const auto index_data_record = readRecord(stream);
+      const auto index_data_header = readHeader(index_data_record);
+
+      uint32_t version;
+      uint32_t connection_id;
+      uint32_t msg_count;
+      index_data_header.getField("ver", version);
+      index_data_header.getField("conn", connection_id);
+      index_data_header.getField("count", msg_count);
+
+      RosBagTypes::index_block_t index_block{};
+      // NOTE: It seems like it would be simpler to just do &chunk here right? WRONG.
+      //       C++ resuses the same memory location for the chunk variable for each loop, so
+      //       if you use &chunk, all `into_chunk` values will be exactly the same
+      index_block.into_chunk = &chunks_[i];
+
+      info.message_count += msg_count;
+      connections_[connection_id].blocks.push_back(index_block);
+    }
+
     chunk.info = info;
-
     chunks_.push_back(chunk);
-
-    // Each chunk is followed by an INDEX_DATA record, so parse that out here
-    const auto index_data_record = readRecord(stream);
-    const auto index_data_header = readHeader(index_data_record);
-
-    uint32_t version;
-    uint32_t connection_id;
-    uint32_t msg_count;
-
-    // TODO: check these values
-    index_data_header.getField("ver", version);
-    index_data_header.getField("conn", connection_id);
-    index_data_header.getField("count", msg_count);
-
-    RosBagTypes::index_block_t index_block{};
-
-    // NOTE: It seems like it would be simpler to just do &chunk here right? WRONG.
-    //       C++ resuses the same memory location for the chunk variable for each loop, so
-    //       if you use &chunk, all `into_chunk` values will be exactly the same
-    index_block.into_chunk = &chunks_[i];
-
-    connections_[connection_id].blocks.push_back(index_block);
   }
 
   return true;
