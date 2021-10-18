@@ -58,7 +58,7 @@ class RosMessage {
 
  private:
   bool parsed_ = false;
-  std::shared_ptr<RosValue> data_;
+  const RosValue* data_;
   std::shared_ptr<RosMsgTypes::ros_msg_def> msg_def_;
   std::string scope_;
 

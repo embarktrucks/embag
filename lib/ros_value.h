@@ -14,6 +14,15 @@ namespace Embag {
 class RosValue {
  public:
 
+  struct ros_value_pointer_t {
+    std::shared_ptr<std::vector<RosValue>> base;
+    size_t offset;
+
+    const RosValue& get() const {
+      return base->at(offset);
+    }
+  };
+
   enum class Type {
     ros_bool,
     int8,
@@ -91,6 +100,15 @@ class RosValue {
  public:
   RosValue(const _object_identifier &i) : type(Type::object), objects({}) {}
   RosValue(const _array_identifier &i) : type(Type::array), values({0}) {}
+  RosValue(const RosValue &value): type(value.type) {
+    if (type == Type::object) {
+      objects = value.objects;
+    } else if (type == Type::array) {
+      values = value.values;
+    } else {
+      primitive_info = value.primitive_info;
+    }
+  }
   ~RosValue() {
     if (type == Type::object) {
       objects.~unordered_map();
@@ -111,10 +129,7 @@ class RosValue {
 
   template<typename T>
   const T &getValue(const std::string &key) const {
-    if (type != Type::object) {
-      throw std::runtime_error("Value is not an object");
-    }
-    return objects.at(key).as<T>();
+    return get(key).as<T>();
   }
 
   template<typename T>
@@ -152,11 +167,11 @@ class RosValue {
     return values.size();
   }
 
-  std::unordered_map<std::string, std::shared_ptr<const RosValue>> getObjects() const {
+  std::unordered_map<std::string, ros_value_pointer_t> getObjects() const {
     return objects;
   }
 
-  std::vector<std::shared_ptr<const RosValue>> getValues() const {
+  std::vector<ros_value_pointer_t> getValues() const {
     return values;
   }
 
@@ -180,9 +195,9 @@ class RosValue {
     // If this is a primitive
     primitive_info_t primitive_info;
     // If this is an object
-    std::unordered_map<std::string, std::shared_ptr<const RosValue>> objects;
+    std::unordered_map<std::string, ros_value_pointer_t> objects;
     // If this is an array
-    std::vector<std::shared_ptr<const RosValue>> values;
+    std::vector<ros_value_pointer_t> values;
   };
 
   const char* const getPrimitivePointer() const {

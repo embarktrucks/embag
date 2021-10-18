@@ -21,7 +21,7 @@ const RosValue &RosValue::get(const std::string &key) const {
   if (type != Type::object) {
     throw std::runtime_error("Value is not an object");
   }
-  return *objects.at(key);
+  return objects.at(key).get();
 }
 
 
@@ -29,7 +29,7 @@ const RosValue &RosValue::at(const size_t idx) const {
   if (type != Type::array) {
     throw std::runtime_error("Value is not an array");
   }
-  return *values.at(idx);
+  return values.at(idx).get();
 }
 
 std::string RosValue::toString(const std::string &path) const {
@@ -84,13 +84,13 @@ std::string RosValue::toString(const std::string &path) const {
       std::ostringstream output;
       for (const auto &object : objects) {
         if (path.empty()) {
-          output << object.second->toString(object.first);
+          output << object.second.get().toString(object.first);
         } else {
-          output << object.second->toString(path + "." + object.first);
+          output << object.second.get().toString(path + "." + object.first);
         }
 
         // No need for a newline if our child is an object or array
-        const auto &object_type = object.second->getType();
+        const auto &object_type = object.second.get().getType();
         if (!(object_type == Type::object || object_type == Type::array)) {
           output << std::endl;
         }
@@ -102,7 +102,7 @@ std::string RosValue::toString(const std::string &path) const {
       size_t i = 0;
       for (const auto &item : values) {
         const std::string array_path = path + "[" + std::to_string(i++) + "]";
-        output << item->toString(array_path) << std::endl;
+        output << item.get().toString(array_path) << std::endl;
       }
 
       return output.str();

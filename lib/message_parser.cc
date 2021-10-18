@@ -29,66 +29,87 @@ std::unordered_map<std::string, size_t> MessageParser::primitive_size_map_ = {
   {"char", sizeof(uint8_t)},
 };
 
-std::shared_ptr<RosValue> MessageParser::parse() {
-  return createObject(msg_def_, scope_);
+const RosValue* MessageParser::parse() {
+  return &createObject(msg_def_, scope_).get();
 }
 
-std::shared_ptr<RosValue> MessageParser::createObject(RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope) {
-  auto object = std::make_shared<RosValue>(RosValue::_object_identifier());
-  // TODO: create all the RosValues and pre-allocate the map at once?
+RosValue::ros_value_pointer_t MessageParser::createObject(RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope) {
+  size_t num_children = 0;
+  for (const auto &member : object_definition.members) {
+    if (member.which() == 0) {
+      num_children += 1;
+    }
+  }
+  ros_values_->reserve(ros_values_->size() + num_children + 1);
+
+  ros_values_->emplace_back(RosValue::_object_identifier());
+  auto &object = ros_values_->back();
+  size_t offset = ros_values_offset_++;
+  object.objects.reserve(num_children);
+
   for (const auto &member : object_definition.members) {
     if (member.which() == 0) {
       auto field = boost::get<RosMsgTypes::ros_msg_field>(member);
-      object->objects[field.field_name] = parseField(scope, field);
+      object.objects[field.field_name] = parseField(scope, field);
     }
   }
 
-  return object;
+  return { ros_values_, offset };
 }
 
-std::shared_ptr<RosValue> MessageParser::createPrimitiveArray(RosMsgTypes::ros_msg_field &field, const size_t array_len) {
-  auto array = std::make_shared<RosValue>(RosValue::_array_identifier());
-  array->values.reserve(array_len);
+RosValue::ros_value_pointer_t MessageParser::createPrimitiveArray(RosMsgTypes::ros_msg_field &field, const size_t array_len) {
+  ros_values_->reserve(ros_values_->size() + array_len + 1);
+  ros_values_->emplace_back(RosValue::_array_identifier());
+  auto &array = ros_values_->back();
+  size_t offset = ros_values_offset_++;
+
+  array.values.reserve(array_len);
   for (size_t i = 0; i < array_len; i++) {
-    array->values.push_back(createPrimitive(field));
+    array.values.push_back(createPrimitive(field));
   }
 
-  return array;
+  return { ros_values_, offset };
 }
 
-std::shared_ptr<RosValue> MessageParser::createObjectArray(RosMsgTypes::ros_embedded_msg_def &object_definition, const size_t array_len) {
-  auto array = std::make_shared<RosValue>(RosValue::_array_identifier());
-  array->values.reserve(array_len);
+RosValue::ros_value_pointer_t MessageParser::createObjectArray(RosMsgTypes::ros_embedded_msg_def &object_definition, const size_t array_len) {
+  ros_values_->reserve(ros_values_->size() + array_len + 1);
+  ros_values_->emplace_back(RosValue::_array_identifier());
+  auto &array = ros_values_->back();
+  size_t offset = ros_values_offset_++;
+
+  array.values.reserve(array_len);
   const std::string scope = object_definition.getScope();
   for (size_t i = 0; i < array_len; i++) {
-    array->values.push_back(createObject(object_definition, scope));
+    array.values.push_back(createObject(object_definition, scope));
   }
 
-  return array;
+  return { ros_values_, offset };
 }
 
-std::shared_ptr<RosValue> MessageParser::createPrimitive(RosMsgTypes::ros_msg_field &field) {
-  auto primitive = std::make_shared<RosValue>(RosMsgTypes::ros_msg_field::primitive_type_map_[field.type_name]);
-  primitive->primitive_info.message_buffer = message_buffer_;
-  primitive->primitive_info.offset = offset_;
+RosValue::ros_value_pointer_t MessageParser::createPrimitive(RosMsgTypes::ros_msg_field &field) {
+  ros_values_->emplace_back(RosMsgTypes::ros_msg_field::primitive_type_map_[field.type_name]);
+  auto &primitive = ros_values_->back();
+  size_t offset = ros_values_offset_++;
+  primitive.primitive_info.message_buffer = message_buffer_;
+  primitive.primitive_info.offset = message_buffer_offset_;
 
-  if (primitive->type == RosValue::Type::string) {
-    offset_ += *reinterpret_cast<const uint32_t* const>(primitive->getPrimitivePointer()) + sizeof(uint32_t);
+  if (primitive.type == RosValue::Type::string) {
+    message_buffer_offset_ += *reinterpret_cast<const uint32_t* const>(primitive.getPrimitivePointer()) + sizeof(uint32_t);
   } else {
-    offset_ += primitive_size_map_[field.type_name];
+    message_buffer_offset_ += primitive_size_map_[field.type_name];
   }
 
-  return primitive;
+  return { ros_values_, offset };
 }
 
-std::shared_ptr<RosValue> MessageParser::parseField(const std::string &scope, RosMsgTypes::ros_msg_field &field) {
+RosValue::ros_value_pointer_t MessageParser::parseField(const std::string &scope, RosMsgTypes::ros_msg_field &field) {
   auto &primitive_type_map = RosMsgTypes::ros_msg_field::primitive_type_map_;
 
   switch (field.array_size) {
     // Undefined number of array objects
     case -1: {
-      const uint32_t* const array_len = reinterpret_cast<uint32_t*>(&message_buffer_->at(offset_));
-      offset_ += sizeof(uint32_t);
+      const uint32_t* const array_len = reinterpret_cast<uint32_t*>(&message_buffer_->at(message_buffer_offset_));
+      message_buffer_offset_ += sizeof(uint32_t);
 
       if (primitive_type_map.count(field.type_name)) {
         return createPrimitiveArray(field, *array_len);
