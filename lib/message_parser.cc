@@ -40,17 +40,16 @@ RosValue::ros_value_pointer_t MessageParser::createObject(RosMsgTypes::ros_msg_d
       num_children += 1;
     }
   }
-  ros_values_->reserve(ros_values_->size() + num_children + 1);
+  // ros_values_->reserve(ros_values_->size() + num_children + 1);
 
   ros_values_->emplace_back(RosValue::_object_identifier());
-  auto &object = ros_values_->back();
-  size_t offset = ros_values_offset_++;
-  object.objects.reserve(num_children);
+  const size_t offset = ros_values_offset_++;
+  ros_values_->at(offset).objects.reserve(num_children);
 
   for (const auto &member : object_definition.members) {
     if (member.which() == 0) {
       auto field = boost::get<RosMsgTypes::ros_msg_field>(member);
-      object.objects[field.field_name] = parseField(scope, field);
+      ros_values_->at(offset).objects[field.field_name] = parseField(scope, field);
     }
   }
 
@@ -58,29 +57,27 @@ RosValue::ros_value_pointer_t MessageParser::createObject(RosMsgTypes::ros_msg_d
 }
 
 RosValue::ros_value_pointer_t MessageParser::createPrimitiveArray(RosMsgTypes::ros_msg_field &field, const size_t array_len) {
-  ros_values_->reserve(ros_values_->size() + array_len + 1);
+  // ros_values_->reserve(ros_values_->size() + array_len + 1);
   ros_values_->emplace_back(RosValue::_array_identifier());
-  auto &array = ros_values_->back();
-  size_t offset = ros_values_offset_++;
+  const size_t offset = ros_values_offset_++;
 
-  array.values.reserve(array_len);
+  ros_values_->at(offset).values.reserve(array_len);
   for (size_t i = 0; i < array_len; i++) {
-    array.values.push_back(createPrimitive(field));
+    ros_values_->at(offset).values.push_back(createPrimitive(field));
   }
 
   return { ros_values_, offset };
 }
 
 RosValue::ros_value_pointer_t MessageParser::createObjectArray(RosMsgTypes::ros_embedded_msg_def &object_definition, const size_t array_len) {
-  ros_values_->reserve(ros_values_->size() + array_len + 1);
+  // ros_values_->reserve(ros_values_->size() + array_len + 1);
   ros_values_->emplace_back(RosValue::_array_identifier());
-  auto &array = ros_values_->back();
-  size_t offset = ros_values_offset_++;
+  const size_t offset = ros_values_offset_++;
 
-  array.values.reserve(array_len);
+  ros_values_->at(offset).values.reserve(array_len);
   const std::string scope = object_definition.getScope();
   for (size_t i = 0; i < array_len; i++) {
-    array.values.push_back(createObject(object_definition, scope));
+    ros_values_->at(offset).values.push_back(createObject(object_definition, scope));
   }
 
   return { ros_values_, offset };
@@ -88,13 +85,12 @@ RosValue::ros_value_pointer_t MessageParser::createObjectArray(RosMsgTypes::ros_
 
 RosValue::ros_value_pointer_t MessageParser::createPrimitive(RosMsgTypes::ros_msg_field &field) {
   ros_values_->emplace_back(RosMsgTypes::ros_msg_field::primitive_type_map_[field.type_name]);
-  auto &primitive = ros_values_->back();
-  size_t offset = ros_values_offset_++;
-  primitive.primitive_info.message_buffer = message_buffer_;
-  primitive.primitive_info.offset = message_buffer_offset_;
+  const size_t offset = ros_values_offset_++;
+  ros_values_->at(offset).primitive_info.message_buffer = message_buffer_;
+  ros_values_->at(offset).primitive_info.offset = message_buffer_offset_;
 
-  if (primitive.type == RosValue::Type::string) {
-    message_buffer_offset_ += *reinterpret_cast<const uint32_t* const>(primitive.getPrimitivePointer()) + sizeof(uint32_t);
+  if (ros_values_->at(offset).type == RosValue::Type::string) {
+    message_buffer_offset_ += *reinterpret_cast<const uint32_t* const>(ros_values_->at(offset).getPrimitivePointer()) + sizeof(uint32_t);
   } else {
     message_buffer_offset_ += primitive_size_map_[field.type_name];
   }

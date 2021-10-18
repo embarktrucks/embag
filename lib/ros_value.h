@@ -89,7 +89,10 @@ class RosValue {
   }
 
   // Constructors
-  RosValue(const Type type) : type(type), primitive_info({}) {
+  RosValue(const Type type)
+    : type(type)
+    , primitive_info({})
+  {
     if (type == Type::object || type == Type::array) {
       throw std::runtime_error("Cannot create an object or array with this constructor");
     }
@@ -98,15 +101,23 @@ class RosValue {
   struct _object_identifier {};
   struct _array_identifier {};
  public:
-  RosValue(const _object_identifier &i) : type(Type::object), objects({}) {}
-  RosValue(const _array_identifier &i) : type(Type::array), values({0}) {}
-  RosValue(const RosValue &value): type(value.type) {
+  RosValue(const _object_identifier &i)
+    : type(Type::object)
+    , objects({})
+  {
+  }
+  RosValue(const _array_identifier &i)
+    : type(Type::array)
+    , values({0})
+  {
+  }
+  RosValue(const RosValue &other): type(other.type) {
     if (type == Type::object) {
-      objects = value.objects;
+      new (&objects) auto(other.objects);
     } else if (type == Type::array) {
-      values = value.values;
+      new (&values) auto(other.values);
     } else {
-      primitive_info = value.primitive_info;
+      new (&primitive_info) auto(other.primitive_info);
     }
   }
   ~RosValue() {
