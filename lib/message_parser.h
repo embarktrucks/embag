@@ -31,11 +31,10 @@ class MessageParser {
  private:
   static std::unordered_map<std::string, size_t> primitive_size_map_;
 
-  RosValue::ros_value_pointer_t createObject(RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope);
-  RosValue::ros_value_pointer_t createObjectArray(RosMsgTypes::ros_embedded_msg_def &object_definition, const size_t array_len);
-  RosValue::ros_value_pointer_t createPrimitiveArray(RosMsgTypes::ros_msg_field &field, const size_t array_len);
-  RosValue::ros_value_pointer_t createPrimitive(RosMsgTypes::ros_msg_field &field);
-  RosValue::ros_value_pointer_t parseField(const std::string &scope, RosMsgTypes::ros_msg_field &field);
+  void initObject(size_t object_offset, RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope);
+  void initArray(size_t array_offset, const std::string &scope, RosMsgTypes::ros_msg_field &field);
+  void initPrimitive(size_t primitive_offset, RosMsgTypes::ros_msg_field &field);
+  void emplaceField(const std::string &scope, RosMsgTypes::ros_msg_field &field);
 
   const std::shared_ptr<std::vector<char>> message_buffer_;
   size_t message_buffer_offset_;

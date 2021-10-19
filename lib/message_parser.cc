@@ -9,129 +9,114 @@
 
 namespace Embag {
 
-std::unordered_map<std::string, size_t> MessageParser::primitive_size_map_ = {
-  {"bool", sizeof(bool)},
-  {"int8", sizeof(int8_t)},
-  {"uint8", sizeof(uint8_t)},
-  {"int16", sizeof(int16_t)},
-  {"uint16", sizeof(uint16_t)},
-  {"int32", sizeof(int32_t)},
-  {"uint32", sizeof(uint32_t)},
-  {"int64", sizeof(int64_t)},
-  {"uint64", sizeof(uint64_t)},
-  {"float32", sizeof(float)},
-  {"float64", sizeof(double)},
-  {"time", sizeof(RosValue::ros_time_t)},
-  {"duration", sizeof(RosValue::ros_duration_t)},
-
-  // Deprecated types
-  {"byte", sizeof(int8_t)},
-  {"char", sizeof(uint8_t)},
-};
-
 const RosValue* MessageParser::parse() {
-  return &createObject(msg_def_, scope_).get();
-}
-
-RosValue::ros_value_pointer_t MessageParser::createObject(RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope) {
-  size_t num_children = 0;
-  for (const auto &member : object_definition.members) {
-    if (member.which() == 0) {
-      num_children += 1;
-    }
-  }
-  // ros_values_->reserve(ros_values_->size() + num_children + 1);
-
+  // The lowest number of RosValues occurs when we have a message with only doubles in a single type.
+  // The number of RosValues in this case is the number of doubles that can fit in our buffer,
+  // plus one for the RosValue object that will point to all the doubles.
+  ros_values_->reserve(message_buffer_->size() / sizeof(double) + 1);
   ros_values_->emplace_back(RosValue::_object_identifier());
-  const size_t offset = ros_values_offset_++;
-  ros_values_->at(offset).objects.reserve(num_children);
+  ros_values_offset_ = 1;
+  initObject(0, msg_def_, scope_);
+  return &ros_values_->front();
+}
 
-  for (const auto &member : object_definition.members) {
+void MessageParser::initObject(size_t object_offset, RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope) {
+  const size_t children_offset = ros_values_offset_;
+  ros_values_->at(object_offset).children.base = ros_values_;
+  ros_values_->at(object_offset).children.offset = children_offset;
+  ros_values_->at(object_offset).children.length = 0;
+  for (auto &member: object_definition.members) {
     if (member.which() == 0) {
-      auto field = boost::get<RosMsgTypes::ros_msg_field>(member);
-      ros_values_->at(offset).objects[field.field_name] = parseField(scope, field);
+      auto& field = boost::get<RosMsgTypes::ros_msg_field>(member);
+      emplaceField(scope, field);
     }
   }
 
-  return { ros_values_, offset };
-}
-
-RosValue::ros_value_pointer_t MessageParser::createPrimitiveArray(RosMsgTypes::ros_msg_field &field, const size_t array_len) {
-  // ros_values_->reserve(ros_values_->size() + array_len + 1);
-  ros_values_->emplace_back(RosValue::_array_identifier());
-  const size_t offset = ros_values_offset_++;
-
-  ros_values_->at(offset).values.reserve(array_len);
-  for (size_t i = 0; i < array_len; i++) {
-    ros_values_->at(offset).values.push_back(createPrimitive(field));
+  for (auto &member: object_definition.members) {
+    if (member.which() == 0) {
+      auto& field = boost::get<RosMsgTypes::ros_msg_field>(member);
+      const size_t child_offset = children_offset + ros_values_->at(object_offset).children.length++;
+      switch (ros_values_->at(child_offset).type) {
+        case RosValue::Type::object: {
+          auto& embedded_type = msg_def_.getEmbeddedType(scope, field);
+          initObject(child_offset, embedded_type, embedded_type.getScope());
+          break;
+        }
+        case RosValue::Type::array: {
+          initArray(child_offset, scope, field);
+          break;
+        }
+        default: {
+          // Primitive
+          initPrimitive(child_offset, field);
+        }
+      }
+    }
   }
-
-  return { ros_values_, offset };
 }
 
-RosValue::ros_value_pointer_t MessageParser::createObjectArray(RosMsgTypes::ros_embedded_msg_def &object_definition, const size_t array_len) {
-  // ros_values_->reserve(ros_values_->size() + array_len + 1);
-  ros_values_->emplace_back(RosValue::_array_identifier());
-  const size_t offset = ros_values_offset_++;
-
-  ros_values_->at(offset).values.reserve(array_len);
-  const std::string scope = object_definition.getScope();
-  for (size_t i = 0; i < array_len; i++) {
-    ros_values_->at(offset).values.push_back(createObject(object_definition, scope));
-  }
-
-  return { ros_values_, offset };
-}
-
-RosValue::ros_value_pointer_t MessageParser::createPrimitive(RosMsgTypes::ros_msg_field &field) {
-  ros_values_->emplace_back(RosMsgTypes::ros_msg_field::primitive_type_map_[field.type_name]);
-  const size_t offset = ros_values_offset_++;
-  ros_values_->at(offset).primitive_info.message_buffer = message_buffer_;
-  ros_values_->at(offset).primitive_info.offset = message_buffer_offset_;
-
-  if (ros_values_->at(offset).type == RosValue::Type::string) {
-    message_buffer_offset_ += *reinterpret_cast<const uint32_t* const>(ros_values_->at(offset).getPrimitivePointer()) + sizeof(uint32_t);
+void MessageParser::emplaceField(const std::string &scope, RosMsgTypes::ros_msg_field &field) {
+  if (field.array_size == 0) {
+    const std::pair<RosValue::Type, size_t>& field_type_info = field.getTypeInfo();
+    if (field_type_info.first != RosValue::Type::object) {
+      ros_values_->emplace_back(field_type_info.first);
+    } else {
+      ros_values_->emplace_back(RosValue::_object_identifier());
+    }
   } else {
-    message_buffer_offset_ += primitive_size_map_[field.type_name];
+    ros_values_->emplace_back(RosValue::_array_identifier());
   }
 
-  return { ros_values_, offset };
+  ++ros_values_offset_;
 }
 
-RosValue::ros_value_pointer_t MessageParser::parseField(const std::string &scope, RosMsgTypes::ros_msg_field &field) {
-  auto &primitive_type_map = RosMsgTypes::ros_msg_field::primitive_type_map_;
+void MessageParser::initArray(size_t array_offset, const std::string &scope, RosMsgTypes::ros_msg_field &field) {
+  size_t array_length;
+  if (field.array_size == -1) {
+    array_length = *reinterpret_cast<uint32_t*>(&message_buffer_->at(message_buffer_offset_));
+    message_buffer_offset_ += sizeof(uint32_t);
+  } else {
+    array_length = static_cast<uint32_t>(field.array_size);
+  }
+  const size_t children_offset = ros_values_offset_;
+  ros_values_offset_ += array_length;
 
-  switch (field.array_size) {
-    // Undefined number of array objects
-    case -1: {
-      const uint32_t* const array_len = reinterpret_cast<uint32_t*>(&message_buffer_->at(message_buffer_offset_));
-      message_buffer_offset_ += sizeof(uint32_t);
+  ros_values_->at(array_offset).children.length = array_length;
+  ros_values_->at(array_offset).children.base = ros_values_;
+  ros_values_->at(array_offset).children.offset = children_offset;
 
-      if (primitive_type_map.count(field.type_name)) {
-        return createPrimitiveArray(field, *array_len);
-      } else {
-        auto embedded_type = msg_def_.getEmbeddedType(scope, field);
-        return createObjectArray(embedded_type, *array_len);
-      }
+  const std::pair<RosValue::Type, size_t>& field_type_info = field.getTypeInfo();
+  if (field_type_info.first != RosValue::Type::object) {
+    for (size_t i = 0; i < array_length; ++i) {
+      ros_values_->emplace_back(field_type_info.first);
     }
-    // Not an array
-    case 0: {
-      if (primitive_type_map.count(field.type_name)) {
-        return createPrimitive(field);
-      } else {
-        auto embedded_type = msg_def_.getEmbeddedType(scope, field);
-        return createObject(embedded_type, embedded_type.getScope());
-      }
+
+    for (size_t i = 0; i < array_length; ++i) {
+      initPrimitive(children_offset + i, field);
     }
-    // Array with fixed size
-    default: {
-      if (primitive_type_map.count(field.type_name)) {
-        return createPrimitiveArray(field, field.array_size);
-      } else {
-        auto embedded_type = msg_def_.getEmbeddedType(scope, field);
-        return createObjectArray(embedded_type, field.array_size);
-      }
+  } else {
+    for (size_t i = 0; i < array_length; ++i) {
+      ros_values_->emplace_back(RosValue::_object_identifier());
     }
+
+    auto& object_definition = msg_def_.getEmbeddedType(scope, field);
+    const std::string children_scope = object_definition.getScope();
+    for (size_t i = 0; i < array_length; ++i) {
+      initObject(children_offset + i, object_definition, children_scope);
+    }
+  }
+}
+
+void MessageParser::initPrimitive(size_t primitive_offset, RosMsgTypes::ros_msg_field &field) {
+  RosValue& primitive = ros_values_->at(primitive_offset);
+  primitive.primitive_info.message_buffer = message_buffer_;
+  primitive.primitive_info.offset = message_buffer_offset_;
+
+  const std::pair<RosValue::Type, size_t>& field_type_info = field.getTypeInfo();
+  if (field_type_info.first == RosValue::Type::string) {
+    message_buffer_offset_ += *reinterpret_cast<const uint32_t* const>(primitive.getPrimitivePointer()) + sizeof(uint32_t);
+  } else {
+    message_buffer_offset_ += field_type_info.second;
   }
 }
 }

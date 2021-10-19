@@ -10,7 +10,7 @@ class RosMsgTypes{
  public:
   // Schema stuff
   // TODO: move this stuff elsewhere?
-  typedef std::unordered_map<std::string, RosValue::Type> primitive_type_map_t;
+  typedef std::unordered_map<std::string, std::pair<RosValue::Type, size_t>> primitive_type_map_t;
   struct ros_msg_field {
     static primitive_type_map_t primitive_type_map_;
 
@@ -18,16 +18,26 @@ class RosMsgTypes{
     int32_t array_size;
     std::string field_name;
 
-    bool type_set = false;
-    RosValue::Type ros_type;
+    const std::pair<RosValue::Type, size_t>& getTypeInfo() {
+      if (!type_info_set) {
+        if (primitive_type_map_.count(type_name)) {
+          type_info = primitive_type_map_.at(type_name);
+        } else {
+          type_info = {RosValue::Type::object, 0};
+        }
 
-    RosValue::Type get_ros_type() {
-      if (!type_set) {
-        ros_type = primitive_type_map_.at(type_name);
-        type_set = true;
+        type_info_set = true;
       }
-      return ros_type;
+
+      return type_info;
     }
+
+   private:
+    // Holds the type and size information about the field.
+    // If this field is an array, holds the type info of the items within the array.
+    // If this field is an object, the size will be 0.
+    std::pair<RosValue::Type, size_t> type_info;
+    bool type_info_set = false;
   };
 
   struct ros_msg_constant {
@@ -98,12 +108,12 @@ class RosMsgTypes{
 
     // This speeds up searching for embedded types during parsing.
     bool map_set = false;
-    std::unordered_map<std::string, const RosMsgTypes::ros_embedded_msg_def*> embedded_type_map_;
+    std::unordered_map<std::string, RosMsgTypes::ros_embedded_msg_def*> embedded_type_map_;
 
-    Embag::RosMsgTypes::ros_embedded_msg_def getEmbeddedType(const std::string &scope,
-                                                             const Embag::RosMsgTypes::ros_msg_field &field) {
+    Embag::RosMsgTypes::ros_embedded_msg_def& getEmbeddedType(const std::string &scope,
+                                                              const Embag::RosMsgTypes::ros_msg_field &field) {
       if (!map_set) {
-        for (const auto &embedded_type : embedded_types) {
+        for (auto &embedded_type : embedded_types) {
           embedded_type_map_[embedded_type.type_name] = &embedded_type;
         }
         map_set = true;

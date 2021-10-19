@@ -13,13 +13,13 @@ namespace Embag {
 
 class RosValue {
  public:
-
-  struct ros_value_pointer_t {
+  struct ros_value_list_t {
     std::shared_ptr<std::vector<RosValue>> base;
     size_t offset;
+    size_t length;
 
-    const RosValue& get() const {
-      return base->at(offset);
+    const RosValue& at(size_t index) const {
+      return base->at(offset + index);
     }
   };
 
@@ -91,7 +91,7 @@ class RosValue {
   // Constructors
   RosValue(const Type type)
     : type(type)
-    , primitive_info({})
+    // , primitive_info({})
   {
     if (type == Type::object || type == Type::array) {
       throw std::runtime_error("Cannot create an object or array with this constructor");
@@ -103,32 +103,32 @@ class RosValue {
  public:
   RosValue(const _object_identifier &i)
     : type(Type::object)
-    , objects({})
+    // , objects({})
   {
   }
   RosValue(const _array_identifier &i)
     : type(Type::array)
-    , values({0})
+    // , values({0})
   {
   }
-  RosValue(const RosValue &other): type(other.type) {
-    if (type == Type::object) {
-      new (&objects) auto(other.objects);
-    } else if (type == Type::array) {
-      new (&values) auto(other.values);
-    } else {
-      new (&primitive_info) auto(other.primitive_info);
-    }
-  }
-  ~RosValue() {
-    if (type == Type::object) {
-      objects.~unordered_map();
-    } else if (type == Type::array) {
-      values.~vector();
-    } else {
-      primitive_info.~primitive_info_t();
-    }
-  }
+  // RosValue(const RosValue &other): type(other.type) {
+  //   if (type == Type::object) {
+  //     new (&objects) auto(other.objects);
+  //   } else if (type == Type::array) {
+  //     new (&values) auto(other.values);
+  //   } else {
+  //     new (&primitive_info) auto(other.primitive_info);
+  //   }
+  // }
+  // ~RosValue() {
+  //   if (type == Type::object) {
+  //     objects.~unordered_map();
+  //   } else if (type == Type::array) {
+  //     values.~vector();
+  //   } else {
+  //     primitive_info.~primitive_info_t();
+  //   }
+  // }
 
 
   // Convenience accessors
@@ -167,24 +167,28 @@ class RosValue {
     if (type != Type::object) {
       throw std::runtime_error("Value is not an object");
     }
-    return objects.count(key) > 0;
+
+    // FIXME: access the message definition
+    return true;
   }
 
   size_t size() const {
-    if (type != Type::array) {
-      throw std::runtime_error("Value is not an array");
+    if (type != Type::array or type != Type::object) {
+      throw std::runtime_error("Value is not an array or an object");
     }
 
-    return values.size();
+    return children.length;
   }
 
-  std::unordered_map<std::string, ros_value_pointer_t> getObjects() const {
-    return objects;
-  }
+  // FIXME: dynamically create a std::unordered_map<std::string, RosValue>
+  // std::unordered_map<std::string, ros_value_pointer_t> getObjects() const {
+  //   return objects;
+  // }
 
-  std::vector<ros_value_pointer_t> getValues() const {
-    return values;
-  }
+  // FIXME: dynamically create a std::vector<RosValue>
+  // std::vector<ros_value_pointer_t> getValues() const {
+  //   return values;
+  // }
 
   std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
@@ -202,14 +206,13 @@ class RosValue {
   };
 
   Type type;
-  union {
-    // If this is a primitive
+  // union {
+  //   // If this is a primitive
     primitive_info_t primitive_info;
-    // If this is an object
-    std::unordered_map<std::string, ros_value_pointer_t> objects;
-    // If this is an array
-    std::vector<ros_value_pointer_t> values;
-  };
+
+    // If this is an object or an array
+    ros_value_list_t children;
+  // };
 
   const char* const getPrimitivePointer() const {
     return &primitive_info.message_buffer->at(primitive_info.offset);
