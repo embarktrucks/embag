@@ -23,6 +23,21 @@ class RosValue {
     }
   };
 
+  struct RosValuePointer {
+    std::shared_ptr<std::vector<RosValue>> base;
+    size_t index;
+
+    RosValuePointer(std::shared_ptr<std::vector<RosValue>> base, size_t index)
+    : base(base)
+    , index(index)
+    {
+    }
+
+    const RosValue *operator->() const {
+      return &base->at(index);
+    }
+  };
+
   enum class Type {
     ros_bool,
     int8,
@@ -98,17 +113,15 @@ class RosValue {
     }
   }
  private:
-  struct _object_identifier {};
   struct _array_identifier {};
  public:
-  RosValue(const _object_identifier &i)
+  RosValue(std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes)
     : type(Type::object)
-    // , objects({})
+    , field_indexes(field_indexes)
   {
   }
   RosValue(const _array_identifier &i)
     : type(Type::array)
-    // , values({0})
   {
   }
   // RosValue(const RosValue &other): type(other.type) {
@@ -137,6 +150,7 @@ class RosValue {
   const RosValue &operator[](const size_t idx) const;
   const RosValue &get(const std::string &key) const;
   const RosValue &at(size_t idx) const;
+  const RosValue &at(const std::string &key) const;
 
   template<typename T>
   const T &getValue(const std::string &key) const {
@@ -149,7 +163,7 @@ class RosValue {
       throw std::runtime_error("Value cannot be an object or array for as");
     }
 
-    // FIXME: Add check that the underlying type aligns with T
+    // TODO: Add check that the underlying type aligns with T
     return *reinterpret_cast<const T*>(getPrimitivePointer());
   }
 
@@ -168,8 +182,7 @@ class RosValue {
       throw std::runtime_error("Value is not an object");
     }
 
-    // FIXME: access the message definition
-    return true;
+    return field_indexes->count(key);
   }
 
   size_t size() const {
@@ -180,15 +193,23 @@ class RosValue {
     return children.length;
   }
 
-  // FIXME: dynamically create a std::unordered_map<std::string, RosValue>
-  // std::unordered_map<std::string, ros_value_pointer_t> getObjects() const {
-  //   return objects;
-  // }
+  std::unordered_map<std::string, RosValuePointer> getObjects() const {
+    std::unordered_map<std::string, RosValuePointer> objects;
+    objects.reserve(children.length);
+    for (const auto& field : *field_indexes) {
+      objects.emplace(std::make_pair(field.first, RosValuePointer(children.base, children.offset + field.second)));
+    }
+    return objects;
+  }
 
-  // FIXME: dynamically create a std::vector<RosValue>
-  // std::vector<ros_value_pointer_t> getValues() const {
-  //   return values;
-  // }
+  std::vector<RosValuePointer> getValues() const {
+    std::vector<RosValuePointer> values;
+    values.reserve(children.length);
+    for (size_t i; i < children.length; ++i) {
+      values.emplace_back(children.base, children.offset + i);
+    }
+    return values;
+  }
 
   std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
@@ -206,12 +227,16 @@ class RosValue {
   };
 
   Type type;
+  // FIXME: Implement as a union
   // union {
   //   // If this is a primitive
     primitive_info_t primitive_info;
 
     // If this is an object or an array
     ros_value_list_t children;
+
+    // If this is an object
+    std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes;
   // };
 
   const char* const getPrimitivePointer() const {

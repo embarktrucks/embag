@@ -14,7 +14,7 @@ const RosValue* MessageParser::parse() {
   // The number of RosValues in this case is the number of doubles that can fit in our buffer,
   // plus one for the RosValue object that will point to all the doubles.
   ros_values_->reserve(message_buffer_->size() / sizeof(double) + 1);
-  ros_values_->emplace_back(RosValue::_object_identifier());
+  ros_values_->emplace_back(msg_def_.getFieldIndexes());
   ros_values_offset_ = 1;
   initObject(0, msg_def_, scope_);
   return &ros_values_->front();
@@ -61,7 +61,8 @@ void MessageParser::emplaceField(const std::string &scope, RosMsgTypes::ros_msg_
     if (field_type_info.first != RosValue::Type::object) {
       ros_values_->emplace_back(field_type_info.first);
     } else {
-      ros_values_->emplace_back(RosValue::_object_identifier());
+      auto& object_definition = msg_def_.getEmbeddedType(scope, field);
+      ros_values_->emplace_back(object_definition.getFieldIndexes());
     }
   } else {
     ros_values_->emplace_back(RosValue::_array_identifier());
@@ -95,11 +96,11 @@ void MessageParser::initArray(size_t array_offset, const std::string &scope, Ros
       initPrimitive(children_offset + i, field);
     }
   } else {
+    auto& object_definition = msg_def_.getEmbeddedType(scope, field);
     for (size_t i = 0; i < array_length; ++i) {
-      ros_values_->emplace_back(RosValue::_object_identifier());
+      ros_values_->emplace_back(object_definition.getFieldIndexes());
     }
 
-    auto& object_definition = msg_def_.getEmbeddedType(scope, field);
     const std::string children_scope = object_definition.getScope();
     for (size_t i = 0; i < array_length; ++i) {
       initObject(children_offset + i, object_definition, children_scope);

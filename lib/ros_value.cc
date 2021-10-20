@@ -17,12 +17,16 @@ const RosValue &RosValue::operator[](const size_t idx) const {
   return at(idx);
 }
 
+const RosValue &RosValue::at(const std::string &key) const {
+  return get(key);
+}
+
 const RosValue &RosValue::get(const std::string &key) const {
   if (type != Type::object) {
     throw std::runtime_error("Value is not an object");
   }
-  // FIXME: Use the string by accessing the message def and getting the order
-  return children.at(0);
+
+  return children.at(field_indexes->at(key));
 }
 
 
@@ -38,7 +42,7 @@ std::string RosValue::toString(const std::string &path) const {
     case Type::ros_bool: {
       return path + " -> " + (as<bool>() ? "true" : "false");
     }
-    // FIXME: Should have some mapping from type to as function some how
+    // TODO: Could have some mapping from type to as function some how
     case Type::int8: {
       return path + " -> " + std::to_string(as<int8_t>());
     }
@@ -70,7 +74,6 @@ std::string RosValue::toString(const std::string &path) const {
       return path + " -> " + std::to_string(as<double>());
     }
     case Type::string: {
-      // FIXME: actually print the string value
       return path + " -> " + as<std::string>();
     }
     case Type::ros_time: {
@@ -82,35 +85,29 @@ std::string RosValue::toString(const std::string &path) const {
       return path + " -> " + std::to_string(value.secs) + "s " + std::to_string(value.nsecs) + "ns";
     }
     case Type::object: {
-      // FIXME
-      // std::ostringstream output;
-      // for (const auto &object : objects) {
-      //   if (path.empty()) {
-      //     output << object.second.get().toString(object.first);
-      //   } else {
-      //     output << object.second.get().toString(path + "." + object.first);
-      //   }
+      std::ostringstream output;
+      for (const auto& field : *field_indexes) {
+        if (path.empty()) {
+          output << children.at(field.second).toString(field.first);
+        } else {
+          output << children.at(field.second).toString(path + "." + field.first);
+        }
 
-      //   // No need for a newline if our child is an object or array
-      //   const auto &object_type = object.second.get().getType();
-      //   if (!(object_type == Type::object || object_type == Type::array)) {
-      //     output << std::endl;
-      //   }
-      // }
-      // return output.str();
-      return "";
+        // No need for a newline if our child is an object or array
+        const auto &object_type = children.at(field.second).getType();
+        if (!(object_type == Type::object || object_type == Type::array)) {
+          output << std::endl;
+        }
+      }
+      return output.str();
     }
     case Type::array: {
-      // FIXME
-      // std::ostringstream output;
-      // size_t i = 0;
-      // for (const auto &item : values) {
-      //   const std::string array_path = path + "[" + std::to_string(i++) + "]";
-      //   output << item.get().toString(array_path) << std::endl;
-      // }
-
-      // return output.str();
-      return "";
+      std::ostringstream output;
+      for (size_t i = 0; i < children.length; ++i) {
+        const std::string array_path = path + "[" + std::to_string(i) + "]";
+        output << children.at(i).toString(array_path) << std::endl;
+      }
+      return output.str();
     }
     default: {
       return path + " -> unknown type";
