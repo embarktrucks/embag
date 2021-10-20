@@ -158,24 +158,7 @@ class RosValue {
   }
 
   template<typename T>
-  const T as() const {
-    if (type == Type::object || type == Type::array) {
-      throw std::runtime_error("Value cannot be an object or array for as");
-    }
-
-    // TODO: Add check that the underlying type aligns with T
-    return *reinterpret_cast<const T*>(getPrimitivePointer());
-  }
-
-  const std::string as() const {
-    if (type != Type::string) {
-      throw std::runtime_error("Cannot call as<std::string> for a non string");
-    }
-
-    const uint32_t string_length = *reinterpret_cast<const uint32_t* const>(getPrimitivePointer());
-    const char* const string_loc = reinterpret_cast<const char* const>(getPrimitivePointer() + sizeof(uint32_t));
-    return std::string(string_loc, string_loc + string_length);
-  }
+  const T as() const;
 
   bool has(const std::string &key) const {
     if (type != Type::object) {
@@ -186,7 +169,7 @@ class RosValue {
   }
 
   size_t size() const {
-    if (type != Type::array or type != Type::object) {
+    if (type != Type::array && type != Type::object) {
       throw std::runtime_error("Value is not an array or an object");
     }
 

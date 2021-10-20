@@ -29,6 +29,27 @@ const RosValue &RosValue::get(const std::string &key) const {
   return children.at(field_indexes->at(key));
 }
 
+template<>
+const std::string RosValue::as<std::string>() const {
+  if (type != Type::string) {
+    throw std::runtime_error("Cannot call as<std::string> for a non string");
+  }
+
+  const uint32_t string_length = *reinterpret_cast<const uint32_t* const>(getPrimitivePointer());
+  const char* const string_loc = reinterpret_cast<const char* const>(getPrimitivePointer() + sizeof(uint32_t));
+  return std::string(string_loc, string_loc + string_length);
+}
+
+template<typename T>
+const T RosValue::as() const {
+  if (type == Type::object || type == Type::array) {
+    throw std::runtime_error("Value cannot be an object or array for as");
+  }
+
+  // TODO: Add check that the underlying type aligns with T
+  return *reinterpret_cast<const T*>(getPrimitivePointer());
+}
+
 
 const RosValue &RosValue::at(const size_t idx) const {
   if (type != Type::array) {
