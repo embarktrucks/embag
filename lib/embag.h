@@ -64,6 +64,17 @@ class Bag {
     return topic_connection_map_[topic];
   }
 
+  std::unordered_map<std::string, std::vector<RosBagTypes::connection_data_t>> connectionsByTopicMap() const {
+    std::unordered_map<std::string, std::vector<RosBagTypes::connection_data_t>> map;
+    for (const auto &item : topic_connection_map_) {
+      auto &topic_conns = map[item.first];
+      for (const auto *conn_record : item.second) {
+        topic_conns.push_back(conn_record->data);
+      }
+    }
+    return map;
+  }
+
  private:
   const std::string MAGIC_STRING = "#ROSBAG V";
 

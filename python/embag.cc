@@ -30,6 +30,7 @@ PYBIND11_MODULE(libembag, m) {
         auto builder = SchemaBuilder{bag};
         return builder.generateSchema(topic);
       })
+      .def("connectionsByTopic", &Embag::Bag::connectionsByTopicMap)
       .def("close", &Embag::Bag::close);
 
   py::class_<Embag::View>(m, "View")
@@ -45,7 +46,9 @@ PYBIND11_MODULE(libembag, m) {
       .def("getMessages", (Embag::View (Embag::View::*)(const std::vector<std::string> &)) &Embag::View::getMessages)
       .def("__iter__", [](Embag::View &v) {
         return py::make_iterator(v.begin(), v.end());
-      }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */ );
+      }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */ )
+      .def("topics", &Embag::View::topics)
+      .def("connectionsByTopic", &Embag::View::connectionsByTopicMap);
 
   py::class_<Embag::RosMessage, std::shared_ptr<Embag::RosMessage>>(m, "RosMessage", py::dynamic_attr())
       .def(py::init())
@@ -113,5 +116,18 @@ PYBIND11_MODULE(libembag, m) {
       .def_readonly("nsecs", &Embag::RosValue::ros_duration_t::nsecs)
       .def("__str__", [](Embag::RosValue::ros_duration_t &v) {
         return std::to_string(v.to_nsec());
+      });
+
+  py::class_<Embag::RosBagTypes::connection_data_t>(m, "Connection")
+      .def_readonly("topic", &Embag::RosBagTypes::connection_data_t::topic)
+      .def_readonly("type", &Embag::RosBagTypes::connection_data_t::type)
+      .def_readonly("scope", &Embag::RosBagTypes::connection_data_t::scope)
+      .def_readonly("md5sum", &Embag::RosBagTypes::connection_data_t::md5sum)
+      .def_readonly("message_definition", &Embag::RosBagTypes::connection_data_t::message_definition)
+      .def_readonly("callerid", &Embag::RosBagTypes::connection_data_t::callerid)
+      .def_readonly("latching", &Embag::RosBagTypes::connection_data_t::latching)
+      .def_readonly("message_count", &Embag::RosBagTypes::connection_data_t::message_count)
+      .def("__repr__", [](const Embag::RosBagTypes::connection_data_t &c) {
+        return "<embag.Connection '" + c.type + "' from '" + c.callerid + "'>";
       });
 }
