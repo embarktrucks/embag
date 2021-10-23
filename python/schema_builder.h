@@ -13,7 +13,7 @@ class SchemaBuilder {
   py::object generateSchema(const std::string &topic);
 
  private:
-  py::dict schemaForField(const std::string &scope, const Embag::RosMsgTypes::ros_msg_field &field) const;
+  py::dict schemaForField(const std::string &scope, Embag::RosMsgTypes::ros_msg_field &field) const;
 
   std::shared_ptr<Embag::Bag> bag_;
   std::shared_ptr<Embag::RosMsgTypes::ros_msg_def> msg_def_;

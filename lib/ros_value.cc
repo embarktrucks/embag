@@ -40,17 +40,6 @@ const std::string RosValue::as<std::string>() const {
   return std::string(string_loc, string_loc + string_length);
 }
 
-template<typename T>
-const T RosValue::as() const {
-  if (type == Type::object || type == Type::array) {
-    throw std::runtime_error("Value cannot be an object or array for as");
-  }
-
-  // TODO: Add check that the underlying type aligns with T
-  return *reinterpret_cast<const T*>(getPrimitivePointer());
-}
-
-
 const RosValue &RosValue::at(const size_t idx) const {
   if (type != Type::array) {
     throw std::runtime_error("Value is not an array");
@@ -135,4 +124,20 @@ std::string RosValue::toString(const std::string &path) const {
     }
   }
 }
+
+/*
+--------------
+ITERATOR SETUP
+--------------
+*/
+template<>
+const std::string& RosValue::const_iterator<const std::string&, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
+  return index->first;
+}
+
+template<>
+const std::pair<const std::string&, const RosValue&> RosValue::const_iterator<const std::pair<const std::string&, const RosValue&>, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
+  return std::make_pair(index->first, this->value.children.at(index->second));
+}
+
 }

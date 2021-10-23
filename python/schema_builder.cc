@@ -20,7 +20,7 @@ py::object SchemaBuilder::generateSchema(const std::string &topic) {
   return schema;
 }
 
-py::dict SchemaBuilder::schemaForField(const std::string &scope, const Embag::RosMsgTypes::ros_msg_field &field) const {
+py::dict SchemaBuilder::schemaForField(const std::string &scope, Embag::RosMsgTypes::ros_msg_field &field) const {
   auto &primitive_type_map = Embag::RosMsgTypes::ros_msg_field::primitive_type_map_;
   auto field_def = py::dict{};
 

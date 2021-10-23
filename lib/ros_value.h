@@ -36,6 +36,10 @@ class RosValue {
     const RosValue *operator->() const {
       return &base->at(index);
     }
+
+    const RosValue& operator*() const {
+      return base->at(index);
+    }
   };
 
   enum class Type {
@@ -103,6 +107,88 @@ class RosValue {
     return type;
   }
 
+ private:
+  template<class ReturnType, class IndexType, class ChildIteratorType>
+  struct _const_iterator {
+   public:
+    bool operator==(const ChildIteratorType& other) const {
+      return index == other.index;
+    }
+
+    bool operator!=(const ChildIteratorType& other) const {
+      return !(*this == other);
+    }
+
+    ChildIteratorType& operator++() {
+      ++index;
+      return *((ChildIteratorType*) this);
+    }
+
+    ChildIteratorType operator++(int) {
+      return {value, index++};
+    }
+   protected:
+    _const_iterator(const RosValue& value, size_t index)
+      : value(value)
+      , index(index)
+    {
+    }
+
+    const RosValue& value;
+    IndexType index;
+  };
+
+ public:
+  template<class ReturnType, class IndexType>
+  struct const_iterator;
+
+  template<class ReturnType>
+  struct const_iterator<ReturnType, size_t> : public _const_iterator<ReturnType, size_t, const_iterator<ReturnType, size_t>> {
+   public:
+    const_iterator(const RosValue& value, size_t index)
+      : _const_iterator<ReturnType, size_t, const_iterator<ReturnType, size_t>>(value, index)
+    {
+      if (value.type != Type::object && value.type != Type::array) {
+        throw std::runtime_error("Cannot iterate a RosValue that is not an object or array");
+      }
+    }
+
+    const ReturnType operator*() const {
+      return this->value.children.at(index);
+    }
+  };
+
+  template<class ReturnType>
+  struct const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator> : public _const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator, const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator>> {
+   public:
+    const_iterator(const RosValue& value, std::unordered_map<std::string, size_t>::const_iterator index)
+      : _const_iterator<ReturnType, size_t, std::unordered_map<std::string, size_t>::const_iterator>(value, index)
+    {
+      if (value.type != Type::object) {
+        throw std::runtime_error("Cannot only iterate the keys or key/value pairs of an object");
+      }
+    }
+
+    const ReturnType operator*() const;
+  };
+
+  template<class IteratorReturnType>
+  const_iterator<IteratorReturnType, size_t> beginValues() const {
+    return RosValue::const_iterator<IteratorReturnType, size_t>(*this, 0);
+  }
+  template<class IteratorReturnType>
+  const_iterator<IteratorReturnType, size_t> endValues() const {
+    return RosValue::const_iterator<IteratorReturnType, size_t>(*this, children.length);
+  }
+  template<class IteratorReturnType>
+  const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator> beginItems() const {
+    return RosValue::const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator>(*this, field_indexes->begin());
+  }
+  template<class IteratorReturnType>
+  const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator> endItems() const {
+    return RosValue::const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator>(*this, field_indexes->end());
+  }
+
   // Constructors
   RosValue(const Type type)
     : type(type)
@@ -158,7 +244,14 @@ class RosValue {
   }
 
   template<typename T>
-  const T as() const;
+  const T as() const {
+    if (type == Type::object || type == Type::array) {
+      throw std::runtime_error("Value cannot be an object or array for as");
+    }
+
+    // TODO: Add check that the underlying type aligns with T
+    return *reinterpret_cast<const T*>(getPrimitivePointer());
+  }
 
   bool has(const std::string &key) const {
     if (type != Type::object) {
@@ -188,7 +281,7 @@ class RosValue {
   std::vector<RosValuePointer> getValues() const {
     std::vector<RosValuePointer> values;
     values.reserve(children.length);
-    for (size_t i; i < children.length; ++i) {
+    for (size_t i = 0; i < children.length; ++i) {
       values.emplace_back(children.base, children.offset + i);
     }
     return values;

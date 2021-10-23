@@ -48,7 +48,6 @@ PYBIND11_MODULE(libembag, m) {
       }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */ );
 
   py::class_<Embag::RosMessage, std::shared_ptr<Embag::RosMessage>>(m, "RosMessage", py::dynamic_attr())
-      .def(py::init())
       .def("__str__", [](std::shared_ptr<Embag::RosMessage> &m) {
         return encodeStrLatin1(m->toString());
       })
@@ -66,18 +65,30 @@ PYBIND11_MODULE(libembag, m) {
       .def_readonly("raw_data_len", &Embag::RosMessage::raw_data_len);
 
   auto ros_value = py::class_<Embag::RosValue, std::shared_ptr<Embag::RosValue>>(m, "RosValue", py::dynamic_attr())
-      .def(py::init())
       .def("get", &Embag::RosValue::get)
       .def("getType", &Embag::RosValue::getType)
+      .def("__len__", &Embag::RosValue::size)
       .def("__str__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &path) {
         return encodeStrLatin1(v->toString());
       }, py::arg("path") = "")
-      .def("__getitem__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &key) {
-        if (v->getType() != Embag::RosValue::Type::object) {
-          throw std::runtime_error("Element is not an object");
+      .def("__iter__", [](std::shared_ptr<Embag::RosValue> &v) {
+        switch (v->getType()) {
+          // TODO: Allow object iteration
+          case Embag::RosValue::Type::array: {
+            return py::make_iterator(v->beginValues<py::object>(), v->endValues<py::object>());
+          }
+          default:
+            throw std::runtime_error("Can only iterate array RosValues");
         }
-
-        return rosValueToDict(v->get(key));
+      }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */)
+      .def("__getattr__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &attr) {
+        return getField(v, attr);
+      })
+      .def("__getitem__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &key) {
+        return getField(v, key);
+      })
+      .def("__getitem__", [](std::shared_ptr<Embag::RosValue> &v, const size_t index) {
+        return getIndex(v, index);
       });
 
   py::enum_<Embag::RosValue::Type>(m, "RosValueType")
@@ -92,7 +103,6 @@ PYBIND11_MODULE(libembag, m) {
     .value("int64", Embag::RosValue::Type::int64)
     .value("float32", Embag::RosValue::Type::float32)
     .value("float64", Embag::RosValue::Type::float64)
-    .value("blob", Embag::RosValue::Type::blob)
     .value("array", Embag::RosValue::Type::array)
     .value("object", Embag::RosValue::Type::object)
     .value("string", Embag::RosValue::Type::string)
