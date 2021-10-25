@@ -321,4 +321,14 @@ class RosValue {
 
   friend class MessageParser;
 };
+
+template<>
+const std::string RosValue::as<std::string>() const;
+
+template<>
+const std::string& RosValue::const_iterator<const std::string&, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const;
+
+template<>
+const std::pair<const std::string&, const RosValue&> RosValue::const_iterator<const std::pair<const std::string&, const RosValue&>, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const;
+
 }
