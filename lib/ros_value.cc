@@ -125,6 +125,10 @@ std::string RosValue::toString(const std::string &path) const {
   }
 }
 
+void RosValue::print(const std::string &path) const {
+  std::cout << toString(path);
+}
+
 /*
 --------------
 ITERATOR SETUP
