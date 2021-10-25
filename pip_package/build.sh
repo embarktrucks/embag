@@ -7,7 +7,7 @@ function build() {
   # Build embag libs and echo test binary
   (cd /tmp/embag &&
     PYTHON_BIN_PATH="$PYTHON_PATH/python" bazel build -c opt //python:libembag.so //embag_echo:embag_echo &&
-    PYTHON_BIN_PATH="$PYTHON_PATH/python" bazel test //test:embag_test "//test:embag_test_python$PYTHON_VERSION" --cache_test_results=no --test_output=all)
+    PYTHON_BIN_PATH="$PYTHON_PATH/python" bazel test -c opt //test:embag_test "//test:embag_test_python$PYTHON_VERSION" --cache_test_results=no --test_output=all)
 
   # Build wheel
   cp /tmp/embag/bazel-bin/python/libembag.so /tmp/pip_build/embag
