@@ -154,7 +154,7 @@ class RosValue {
     }
 
     const ReturnType operator*() const {
-      return this->value.children.at(index);
+      return this->value.getChildren().at(index);
     }
   };
 
@@ -178,56 +178,65 @@ class RosValue {
   }
   template<class IteratorReturnType>
   const_iterator<IteratorReturnType, size_t> endValues() const {
-    return RosValue::const_iterator<IteratorReturnType, size_t>(*this, children.length);
+    return RosValue::const_iterator<IteratorReturnType, size_t>(*this, getChildren().length);
   }
   template<class IteratorReturnType>
   const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator> beginItems() const {
-    return RosValue::const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator>(*this, field_indexes->begin());
+    if (type != Type::object) {
+      throw std::runtime_error("Cannot iterate over the items of a RosValue that is not an object");
+    }
+
+    return RosValue::const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator>(*this, object_info.field_indexes->begin());
   }
   template<class IteratorReturnType>
   const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator> endItems() const {
-    return RosValue::const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator>(*this, field_indexes->end());
+    if (type != Type::object) {
+      throw std::runtime_error("Cannot iterate over the items of a RosValue that is not an object");
+    }
+
+    return RosValue::const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator>(*this, object_info.field_indexes->end());
   }
 
-  // Constructors
+ private:
+  struct _array_identifier {};
+ public:
   RosValue(const Type type)
     : type(type)
-    // , primitive_info({})
+    , primitive_info()
   {
     if (type == Type::object || type == Type::array) {
       throw std::runtime_error("Cannot create an object or array with this constructor");
     }
   }
- private:
-  struct _array_identifier {};
- public:
   RosValue(std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes)
     : type(Type::object)
-    , field_indexes(field_indexes)
+    , object_info()
   {
+    object_info.field_indexes = field_indexes;
   }
   RosValue(const _array_identifier &i)
     : type(Type::array)
+    , array_info()
   {
   }
-  // RosValue(const RosValue &other): type(other.type) {
-  //   if (type == Type::object) {
-  //     new (&objects) auto(other.objects);
-  //   } else if (type == Type::array) {
-  //     new (&values) auto(other.values);
-  //   } else {
-  //     new (&primitive_info) auto(other.primitive_info);
-  //   }
-  // }
-  // ~RosValue() {
-  //   if (type == Type::object) {
-  //     objects.~unordered_map();
-  //   } else if (type == Type::array) {
-  //     values.~vector();
-  //   } else {
-  //     primitive_info.~primitive_info_t();
-  //   }
-  // }
+  RosValue(const RosValue &other): type(other.type) {
+    if (type == Type::object) {
+      new (&object_info) auto(other.object_info);
+    } else if (type == Type::array) {
+      new (&array_info) auto(other.array_info);
+    } else {
+      new (&primitive_info) auto(other.primitive_info);
+    }
+  }
+  ~RosValue() {
+    if (type == Type::object) {
+      object_info.~object_info_t();
+    } else if (type == Type::array) {
+      array_info.~array_info_t();
+    } else {
+      primitive_info.~primitive_info_t();
+    }
+  }
 
 
   // Convenience accessors
@@ -258,7 +267,7 @@ class RosValue {
       throw std::runtime_error("Value is not an object");
     }
 
-    return field_indexes->count(key);
+    return object_info.field_indexes->count(key);
   }
 
   size_t size() const {
@@ -266,19 +275,28 @@ class RosValue {
       throw std::runtime_error("Value is not an array or an object");
     }
 
-    return children.length;
+    return getChildren().length;
   }
 
   std::unordered_map<std::string, RosValuePointer> getObjects() const {
+    if (type != Type::object) {
+      throw std::runtime_error("Cannot getObjects of a non-object RosValue");
+    }
+
     std::unordered_map<std::string, RosValuePointer> objects;
-    objects.reserve(children.length);
-    for (const auto& field : *field_indexes) {
-      objects.emplace(std::make_pair(field.first, RosValuePointer(children.base, children.offset + field.second)));
+    objects.reserve(object_info.children.length);
+    for (const auto& field : *object_info.field_indexes) {
+      objects.emplace(std::make_pair(field.first, RosValuePointer(object_info.children.base, object_info.children.offset + field.second)));
     }
     return objects;
   }
 
   std::vector<RosValuePointer> getValues() const {
+    if (type != Type::object && type != Type::array) {
+      throw std::runtime_error("Cannot getValues of a non object or array RosValue");
+    }
+
+    const ros_value_list_t& children = getChildren();
     std::vector<RosValuePointer> values;
     values.reserve(children.length);
     for (size_t i = 0; i < children.length; ++i) {
@@ -296,27 +314,39 @@ class RosValue {
 
  private:
   struct primitive_info_t {
-    size_t offset;
-    std::shared_ptr<std::vector<char>> message_buffer;
+    size_t offset = 0;
+    std::shared_ptr<std::vector<char>> message_buffer = nullptr;
+  };
 
-    primitive_info_t() : offset(0), message_buffer(nullptr) {}
+  struct array_info_t {
+    ros_value_list_t children;
+  };
+
+  struct object_info_t {
+    ros_value_list_t children;
+    std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes;
   };
 
   Type type;
-  // FIXME: Implement as a union
-  // union {
-  //   // If this is a primitive
+  union {
     primitive_info_t primitive_info;
-
-    // If this is an object or an array
-    ros_value_list_t children;
-
-    // If this is an object
-    std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes;
-  // };
+    array_info_t array_info;
+    object_info_t object_info;
+  };
 
   const char* const getPrimitivePointer() const {
     return &primitive_info.message_buffer->at(primitive_info.offset);
+  }
+
+  const ros_value_list_t& getChildren() const {
+    switch(type) {
+      case Type::object:
+        return object_info.children;
+      case Type::array:
+        return array_info.children;
+      default:
+        throw std::runtime_error("Cannot getChildren of a RosValue that is not an object or array");
+    }
   }
 
   friend class MessageParser;

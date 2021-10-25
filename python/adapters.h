@@ -241,6 +241,6 @@ py::object getIndex(std::shared_ptr<Embag::RosValue> &v, const size_t index) {
 namespace Embag {
 template<>
 const py::object RosValue::const_iterator<py::object, size_t>::operator*() const {
-  return castValue(this->value.children.at(index));
+  return castValue(this->value.getChildren().at(index));
 }
 }

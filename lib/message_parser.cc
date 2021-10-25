@@ -22,9 +22,9 @@ const RosValue* MessageParser::parse() {
 
 void MessageParser::initObject(size_t object_offset, RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope) {
   const size_t children_offset = ros_values_offset_;
-  ros_values_->at(object_offset).children.base = ros_values_;
-  ros_values_->at(object_offset).children.offset = children_offset;
-  ros_values_->at(object_offset).children.length = 0;
+  ros_values_->at(object_offset).object_info.children.base = ros_values_;
+  ros_values_->at(object_offset).object_info.children.offset = children_offset;
+  ros_values_->at(object_offset).object_info.children.length = 0;
   for (auto &member: object_definition.members) {
     if (member.which() == 0) {
       auto& field = boost::get<RosMsgTypes::ros_msg_field>(member);
@@ -35,7 +35,7 @@ void MessageParser::initObject(size_t object_offset, RosMsgTypes::ros_msg_def_ba
   for (auto &member: object_definition.members) {
     if (member.which() == 0) {
       auto& field = boost::get<RosMsgTypes::ros_msg_field>(member);
-      const size_t child_offset = children_offset + ros_values_->at(object_offset).children.length++;
+      const size_t child_offset = children_offset + ros_values_->at(object_offset).object_info.children.length++;
       switch (ros_values_->at(child_offset).type) {
         case RosValue::Type::object: {
           auto& embedded_type = msg_def_.getEmbeddedType(scope, field);
@@ -82,9 +82,9 @@ void MessageParser::initArray(size_t array_offset, const std::string &scope, Ros
   const size_t children_offset = ros_values_offset_;
   ros_values_offset_ += array_length;
 
-  ros_values_->at(array_offset).children.length = array_length;
-  ros_values_->at(array_offset).children.base = ros_values_;
-  ros_values_->at(array_offset).children.offset = children_offset;
+  ros_values_->at(array_offset).array_info.children.length = array_length;
+  ros_values_->at(array_offset).array_info.children.base = ros_values_;
+  ros_values_->at(array_offset).array_info.children.offset = children_offset;
 
   const std::pair<RosValue::Type, size_t>& field_type_info = field.getTypeInfo();
   if (field_type_info.first != RosValue::Type::object) {
