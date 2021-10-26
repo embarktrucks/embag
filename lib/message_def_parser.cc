@@ -7,9 +7,9 @@
 // Parser structures and binding - must exist in global namespace
 BOOST_FUSION_ADAPT_STRUCT(
     Embag::RosMsgTypes::ros_msg_field,
-    type_name,
-    array_size,
-    field_name,
+    type_name_,
+    array_size_,
+    field_name_,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
@@ -21,14 +21,14 @@ BOOST_FUSION_ADAPT_STRUCT(
 
 BOOST_FUSION_ADAPT_STRUCT(
     Embag::RosMsgTypes::ros_embedded_msg_def,
-    type_name,
-    members,
+    type_name_,
+    members_,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
     Embag::RosMsgTypes::ros_msg_def,
-    members,
-    embedded_types,
+    members_,
+    embedded_types_,
 )
 
 namespace Embag {

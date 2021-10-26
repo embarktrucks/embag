@@ -8,22 +8,23 @@
 namespace Embag {
 class RosMsgTypes{
  public:
-  struct ros_embedded_msg_def;
+  class ros_embedded_msg_def;
 
   // Schema stuff
   // TODO: move this stuff elsewhere?
   typedef std::unordered_map<std::string, std::pair<RosValue::Type, size_t>> primitive_type_map_t;
-  struct ros_msg_field {
+  class ros_msg_field {
+   public:
     static primitive_type_map_t primitive_type_map_;
 
-    std::string type_name;
-    int32_t array_size;
-    std::string field_name;
+    std::string type_name_;
+    int32_t array_size_;
+    std::string field_name_;
 
     const std::pair<RosValue::Type, size_t>& getTypeInfo() {
       if (!type_info_set) {
-        if (primitive_type_map_.count(type_name)) {
-          type_info = primitive_type_map_.at(type_name);
+        if (primitive_type_map_.count(type_name_)) {
+          type_info = primitive_type_map_.at(type_name_);
         } else {
           type_info = {RosValue::Type::object, 0};
         }
@@ -39,18 +40,18 @@ class RosMsgTypes{
       const std::string &scope
     ) {
       if (definition == nullptr) {
-        if (definition_map.count(type_name)) {
-          definition = definition_map.at(type_name);
+        if (definition_map.count(type_name_)) {
+          definition = definition_map.at(type_name_);
         }
 
         // ROS allows a type to lack its scope when referenced
-        const auto scoped_name = scope + '/' + type_name;
+        const auto scoped_name = scope + '/' + type_name_;
         if (definition_map.count(scoped_name)) {
           definition = definition_map.at(scoped_name);
         }
 
         if (definition == nullptr) {
-          throw std::runtime_error("Unable to find embedded type: " + type_name + " in scope " + scope);
+          throw std::runtime_error("Unable to find embedded type: " + type_name_ + " in scope " + scope);
         }
       }
 
@@ -77,7 +78,7 @@ class RosMsgTypes{
 
   typedef boost::variant<ros_msg_field, ros_msg_constant> ros_msg_member;
 
-  struct ros_msg_def_base {
+  class ros_msg_def_base {
    private:
     std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes_;
     std::unordered_map<std::string, const ros_msg_member*> member_map_;
@@ -85,19 +86,19 @@ class RosMsgTypes{
     const std::string& getMemberName(const ros_msg_member &member) {
       switch (member.which()) {
         case 0:
-          return boost::get<RosMsgTypes::ros_msg_field>(member).field_name;
+          return boost::get<RosMsgTypes::ros_msg_field>(member).field_name_;
         case 1:
           return boost::get<RosMsgTypes::ros_msg_constant>(member).constant_name;
       }
     }
 
    public:
-    std::vector<ros_msg_member> members;
+    std::vector<ros_msg_member> members_;
 
     std::shared_ptr<std::unordered_map<std::string, size_t>> getFieldIndexes() {
       if (!field_indexes_) {
         size_t num_fields = 0;
-        for (const auto &member : members) {
+        for (const auto &member : members_) {
           if (member.which() == 0) {
             ++num_fields;
           }
@@ -106,9 +107,9 @@ class RosMsgTypes{
         field_indexes_ = std::make_shared<std::unordered_map<std::string, size_t>>();
         field_indexes_->reserve(num_fields);
         size_t field_num = 0;
-        for (const auto &member : members) {
+        for (const auto &member : members_) {
           if (member.which() == 0) {
-            field_indexes_->insert(std::make_pair(boost::get<RosMsgTypes::ros_msg_field>(member).field_name, field_num++));
+            field_indexes_->insert(std::make_pair(boost::get<RosMsgTypes::ros_msg_field>(member).field_name_, field_num++));
           }
         }
       }
@@ -117,43 +118,43 @@ class RosMsgTypes{
     }
   };
 
-  struct ros_embedded_msg_def : public ros_msg_def_base {
+  class ros_embedded_msg_def : public ros_msg_def_base {
    public:
-    std::string type_name;
-    std::string scope;
-    bool scope_set = false;
+    std::string type_name_;
+    std::string scope_;
+    bool scope_set_ = false;
 
     // TODO: make this less dumb
     std::string getScope() {
-      if (scope_set) {
-        return scope;
+      if (scope_set_) {
+        return scope_;
       }
 
-      scope_set = true;
-      const size_t slash_pos = type_name.find_first_of('/');
+      scope_set_ = true;
+      const size_t slash_pos = type_name_.find_first_of('/');
       if (slash_pos != std::string::npos) {
-        scope = type_name.substr(0, slash_pos);
+        scope_ = type_name_.substr(0, slash_pos);
       }
 
-      return scope;
+      return scope_;
     }
   };
 
-  struct ros_msg_def : public ros_msg_def_base {
+  class ros_msg_def : public ros_msg_def_base {
    public:
-    std::vector<ros_embedded_msg_def> embedded_types;
+    std::vector<ros_embedded_msg_def> embedded_types_;
 
     // This speeds up searching for embedded types during parsing.
-    bool map_set = false;
+    bool map_set_ = false;
     std::unordered_map<std::string, RosMsgTypes::ros_embedded_msg_def*> embedded_type_map_;
 
     Embag::RosMsgTypes::ros_embedded_msg_def& getEmbeddedType(const std::string &scope,
                                                               Embag::RosMsgTypes::ros_msg_field &field) {
-      if (!map_set) {
-        for (auto &embedded_type : embedded_types) {
-          embedded_type_map_[embedded_type.type_name] = &embedded_type;
+      if (!map_set_) {
+        for (auto &embedded_type : embedded_types_) {
+          embedded_type_map_[embedded_type.type_name_] = &embedded_type;
         }
-        map_set = true;
+        map_set_ = true;
       }
 
       return field.getDefinition(embedded_type_map_, scope);

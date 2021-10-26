@@ -22,16 +22,16 @@ const RosValue &RosValue::at(const std::string &key) const {
 }
 
 const RosValue &RosValue::get(const std::string &key) const {
-  if (type != Type::object) {
+  if (type_ != Type::object) {
     throw std::runtime_error("Value is not an object");
   }
 
-  return object_info.children.at(object_info.field_indexes->at(key));
+  return object_info_.children.at(object_info_.field_indexes->at(key));
 }
 
 template<>
 const std::string RosValue::as<std::string>() const {
-  if (type != Type::string) {
+  if (type_ != Type::string) {
     throw std::runtime_error("Cannot call as<std::string> for a non string");
   }
 
@@ -41,15 +41,15 @@ const std::string RosValue::as<std::string>() const {
 }
 
 const RosValue &RosValue::at(const size_t idx) const {
-  if (type != Type::array) {
+  if (type_ != Type::array) {
     throw std::runtime_error("Value is not an array");
   }
 
-  return array_info.children.at(idx);
+  return array_info_.children.at(idx);
 }
 
 std::string RosValue::toString(const std::string &path) const {
-  switch (type) {
+  switch (type_) {
     case Type::ros_bool: {
       return path + " -> " + (as<bool>() ? "true" : "false");
     }
@@ -97,15 +97,15 @@ std::string RosValue::toString(const std::string &path) const {
     }
     case Type::object: {
       std::ostringstream output;
-      for (const auto& field : *object_info.field_indexes) {
+      for (const auto& field : *object_info_.field_indexes) {
         if (path.empty()) {
-          output << object_info.children.at(field.second).toString(field.first);
+          output << object_info_.children.at(field.second).toString(field.first);
         } else {
-          output << object_info.children.at(field.second).toString(path + "." + field.first);
+          output << object_info_.children.at(field.second).toString(path + "." + field.first);
         }
 
         // No need for a newline if our child is an object or array
-        const auto &object_type = object_info.children.at(field.second).getType();
+        const auto &object_type = object_info_.children.at(field.second).getType();
         if (!(object_type == Type::object || object_type == Type::array)) {
           output << std::endl;
         }
@@ -114,9 +114,9 @@ std::string RosValue::toString(const std::string &path) const {
     }
     case Type::array: {
       std::ostringstream output;
-      for (size_t i = 0; i < array_info.children.length; ++i) {
+      for (size_t i = 0; i < array_info_.children.length; ++i) {
         const std::string array_path = path + "[" + std::to_string(i) + "]";
-        output << array_info.children.at(i).toString(array_path) << std::endl;
+        output << array_info_.children.at(i).toString(array_path) << std::endl;
       }
       return output.str();
     }
@@ -137,12 +137,12 @@ ITERATOR SETUP
 */
 template<>
 const std::string& RosValue::const_iterator<const std::string&, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
-  return index->first;
+  return index_->first;
 }
 
 template<>
 const std::pair<const std::string&, const RosValue&> RosValue::const_iterator<const std::pair<const std::string&, const RosValue&>, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
-  return std::make_pair(index->first, this->value.object_info.children.at(index->second));
+  return std::make_pair(index_->first, value_.object_info_.children.at(index_->second));
 }
 
 }
