@@ -286,7 +286,7 @@ class RosValue {
     std::unordered_map<std::string, RosValuePointer> objects;
     objects.reserve(object_info_.children.length);
     for (const auto& field : *object_info_.field_indexes) {
-      objects.emplace(std::make_pair(field.first, RosValuePointer(object_info_.children.base, object_info_.children.offset + field.second)));
+      objects.emplace(field.first, RosValuePointer(object_info_.children.base, object_info_.children.offset + field.second));
     }
     return objects;
   }

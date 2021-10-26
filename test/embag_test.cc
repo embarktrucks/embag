@@ -55,8 +55,8 @@ void validateSchema(testSchema& test_schema, const std::vector<Embag::RosMsgType
     const auto type = named_type.second;
 
     const auto field = boost::get<Embag::RosMsgTypes::ros_msg_field>(members[i++]);
-    ASSERT_EQ(field.field_name, name);
-    ASSERT_EQ(field.type_name, type);
+    ASSERT_EQ(field.field_name_, name);
+    ASSERT_EQ(field.type_name_, type);
   }
 }
 
@@ -76,7 +76,7 @@ TEST_F(BagTest, MsgDefForTopic) {
       {"intensities", "float32"},
   };
 
-  validateSchema(top_level_types, def->members);
+  validateSchema(top_level_types, def->members_);
 
   // Test recursion on Header embedded type
   const testSchema header_types = {
@@ -85,13 +85,13 @@ TEST_F(BagTest, MsgDefForTopic) {
       {"frame_id", "string"},
   };
 
-  auto header_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(def->members[0]);
+  auto header_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(def->members_[0]);
   const auto header = def->getEmbeddedType("", header_field);
-  validateSchema(header_types, header.members);
+  validateSchema(header_types, header.members_);
 
   // Test array type
-  const auto array_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(def->members.back());
-  ASSERT_EQ(array_field.array_size, -1);  // -1 is an array of undefined length
+  const auto array_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(def->members_.back());
+  ASSERT_EQ(array_field.array_size_, -1);  // -1 is an array of undefined length
 }
 
 TEST_F(BagTest, ConnectionsForTopic) {

@@ -109,7 +109,7 @@ class RosMsgTypes{
         size_t field_num = 0;
         for (const auto &member : members_) {
           if (member.which() == 0) {
-            field_indexes_->insert(std::make_pair(boost::get<RosMsgTypes::ros_msg_field>(member).field_name_, field_num++));
+            field_indexes_->emplace(boost::get<RosMsgTypes::ros_msg_field>(member).field_name_, field_num++);
           }
         }
       }
