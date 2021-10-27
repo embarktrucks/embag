@@ -243,6 +243,7 @@ View View::addBag(const std::string &filename) {
 
 View View::addBag(std::shared_ptr<Bag> bag) {
   bags_.emplace_back(bag);
+  connections_by_topic_.clear();
   return *this;
 }
 }
