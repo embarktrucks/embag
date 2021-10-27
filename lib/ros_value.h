@@ -219,6 +219,8 @@ class RosValue {
     , array_info_()
   {
   }
+
+  // Define custom copy constructor and destructor because of the union for the infos
   RosValue(const RosValue &other): type_(other.type_) {
     if (type_ == Type::object) {
       new (&object_info_) auto(other.object_info_);
