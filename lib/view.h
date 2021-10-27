@@ -159,6 +159,15 @@ class View {
     return connections_by_topic_;
   }
 
+  std::shared_ptr<RosMsgTypes::ros_msg_def> msgDefForTopic(const std::string &topic) {
+    for (const auto &bag : bags_) {
+      if (bag->topicInBag(topic)) {
+        return bag->msgDefForTopic(topic);
+      }
+    }
+    throw std::runtime_error("Unable to find topic in bags: " + topic);
+  }
+
  private:
   std::vector<std::shared_ptr<Bag>> bags_;
   std::unordered_map<std::shared_ptr<Bag>, std::shared_ptr<iterator::bag_wrapper_t>> bag_wrappers_;
