@@ -14,36 +14,36 @@ const RosValue* MessageParser::parse() {
   // The number of RosValues in this case is the number of doubles that can fit in our buffer,
   // plus one for the RosValue object that will point to all the doubles.
   ros_values_->reserve(message_buffer_->size() / sizeof(double) + 1);
-  ros_values_->emplace_back(msg_def_.getFieldIndexes());
+  ros_values_->emplace_back(msg_def_.fieldIndexes());
   ros_values_offset_ = 1;
-  initObject(0, msg_def_, scope_);
+  initObject(0, msg_def_);
   return &ros_values_->front();
 }
 
-void MessageParser::initObject(size_t object_offset, RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope) {
+void MessageParser::initObject(size_t object_offset, const RosMsgTypes::BaseMsgDef &object_definition) {
   const size_t children_offset = ros_values_offset_;
   ros_values_->at(object_offset).object_info_.children.base = ros_values_;
   ros_values_->at(object_offset).object_info_.children.offset = children_offset;
   ros_values_->at(object_offset).object_info_.children.length = 0;
-  for (auto &member: object_definition.members_) {
+  for (auto &member: object_definition.members()) {
     if (member.which() == 0) {
-      auto& field = boost::get<RosMsgTypes::ros_msg_field>(member);
-      emplaceField(scope, field);
+      auto& field = boost::get<RosMsgTypes::FieldDef>(member);
+      emplaceField(field);
     }
   }
 
-  for (auto &member: object_definition.members_) {
+  for (auto &member: object_definition.members()) {
     if (member.which() == 0) {
-      auto& field = boost::get<RosMsgTypes::ros_msg_field>(member);
+      auto& field = boost::get<RosMsgTypes::FieldDef>(member);
       const size_t child_offset = children_offset + ros_values_->at(object_offset).object_info_.children.length++;
       switch (ros_values_->at(child_offset).type_) {
         case RosValue::Type::object: {
-          auto& embedded_type = msg_def_.getEmbeddedType(scope, field);
-          initObject(child_offset, embedded_type, embedded_type.getScope());
+          auto& embedded_type = field.typeDefinition();
+          initObject(child_offset, embedded_type);
           break;
         }
         case RosValue::Type::array: {
-          initArray(child_offset, scope, field);
+          initArray(child_offset, field);
           break;
         }
         default: {
@@ -55,14 +55,13 @@ void MessageParser::initObject(size_t object_offset, RosMsgTypes::ros_msg_def_ba
   }
 }
 
-void MessageParser::emplaceField(const std::string &scope, RosMsgTypes::ros_msg_field &field) {
-  if (field.array_size_ == 0) {
-    const std::pair<RosValue::Type, size_t>& field_type_info = field.getTypeInfo();
-    if (field_type_info.first != RosValue::Type::object) {
-      ros_values_->emplace_back(field_type_info.first);
+void MessageParser::emplaceField(const RosMsgTypes::FieldDef &field) {
+  if (field.arraySize() == 0) {
+    if (field.type() != RosValue::Type::object) {
+      ros_values_->emplace_back(field.type());
     } else {
-      auto& object_definition = msg_def_.getEmbeddedType(scope, field);
-      ros_values_->emplace_back(object_definition.getFieldIndexes());
+      auto& object_definition = field.typeDefinition();
+      ros_values_->emplace_back(object_definition.fieldIndexes());
     }
   } else {
     ros_values_->emplace_back(RosValue::_array_identifier());
@@ -71,13 +70,13 @@ void MessageParser::emplaceField(const std::string &scope, RosMsgTypes::ros_msg_
   ++ros_values_offset_;
 }
 
-void MessageParser::initArray(size_t array_offset, const std::string &scope, RosMsgTypes::ros_msg_field &field) {
+void MessageParser::initArray(size_t array_offset, const RosMsgTypes::FieldDef &field) {
   size_t array_length;
-  if (field.array_size_ == -1) {
+  if (field.arraySize() == -1) {
     array_length = *reinterpret_cast<uint32_t*>(&message_buffer_->at(message_buffer_offset_));
     message_buffer_offset_ += sizeof(uint32_t);
   } else {
-    array_length = static_cast<uint32_t>(field.array_size_);
+    array_length = static_cast<uint32_t>(field.arraySize());
   }
   const size_t children_offset = ros_values_offset_;
   ros_values_offset_ += array_length;
@@ -86,38 +85,35 @@ void MessageParser::initArray(size_t array_offset, const std::string &scope, Ros
   ros_values_->at(array_offset).array_info_.children.base = ros_values_;
   ros_values_->at(array_offset).array_info_.children.offset = children_offset;
 
-  const std::pair<RosValue::Type, size_t>& field_type_info = field.getTypeInfo();
-  if (field_type_info.first != RosValue::Type::object) {
+  if (field.type() != RosValue::Type::object) {
     for (size_t i = 0; i < array_length; ++i) {
-      ros_values_->emplace_back(field_type_info.first);
+      ros_values_->emplace_back(field.type());
     }
 
     for (size_t i = 0; i < array_length; ++i) {
       initPrimitive(children_offset + i, field);
     }
   } else {
-    auto& object_definition = msg_def_.getEmbeddedType(scope, field);
+    auto& object_definition = field.typeDefinition();
     for (size_t i = 0; i < array_length; ++i) {
-      ros_values_->emplace_back(object_definition.getFieldIndexes());
+      ros_values_->emplace_back(object_definition.fieldIndexes());
     }
 
-    const std::string children_scope = object_definition.getScope();
     for (size_t i = 0; i < array_length; ++i) {
-      initObject(children_offset + i, object_definition, children_scope);
+      initObject(children_offset + i, object_definition);
     }
   }
 }
 
-void MessageParser::initPrimitive(size_t primitive_offset, RosMsgTypes::ros_msg_field &field) {
+void MessageParser::initPrimitive(size_t primitive_offset, const RosMsgTypes::FieldDef &field) {
   RosValue& primitive = ros_values_->at(primitive_offset);
   primitive.primitive_info_.message_buffer = message_buffer_;
   primitive.primitive_info_.offset = message_buffer_offset_;
 
-  const std::pair<RosValue::Type, size_t>& field_type_info = field.getTypeInfo();
-  if (field_type_info.first == RosValue::Type::string) {
+  if (field.type() == RosValue::Type::string) {
     message_buffer_offset_ += *reinterpret_cast<const uint32_t* const>(primitive.getPrimitivePointer()) + sizeof(uint32_t);
   } else {
-    message_buffer_offset_ += field_type_info.second;
+    message_buffer_offset_ += field.typeSize();
   }
 }
 }

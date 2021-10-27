@@ -6,29 +6,29 @@
 
 // Parser structures and binding - must exist in global namespace
 BOOST_FUSION_ADAPT_STRUCT(
-    Embag::RosMsgTypes::ros_msg_field,
-    type_name_,
-    array_size_,
-    field_name_,
+    Embag::RosMsgTypes::FieldDef::parseable_info_t,
+    type_name,
+    array_size,
+    field_name,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    Embag::RosMsgTypes::ros_msg_constant,
+    Embag::RosMsgTypes::ConstantDef,
     type_name,
     constant_name,
     value,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    Embag::RosMsgTypes::ros_embedded_msg_def,
-    type_name_,
-    members_,
+    Embag::RosMsgTypes::EmbeddedMsgDef::parseable_info_t,
+    type_name,
+    members,
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-    Embag::RosMsgTypes::ros_msg_def,
-    members_,
-    embedded_types_,
+    Embag::RosMsgTypes::MsgDef::parseable_info_t,
+    members,
+    embedded_definitions,
 )
 
 namespace Embag {
@@ -62,7 +62,7 @@ struct ros_msg_skipper : qi::grammar<Iterator> {
 // ROS message parsing
 // See http://wiki.ros.org/msg for details on the format
 template<typename Iterator, typename Skipper = ros_msg_skipper<Iterator>>
-struct ros_msg_grammar : qi::grammar<Iterator, RosMsgTypes::ros_msg_def(), Skipper> {
+struct ros_msg_grammar : qi::grammar<Iterator, RosMsgTypes::MsgDef::parseable_info_t(), Skipper> {
   ros_msg_grammar() : ros_msg_grammar::base_type(msg) {
     using qi::lit;
     using qi::lexeme;
@@ -91,38 +91,38 @@ struct ros_msg_grammar : qi::grammar<Iterator, RosMsgTypes::ros_msg_def(), Skipp
     // Embedded types include all the supporting sub types (aka non-primitives) of a top-level message definition
     // The std_msgs namespace is included in the global namespace so we remove it here
     embedded_type_name %= (lit("MSG: std_msgs/") | lit("MSG: ")) >> lexeme[+(char_ - eol)];
-    embedded_type = embedded_type_name >> +(member - lit("MSG: "));
+    embedded_type_definition = embedded_type_name >> +(member - lit("MSG: "));
 
     // Finally, we put these rules together to parse the full definition
     msg = *(member - lit("MSG: "))
-        >> *embedded_type;
+        >> *embedded_type_definition;
   }
 
-  qi::rule<Iterator, RosMsgTypes::ros_msg_def(), Skipper> msg;
-  qi::rule<Iterator, RosMsgTypes::ros_msg_field(), Skipper> field;
+  qi::rule<Iterator, RosMsgTypes::MsgDef::parseable_info_t(), Skipper> msg;
+  qi::rule<Iterator, RosMsgTypes::FieldDef::parseable_info_t(), Skipper> field;
   qi::rule<Iterator, std::string(), Skipper> type;
   qi::rule<Iterator, int32_t(), Skipper> array_size;
   qi::rule<Iterator, std::string(), Skipper> field_name;
-  qi::rule<Iterator, RosMsgTypes::ros_embedded_msg_def(), Skipper> embedded_type;
+  qi::rule<Iterator, RosMsgTypes::EmbeddedMsgDef::parseable_info_t(), Skipper> embedded_type_definition;
   qi::rule<Iterator, std::string(), Skipper> embedded_type_name;
-  qi::rule<Iterator, RosMsgTypes::ros_msg_constant(), Skipper> constant;
+  qi::rule<Iterator, RosMsgTypes::ConstantDef(), Skipper> constant;
   qi::rule<Iterator, std::string(), Skipper> constant_name;
   qi::rule<Iterator, std::string(), Skipper> constant_value;
-  qi::rule<Iterator, RosMsgTypes::ros_msg_member(), Skipper> member;
+  qi::rule<Iterator, RosMsgTypes::member_parseable_info_t(), Skipper> member;
 };
 
-std::shared_ptr<RosMsgTypes::ros_msg_def> parseMsgDef(const std::string &def) {
+std::shared_ptr<RosMsgTypes::MsgDef> parseMsgDef(const std::string &def, const std::string& name) {
   std::string::const_iterator iter = def.begin();
   const std::string::const_iterator end = def.end();
 
   const ros_msg_grammar<std::string::const_iterator> grammar;
   const ros_msg_skipper<std::string::const_iterator> skipper;
 
-  auto ast = std::make_shared<RosMsgTypes::ros_msg_def>();
-  const bool r = phrase_parse(iter, end, grammar, skipper, *ast);
+  RosMsgTypes::MsgDef::parseable_info_t ast;
+  const bool r = phrase_parse(iter, end, grammar, skipper, ast);
 
   if (r && iter == end) {
-    return ast;
+    return std::make_shared<RosMsgTypes::MsgDef>(ast, name);
   }
 
   const std::string::const_iterator some = iter + std::min(30, int(end - iter));

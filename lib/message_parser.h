@@ -15,7 +15,7 @@ class MessageParser {
       const std::shared_ptr<std::vector<char>> message_buffer,
       size_t offset,
       const std::string &scope,
-      RosMsgTypes::ros_msg_def& msg_def
+      const RosMsgTypes::MsgDef& msg_def
   )
   : message_buffer_(message_buffer)
   , message_buffer_offset_(offset)
@@ -31,10 +31,10 @@ class MessageParser {
  private:
   static std::unordered_map<std::string, size_t> primitive_size_map_;
 
-  void initObject(size_t object_offset, RosMsgTypes::ros_msg_def_base &object_definition, const std::string &scope);
-  void initArray(size_t array_offset, const std::string &scope, RosMsgTypes::ros_msg_field &field);
-  void initPrimitive(size_t primitive_offset, RosMsgTypes::ros_msg_field &field);
-  void emplaceField(const std::string &scope, RosMsgTypes::ros_msg_field &field);
+  void initObject(size_t object_offset, const RosMsgTypes::BaseMsgDef &object_definition);
+  void initArray(size_t array_offset, const RosMsgTypes::FieldDef &field);
+  void initPrimitive(size_t primitive_offset, const RosMsgTypes::FieldDef &field);
+  void emplaceField(const RosMsgTypes::FieldDef &field);
 
   const std::shared_ptr<std::vector<char>> message_buffer_;
   size_t message_buffer_offset_;
@@ -43,6 +43,6 @@ class MessageParser {
   size_t ros_values_offset_;
 
   const std::string& scope_;
-  RosMsgTypes::ros_msg_def& msg_def_;
+  const RosMsgTypes::MsgDef& msg_def_;
 };
 }

@@ -6,7 +6,7 @@
 
 namespace Embag {
 
-RosMsgTypes::primitive_type_map_t RosMsgTypes::ros_msg_field::primitive_type_map_ = {
+const RosMsgTypes::primitive_type_map_t RosMsgTypes::FieldDef::primitive_type_map = {
     {"bool", {RosValue::Type::ros_bool, sizeof(bool)}},
     {"int8", {RosValue::Type::int8, sizeof(int8_t)}},
     {"uint8", {RosValue::Type::uint8, sizeof(uint8_t)}},
@@ -310,6 +310,6 @@ void Bag::parseMsgDefForTopic(const std::string &topic) {
   }
 
   const auto connection_data = connections.front()->data;
-  message_schemata_[topic] = parseMsgDef(connection_data.message_definition);
+  message_schemata_[topic] = parseMsgDef(connection_data.message_definition, connection_data.type);
 }
 }

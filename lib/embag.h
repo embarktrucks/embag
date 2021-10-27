@@ -50,7 +50,7 @@ class Bag {
     return topic_connection_map_.count(topic) != 0;
   }
 
-  std::shared_ptr<RosMsgTypes::ros_msg_def> msgDefForTopic(const std::string &topic) {
+  std::shared_ptr<RosMsgTypes::MsgDef> msgDefForTopic(const std::string &topic) {
     const auto it = message_schemata_.find(topic);
     if (it == message_schemata_.end()) {
       parseMsgDefForTopic(topic);
@@ -127,7 +127,7 @@ class Bag {
   std::vector<RosBagTypes::chunk_info_t> chunk_infos_;
   std::vector<RosBagTypes::chunk_t> chunks_;
   uint64_t index_pos_ = 0;
-  std::unordered_map<std::string, std::shared_ptr<RosMsgTypes::ros_msg_def>> message_schemata_;
+  std::unordered_map<std::string, std::shared_ptr<RosMsgTypes::MsgDef>> message_schemata_;
 
   friend class View;
 };

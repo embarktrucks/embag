@@ -208,7 +208,7 @@ class RosValue {
       throw std::runtime_error("Cannot create an object or array with this constructor");
     }
   }
-  RosValue(std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes)
+  RosValue(const std::shared_ptr<std::unordered_map<std::string, const size_t>> field_indexes)
     : type_(Type::object)
     , object_info_()
   {
@@ -324,7 +324,7 @@ class RosValue {
 
   struct object_info_t {
     ros_value_list_t children;
-    std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes;
+    std::shared_ptr<std::unordered_map<std::string, const size_t>> field_indexes;
   };
 
   Type type_;

@@ -59,7 +59,7 @@ class RosMessage {
  private:
   bool parsed_ = false;
   const RosValue* data_;
-  std::shared_ptr<RosMsgTypes::ros_msg_def> msg_def_;
+  std::shared_ptr<RosMsgTypes::MsgDef> msg_def_;
   std::string scope_;
 
   void hydrate() {

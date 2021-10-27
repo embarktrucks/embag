@@ -4,6 +4,6 @@
 
 namespace Embag {
 
-std::shared_ptr<RosMsgTypes::ros_msg_def> parseMsgDef(const std::string &def);
+std::shared_ptr<RosMsgTypes::MsgDef> parseMsgDef(const std::string &def, const std::string& name);
 
 }
