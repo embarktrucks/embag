@@ -36,7 +36,6 @@ std::shared_ptr<RosMessage> View::iterator::operator*() const {
   message->md5 = connection.data.md5sum;
   message->raw_data_len = wrapper->current_message_len;
   message->msg_def_ = msg_def;
-  message->scope_ = connection.data.scope;
 
   return message;
 }

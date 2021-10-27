@@ -14,14 +14,12 @@ class MessageParser {
   MessageParser(
       const std::shared_ptr<std::vector<char>> message_buffer,
       size_t offset,
-      const std::string &scope,
       const RosMsgTypes::MsgDef& msg_def
   )
   : message_buffer_(message_buffer)
   , message_buffer_offset_(offset)
   , ros_values_(std::make_shared<std::vector<RosValue>>())
   , ros_values_offset_(0)
-  , scope_(scope)
   , msg_def_(msg_def)
   {
   };
@@ -42,7 +40,6 @@ class MessageParser {
   std::shared_ptr<std::vector<RosValue>> ros_values_;
   size_t ros_values_offset_;
 
-  const std::string& scope_;
   const RosMsgTypes::MsgDef& msg_def_;
 };
 }

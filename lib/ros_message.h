@@ -60,10 +60,9 @@ class RosMessage {
   bool parsed_ = false;
   const RosValue* data_;
   std::shared_ptr<RosMsgTypes::MsgDef> msg_def_;
-  std::string scope_;
 
   void hydrate() {
-    MessageParser msg(raw_buffer, raw_buffer_offset, scope_, *msg_def_);
+    MessageParser msg(raw_buffer, raw_buffer_offset, *msg_def_);
 
     data_ = msg.parse();
 
