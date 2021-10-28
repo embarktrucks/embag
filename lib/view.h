@@ -137,13 +137,15 @@ class View {
     return std::vector<std::string>(topics.begin(), topics.end());
   }
 
-  std::unordered_map<std::string, std::vector<RosBagTypes::connection_data_t>> connectionsByTopicMap() const {
-    std::unordered_map<std::string, std::vector<RosBagTypes::connection_data_t>> connections_by_topic;
+  const std::unordered_map<std::string, std::vector<RosBagTypes::connection_data_t>> &connectionsByTopicMap() const {
+    if (!connections_by_topic_.empty()) {
+      return connections_by_topic_;
+    }
     for (const auto &bag : bags_) {
       for (const auto &item : bag->connectionsByTopicMap()) {
         const auto &topic = item.first;
         const auto &new_conns = item.second;
-        auto &existing_conns = connections_by_topic[topic];
+        auto &existing_conns = connections_by_topic_[topic];
         for (const auto &new_c : new_conns) {
           auto existing_it = std::find(existing_conns.begin(), existing_conns.end(), new_c);
           if (existing_it == existing_conns.end()) {
@@ -154,11 +156,21 @@ class View {
         }
       }
     }
-    return connections_by_topic;
+    return connections_by_topic_;
+  }
+
+  std::shared_ptr<RosMsgTypes::ros_msg_def> msgDefForTopic(const std::string &topic) {
+    for (const auto &bag : bags_) {
+      if (bag->topicInBag(topic)) {
+        return bag->msgDefForTopic(topic);
+      }
+    }
+    throw std::runtime_error("Unable to find topic in bags: " + topic);
   }
 
  private:
   std::vector<std::shared_ptr<Bag>> bags_;
   std::unordered_map<std::shared_ptr<Bag>, std::shared_ptr<iterator::bag_wrapper_t>> bag_wrappers_;
+  mutable std::unordered_map<std::string, std::vector<RosBagTypes::connection_data_t>> connections_by_topic_;
 };
 }

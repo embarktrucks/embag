@@ -26,9 +26,8 @@ PYBIND11_MODULE(libembag, m) {
 
         return py::make_iterator(IteratorCompat{view.begin()}, IteratorCompat{view.end()});
       }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */, py::arg("topics"))
-      .def("getSchema", [](std::shared_ptr<Embag::Bag> &bag, const std::string &topic) {
-        auto builder = SchemaBuilder{bag};
-        return builder.generateSchema(topic);
+      .def("getSchema", [](Embag::Bag &bag, const std::string &topic) {
+        return SchemaBuilder(bag, topic).generateSchema();
       })
       .def("connectionsByTopic", &Embag::Bag::connectionsByTopicMap)
       .def("close", &Embag::Bag::close);
@@ -48,6 +47,9 @@ PYBIND11_MODULE(libembag, m) {
         return py::make_iterator(v.begin(), v.end());
       }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */ )
       .def("topics", &Embag::View::topics)
+      .def("getSchema", [](Embag::View &view, const std::string &topic) {
+        return SchemaBuilder(view, topic).generateSchema();
+      })
       .def("connectionsByTopic", &Embag::View::connectionsByTopicMap);
 
   py::class_<Embag::RosMessage, std::shared_ptr<Embag::RosMessage>>(m, "RosMessage", py::dynamic_attr())
@@ -130,4 +132,9 @@ PYBIND11_MODULE(libembag, m) {
       .def("__repr__", [](const Embag::RosBagTypes::connection_data_t &c) {
         return "<embag.Connection '" + c.type + "' from '" + c.callerid + "'>";
       });
+
+  m.def("getSchema", [](const std::string &message_type,
+                        const std::string &message_definition) {
+    return SchemaBuilder(message_type, message_definition).generateSchema();
+  });
 }

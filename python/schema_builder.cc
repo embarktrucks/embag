@@ -1,22 +1,33 @@
 #include "schema_builder.h"
+#include "lib/message_def_parser.h"
 
-py::object SchemaBuilder::generateSchema(const std::string &topic) {
+SchemaBuilder::SchemaBuilder(Embag::View &view, const std::string &topic) {
+  msg_def_ = view.msgDefForTopic(topic);
+  auto connections = view.connectionsByTopicMap().find(topic)->second;
+  outer_scope_ = connections[0].scope;
+}
+
+SchemaBuilder::SchemaBuilder(Embag::Bag &bag, const std::string &topic) {
+  msg_def_ = bag.msgDefForTopic(topic);
+  auto connections = bag.connectionsForTopic(topic);
+  outer_scope_ = connections[0]->data.scope;
+}
+
+SchemaBuilder::SchemaBuilder(const std::string &message_type,
+                             const std::string &message_definition) {
+  msg_def_ = Embag::parseMsgDef(message_definition);
+  const size_t slash_pos = message_type.find_first_of('/');
+  outer_scope_ = message_type.substr(0, slash_pos);
+}
+
+py::object SchemaBuilder::generateSchema() {
   auto schema = ordered_dict_();
-
-  if (!bag_->topicInBag(topic)) {
-    throw std::runtime_error(topic + " not found in bag!");
-  }
-
-  msg_def_ = bag_->msgDefForTopic(topic);
-  auto connections = bag_->connectionsForTopic(topic);
-
   for (const auto &member : msg_def_->members) {
-    if (member.which() == 0) {  // ros_msg_field
+    if (member.which() == 0) { // ros_msg_field
       auto field = boost::get<Embag::RosMsgTypes::ros_msg_field>(member);
-      schema[field.field_name.c_str()] = schemaForField(connections[0]->data.scope, field);
+      schema[field.field_name.c_str()] = schemaForField(outer_scope_, field);
     }
   }
-
   return schema;
 }
 

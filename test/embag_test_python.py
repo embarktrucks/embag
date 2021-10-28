@@ -51,7 +51,15 @@ class EmbagTest(unittest.TestCase):
             ('is_dense', {'type': 'bool'})
         ])
 
-        schema = self.bag.getSchema('/luminar_pointcloud')
+        topic = '/luminar_pointcloud'
+        schema = self.bag.getSchema(topic)
+        self.assertDictEqual(schema, known_schema)
+
+        schema = self.view.getSchema(topic)
+        self.assertDictEqual(schema, known_schema)
+
+        c = self.bag.connectionsByTopic()[topic][0]
+        schema = embag.getSchema(c.type, c.message_definition)
         self.assertDictEqual(schema, known_schema)
 
     def testTopicsInBag(self):
