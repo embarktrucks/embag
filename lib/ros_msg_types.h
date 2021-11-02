@@ -155,7 +155,7 @@ class RosMsgTypes{
       }
     }
 
-    const std::shared_ptr<std::unordered_map<std::string, const size_t>> fieldIndexes() const {
+    const std::shared_ptr<std::unordered_map<std::string, const size_t>>& fieldIndexes() const {
       return field_indexes_;
     }
 

@@ -109,7 +109,7 @@ class RosValue {
 
  private:
   template<class ReturnType, class IndexType, class ChildIteratorType>
-  class _const_iterator {
+  class const_iterator_base {
    public:
     bool operator==(const ChildIteratorType& other) const {
       return index_ == other.index_;
@@ -128,7 +128,7 @@ class RosValue {
       return {value_, index_++};
     }
    protected:
-    _const_iterator(const RosValue& value, size_t index)
+    const_iterator_base(const RosValue& value, size_t index)
       : value_(value)
       , index_(index)
     {
@@ -139,14 +139,16 @@ class RosValue {
   };
 
  public:
+  // Iterator that implements an InputIterator over the children
+  // of RosValues that are of type object or array
   template<class ReturnType, class IndexType>
   class const_iterator;
 
   template<class ReturnType>
-  class const_iterator<ReturnType, size_t> : public _const_iterator<ReturnType, size_t, const_iterator<ReturnType, size_t>> {
+  class const_iterator<ReturnType, size_t> : public const_iterator_base<ReturnType, size_t, const_iterator<ReturnType, size_t>> {
    public:
     const_iterator(const RosValue& value, size_t index)
-      : _const_iterator<ReturnType, size_t, const_iterator<ReturnType, size_t>>(value, index)
+      : const_iterator_base<ReturnType, size_t, const_iterator<ReturnType, size_t>>(value, index)
     {
       if (value.type_ != Type::object && value.type_ != Type::array) {
         throw std::runtime_error("Cannot iterate a RosValue that is not an object or array");
@@ -159,10 +161,10 @@ class RosValue {
   };
 
   template<class ReturnType>
-  struct const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator> : public _const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator, const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator>> {
+  class const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator> : public const_iterator_base<ReturnType, std::unordered_map<std::string, size_t>::const_iterator, const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator>> {
    public:
     const_iterator(const RosValue& value, std::unordered_map<std::string, size_t>::const_iterator index)
-      : _const_iterator<ReturnType, size_t, std::unordered_map<std::string, size_t>::const_iterator>(value, index)
+      : const_iterator_base<ReturnType, size_t, std::unordered_map<std::string, size_t>::const_iterator>(value, index)
     {
       if (value.type_ != Type::object) {
         throw std::runtime_error("Cannot only iterate the keys or key/value pairs of an object");
@@ -208,7 +210,7 @@ class RosValue {
       throw std::runtime_error("Cannot create an object or array with this constructor");
     }
   }
-  RosValue(const std::shared_ptr<std::unordered_map<std::string, const size_t>> field_indexes)
+  RosValue(const std::shared_ptr<std::unordered_map<std::string, const size_t>>& field_indexes)
     : type_(Type::object)
     , object_info_()
   {
