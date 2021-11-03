@@ -10,33 +10,32 @@ py::object SchemaBuilder::generateSchema(const std::string &topic) {
   msg_def_ = bag_->msgDefForTopic(topic);
   auto connections = bag_->connectionsForTopic(topic);
 
-  for (const auto &member : msg_def_->members) {
+  for (const auto &member : msg_def_->members()) {
     if (member.which() == 0) {  // ros_msg_field
-      auto field = boost::get<Embag::RosMsgTypes::ros_msg_field>(member);
-      schema[field.field_name.c_str()] = schemaForField(connections[0]->data.scope, field);
+      auto field = boost::get<Embag::RosMsgTypes::FieldDef>(member);
+      schema[field.name().c_str()] = schemaForField(field);
     }
   }
 
   return schema;
 }
 
-py::dict SchemaBuilder::schemaForField(const std::string &scope, const Embag::RosMsgTypes::ros_msg_field &field) const {
-  auto &primitive_type_map = Embag::RosMsgTypes::ros_msg_field::primitive_type_map_;
+py::dict SchemaBuilder::schemaForField(const Embag::RosMsgTypes::FieldDef &field) const {
+  auto &primitive_type_map = Embag::RosMsgTypes::FieldDef::primitive_type_map;
   auto field_def = py::dict{};
 
   // Not an array
-  if (field.array_size == 0) {
+  if (field.arraySize() == 0) {
     // Primitive type
-    if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
-      field_def["type"] = field.type_name;
+    if (primitive_type_map.find(field.typeName()) != primitive_type_map.end()) {
+      field_def["type"] = field.typeName();
     } else {
       // Embedded type
       auto children = ordered_dict_();
-      auto embedded_type = msg_def_->getEmbeddedType(scope, field);
-      for (const auto &member : embedded_type.members) {
+      for (const auto &member : field.typeDefinition().members()) {
         if (member.which() == 0) {  // ros_msg_field
-          auto embedded_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(member);
-          children[embedded_field.field_name.c_str()] = schemaForField(embedded_type.getScope(), embedded_field);
+          auto embedded_field = boost::get<Embag::RosMsgTypes::FieldDef>(member);
+          children[embedded_field.name().c_str()] = schemaForField(embedded_field);
         }
       }
 
@@ -45,17 +44,16 @@ py::dict SchemaBuilder::schemaForField(const std::string &scope, const Embag::Ro
     }
   } else {
     // Array type
-    if (primitive_type_map.find(field.type_name) != primitive_type_map.end()) {
+    if (primitive_type_map.find(field.typeName()) != primitive_type_map.end()) {
       // Primitive type
-      field_def["member_type"] = field.type_name;
+      field_def["member_type"] = field.typeName();
     } else {
       // This is an array of embedded types
       auto children = ordered_dict_();
-      auto embedded_type = msg_def_->getEmbeddedType(scope, field);
-      for (const auto &member : embedded_type.members) {
+      for (const auto &member : field.typeDefinition().members()) {
         if (member.which() == 0) {  // ros_msg_field
-          auto embedded_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(member);
-          children[embedded_field.field_name.c_str()] = schemaForField(embedded_type.getScope(), embedded_field);
+          auto embedded_field = boost::get<Embag::RosMsgTypes::FieldDef>(member);
+          children[embedded_field.name().c_str()] = schemaForField(embedded_field);
         }
       }
 

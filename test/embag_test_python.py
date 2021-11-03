@@ -92,8 +92,7 @@ class EmbagTest(unittest.TestCase):
                 self.assertEqual(msg.scan_time, 0.0)
 
                 # Test binary data
-                values = struct.unpack('<%df' % (len(msg.ranges) / 4), msg.ranges)
-                for v in values:
+                for v in msg.ranges:
                     self.assertNotEqual(v, 0)
 
             if topic == '/base_pose_ground_truth':
@@ -102,8 +101,7 @@ class EmbagTest(unittest.TestCase):
                 self.assertEqual(msg.header.frame_id, "odom")
                 self.assertNotEqual(msg.pose.pose.position.x, 0.0)
 
-                values = struct.unpack('<%df' % (len(msg.pose.covariance) / 4), msg.pose.covariance)
-                for v in values:
+                for v in msg.pose.covariance:
                     self.assertEqual(v, 0)
 
         self.assertEqual(len(unseen_topics), 0)

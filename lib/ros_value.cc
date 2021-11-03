@@ -17,182 +17,95 @@ const RosValue &RosValue::operator[](const size_t idx) const {
   return at(idx);
 }
 
+const RosValue &RosValue::at(const std::string &key) const {
+  return get(key);
+}
+
 const RosValue &RosValue::get(const std::string &key) const {
-  if (type != Type::object) {
+  if (type_ != Type::object) {
     throw std::runtime_error("Value is not an object");
   }
-  return *objects.at(key);
+
+  return object_info_.children.at(object_info_.field_indexes->at(key));
 }
 
+template<>
+const std::string RosValue::as<std::string>() const {
+  if (type_ != Type::string) {
+    throw std::runtime_error("Cannot call as<std::string> for a non string");
+  }
+
+  const uint32_t string_length = *reinterpret_cast<const uint32_t* const>(getPrimitivePointer());
+  const char* const string_loc = reinterpret_cast<const char* const>(getPrimitivePointer() + sizeof(uint32_t));
+  return std::string(string_loc, string_loc + string_length);
+}
 
 const RosValue &RosValue::at(const size_t idx) const {
-  if (type != Type::array) {
+  if (type_ != Type::array) {
     throw std::runtime_error("Value is not an array");
   }
-  return *values.at(idx);
-}
 
-const bool &RosValue::getValueImpl(identity<bool>) const {
-  if (type != Type::ros_bool) {
-    throw std::runtime_error("Value is not a bool");
-  }
-  return bool_value;
-}
-
-const int8_t &RosValue::getValueImpl(identity<int8_t>) const {
-  if (type != Type::int8) {
-    throw std::runtime_error("Value is not an int8");
-  }
-  return int8_value;
-}
-
-const uint8_t &RosValue::getValueImpl(identity<uint8_t>) const {
-  if (type != Type::uint8) {
-    throw std::runtime_error("Value is not a uint8");
-  }
-  return uint8_value;
-}
-
-const int16_t &RosValue::getValueImpl(identity<int16_t>) const {
-  if (type != Type::int16) {
-    throw std::runtime_error("Value is not an int16");
-  }
-  return int16_value;
-}
-
-const uint16_t &RosValue::getValueImpl(identity<uint16_t>) const {
-  if (type != Type::uint16) {
-    throw std::runtime_error("Value is not a uint16");
-  }
-  return uint16_value;
-}
-
-const int32_t &RosValue::getValueImpl(identity<int32_t>) const {
-  if (type != Type::int32) {
-    throw std::runtime_error("Value is not an int32");
-  }
-  return int32_value;
-}
-
-const uint32_t &RosValue::getValueImpl(identity<uint32_t>) const {
-  if (type != Type::uint32) {
-    throw std::runtime_error("Value is not a uint32");
-  }
-  return uint32_value;
-}
-
-const int64_t &RosValue::getValueImpl(identity<int64_t>) const {
-  if (type != Type::int64) {
-    throw std::runtime_error("Value is not an int64");
-  }
-  return int64_value;
-}
-
-const uint64_t &RosValue::getValueImpl(identity<uint64_t>) const {
-  if (type != Type::uint64) {
-    throw std::runtime_error("Value is not a uint64");
-  }
-  return uint64_value;
-}
-
-const float &RosValue::getValueImpl(identity<float>) const {
-  if (type != Type::float32) {
-    throw std::runtime_error("Value is not a float");
-  }
-  return float32_value;
-}
-
-const double &RosValue::getValueImpl(identity<double>) const {
-  if (type != Type::float64) {
-    throw std::runtime_error("Value is not a double");
-  }
-  return float64_value;
-}
-
-const std::string &RosValue::getValueImpl(identity<std::string>) const {
-  if (type != Type::string) {
-    throw std::runtime_error("Value is not a string");
-  }
-  return string_value;
-}
-
-const RosValue::ros_time_t &RosValue::getValueImpl(identity<RosValue::ros_time_t>) const {
-  if (type != Type::ros_time) {
-    throw std::runtime_error("Value is not a time type");
-  }
-  return time_value;
-}
-
-const RosValue::ros_duration_t &RosValue::getValueImpl(identity<RosValue::ros_duration_t>) const {
-  if (type != Type::ros_duration) {
-    throw std::runtime_error("Value is not a duration type");
-  }
-  return duration_value;
-}
-
-const RosValue::blob_t &RosValue::getValueImpl(identity<RosValue::blob_t>) const {
-  if (type != Type::blob) {
-    throw std::runtime_error("Value is not a blob type");
-  }
-
-  return blob_storage;
+  return array_info_.children.at(idx);
 }
 
 std::string RosValue::toString(const std::string &path) const {
-  switch (type) {
+  switch (type_) {
     case Type::ros_bool: {
-      return path + " -> " + (bool_value ? "true" : "false");
+      return path + " -> " + (as<bool>() ? "true" : "false");
     }
+    // TODO: Could have some mapping from type to as function some how
     case Type::int8: {
-      return path + " -> " + std::to_string(int8_value);
+      return path + " -> " + std::to_string(as<int8_t>());
     }
     case Type::uint8: {
-      return path + " -> " + std::to_string(uint8_value);
+      return path + " -> " + std::to_string(as<uint8_t>());
     }
     case Type::int16: {
-      return path + " -> " + std::to_string(int16_value);
+      return path + " -> " + std::to_string(as<int16_t>());
     }
     case Type::uint16: {
-      return path + " -> " + std::to_string(uint16_value);
+      return path + " -> " + std::to_string(as<uint16_t>());
     }
     case Type::int32: {
-      return path + " -> " + std::to_string(int32_value);
+      return path + " -> " + std::to_string(as<int32_t>());
     }
     case Type::uint32: {
-      return path + " -> " + std::to_string(uint32_value);
+      return path + " -> " + std::to_string(as<uint32_t>());
     }
     case Type::int64: {
-      return path + " -> " + std::to_string(int64_value);
+      return path + " -> " + std::to_string(as<int64_t>());
     }
     case Type::uint64: {
-      return path + " -> " + std::to_string(uint64_value);
+      return path + " -> " + std::to_string(as<uint64_t>());
     }
     case Type::float32: {
-      return path + " -> " + std::to_string(float32_value);
+      return path + " -> " + std::to_string(as<float>());
     }
     case Type::float64: {
-      return path + " -> " + std::to_string(float64_value);
+      return path + " -> " + std::to_string(as<double>());
     }
     case Type::string: {
-      return path + " -> " + string_value;
+      return path + " -> " + as<std::string>();
     }
     case Type::ros_time: {
-      return path + " -> " + std::to_string(time_value.secs) + "s " + std::to_string(time_value.nsecs) + "ns";
+      const ros_time_t value = as<ros_time_t>();
+      return path + " -> " + std::to_string(value.secs) + "s " + std::to_string(value.nsecs) + "ns";
     }
     case Type::ros_duration: {
-      return path + " -> " + std::to_string(duration_value.secs) + "s " + std::to_string(duration_value.nsecs) + "ns";
+      const ros_duration_t value = as<ros_duration_t>();
+      return path + " -> " + std::to_string(value.secs) + "s " + std::to_string(value.nsecs) + "ns";
     }
     case Type::object: {
       std::ostringstream output;
-      for (const auto &object : objects) {
+      for (const auto& field : *object_info_.field_indexes) {
         if (path.empty()) {
-          output << object.second->toString(object.first);
+          output << object_info_.children.at(field.second).toString(field.first);
         } else {
-          output << object.second->toString(path + "." + object.first);
+          output << object_info_.children.at(field.second).toString(path + "." + field.first);
         }
 
         // No need for a newline if our child is an object or array
-        const auto &object_type = object.second->getType();
+        const auto &object_type = object_info_.children.at(field.second).getType();
         if (!(object_type == Type::object || object_type == Type::array)) {
           output << std::endl;
         }
@@ -201,16 +114,11 @@ std::string RosValue::toString(const std::string &path) const {
     }
     case Type::array: {
       std::ostringstream output;
-      size_t i = 0;
-      for (const auto &item : values) {
-        const std::string array_path = path + "[" + std::to_string(i++) + "]";
-        output << item->toString(array_path) << std::endl;
+      for (size_t i = 0; i < array_info_.children.length; ++i) {
+        const std::string array_path = path + "[" + std::to_string(i) + "]";
+        output << array_info_.children.at(i).toString(array_path) << std::endl;
       }
-
       return output.str();
-    }
-    case Type::blob: {
-      return path + " -> blob";
     }
     default: {
       return path + " -> unknown type";
@@ -221,4 +129,20 @@ std::string RosValue::toString(const std::string &path) const {
 void RosValue::print(const std::string &path) const {
   std::cout << toString(path);
 }
+
+/*
+--------------
+ITERATOR SETUP
+--------------
+*/
+template<>
+const std::string& RosValue::const_iterator<const std::string&, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
+  return index_->first;
+}
+
+template<>
+const std::pair<const std::string&, const RosValue&> RosValue::const_iterator<const std::pair<const std::string&, const RosValue&>, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
+  return std::make_pair(index_->first, value_.object_info_.children.at(index_->second));
+}
+
 }

@@ -46,7 +46,7 @@ TEST_F(BagTest, TopicInBag) {
 }
 
 typedef const std::vector<std::pair<std::string, std::string>> testSchema;
-void validateSchema(testSchema& test_schema, const std::vector<Embag::RosMsgTypes::ros_msg_member>& members) {
+void validateSchema(testSchema& test_schema, const std::vector<Embag::RosMsgTypes::MemberDef>& members) {
   ASSERT_EQ(members.size(), test_schema.size());
 
   size_t i = 0;
@@ -54,9 +54,9 @@ void validateSchema(testSchema& test_schema, const std::vector<Embag::RosMsgType
     const auto name = named_type.first;
     const auto type = named_type.second;
 
-    const auto field = boost::get<Embag::RosMsgTypes::ros_msg_field>(members[i++]);
-    ASSERT_EQ(field.field_name, name);
-    ASSERT_EQ(field.type_name, type);
+    const auto field = boost::get<Embag::RosMsgTypes::FieldDef>(members[i++]);
+    ASSERT_EQ(field.name(), name);
+    ASSERT_EQ(field.typeName(), type);
   }
 }
 
@@ -76,7 +76,7 @@ TEST_F(BagTest, MsgDefForTopic) {
       {"intensities", "float32"},
   };
 
-  validateSchema(top_level_types, def->members);
+  validateSchema(top_level_types, def->members());
 
   // Test recursion on Header embedded type
   const testSchema header_types = {
@@ -85,13 +85,13 @@ TEST_F(BagTest, MsgDefForTopic) {
       {"frame_id", "string"},
   };
 
-  const auto header_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(def->members[0]);
-  const auto header = def->getEmbeddedType("", header_field);
-  validateSchema(header_types, header.members);
+  auto header_field = boost::get<Embag::RosMsgTypes::FieldDef>(def->members()[0]);
+  const auto header = header_field.typeDefinition();
+  validateSchema(header_types, header.members());
 
   // Test array type
-  const auto array_field = boost::get<Embag::RosMsgTypes::ros_msg_field>(def->members.back());
-  ASSERT_EQ(array_field.array_size, -1);  // -1 is an array of undefined length
+  const auto array_field = boost::get<Embag::RosMsgTypes::FieldDef>(def->members().back());
+  ASSERT_EQ(array_field.arraySize(), -1);  // -1 is an array of undefined length
 }
 
 TEST_F(BagTest, ConnectionsForTopic) {
@@ -161,7 +161,7 @@ TEST_F(ViewTest, AllMessages) {
   double last_pose_ts = 0;
   for (const auto &message : view_.getMessages()) {
     ASSERT_NE(message->topic, "");
-    ASSERT_NE(message->raw_data, nullptr);
+    ASSERT_TRUE(message->raw_buffer);
     ASSERT_GT(message->raw_data_len, 0);
 
     if (unseen_topics.count(message->topic)) {
@@ -178,16 +178,13 @@ TEST_F(ViewTest, AllMessages) {
       ASSERT_EQ(message->data()["scan_time"].as<float>(), 0.0);
 
       // Arrays are exposed at blobs
-      ASSERT_EQ(message->data()["ranges"].getType(), Embag::RosValue::Type::blob);
-      const auto blob = message->data()["ranges"].getBlob();
-      ASSERT_EQ(blob.type, Embag::RosValue::Type::float32);
-      ASSERT_GT(blob.size, 0);
-      ASSERT_EQ(blob.size, 90);
-      ASSERT_EQ(blob.byte_size, 90 * sizeof(float));
+      ASSERT_EQ(message->data()["ranges"].getType(), Embag::RosValue::Type::array);
+      const auto array = message->data()["ranges"];
+      ASSERT_EQ(array[0].getType(), Embag::RosValue::Type::float32);
+      ASSERT_EQ(array.size(), 90);
 
-      const auto *ranges = (float *) blob.data.data();
-      for (size_t i = 0; i < blob.size; i++) {
-        ASSERT_NE(*(ranges + i), 0.0);
+      for (size_t i = 0; i < array.size(); ++i) {
+        ASSERT_NE(array[i].as<float>(), 0.0);
       }
     }
 
@@ -199,11 +196,11 @@ TEST_F(ViewTest, AllMessages) {
       ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "odom");
       ASSERT_NE(message->data()["pose"]["pose"]["position"]["x"].as<double>(), 0.0);
 
-      ASSERT_EQ(message->data()["pose"]["covariance"].getType(), Embag::RosValue::Type::blob);
-      const auto blob = message->data()["pose"]["covariance"].getBlob();
-      const auto *values = (float *) blob.data.data();
-      for (size_t i = 0; i < blob.size; i++) {
-        ASSERT_EQ(*(values + i), 0.0);
+      ASSERT_EQ(message->data()["pose"]["covariance"].getType(), Embag::RosValue::Type::array);
+      const auto array = message->data()["pose"]["covariance"];
+
+      for (size_t i = 0; i < array.size(); i++) {
+        ASSERT_EQ(array[i].as<float>(), 0.0);
       }
     }
   }

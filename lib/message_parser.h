@@ -12,27 +12,34 @@ namespace Embag {
 class MessageParser {
  public:
   MessageParser(
-      nonstd::span<char> stream,
-      const std::string &scope,
-      const std::shared_ptr<RosMsgTypes::ros_msg_def> msg_def
-  ) : stream_(stream), scope_(scope), msg_def_(msg_def) {};
+      const std::shared_ptr<std::vector<char>> message_buffer,
+      size_t offset,
+      const RosMsgTypes::MsgDef& msg_def
+  )
+  : message_buffer_(message_buffer)
+  , message_buffer_offset_(offset)
+  , ros_values_(std::make_shared<std::vector<RosValue>>())
+  , ros_values_offset_(0)
+  , msg_def_(msg_def)
+  {
+  };
 
-  std::shared_ptr<RosValue> parse();
+  const RosValue* parse();
 
  private:
+  static std::unordered_map<std::string, size_t> primitive_size_map_;
 
-  std::shared_ptr<RosValue> parseField(const std::string &scope, RosMsgTypes::ros_msg_field &field);
-  void parseArray(size_t array_len, RosMsgTypes::ros_embedded_msg_def &embedded_type, std::shared_ptr<RosValue> &value);
-  std::shared_ptr<RosValue> parseMembers(RosMsgTypes::ros_embedded_msg_def &embedded_type);
-  std::shared_ptr<RosValue> getPrimitiveBlob(RosMsgTypes::ros_msg_field &field, uint32_t len);
-  std::shared_ptr<RosValue> getPrimitiveField(RosMsgTypes::ros_msg_field &field);
+  void initObject(size_t object_offset, const RosMsgTypes::BaseMsgDef &object_definition);
+  void initArray(size_t array_offset, const RosMsgTypes::FieldDef &field);
+  void initPrimitive(size_t primitive_offset, const RosMsgTypes::FieldDef &field);
+  void emplaceField(const RosMsgTypes::FieldDef &field);
 
-  template <typename T>
-  void read_into(T* dest);
-  void read_into(std::string& dest, size_t size);
+  const std::shared_ptr<std::vector<char>> message_buffer_;
+  size_t message_buffer_offset_;
 
-  nonstd::span<char> stream_;
-  const std::string scope_;
-  const std::shared_ptr<RosMsgTypes::ros_msg_def> msg_def_;
+  std::shared_ptr<std::vector<RosValue>> ros_values_;
+  size_t ros_values_offset_;
+
+  const RosMsgTypes::MsgDef& msg_def_;
 };
 }

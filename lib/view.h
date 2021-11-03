@@ -71,7 +71,7 @@ class View {
       std::shared_ptr<Bag> bag;
       size_t processed_bytes = 0;
       uint32_t uncompressed_size = 0;
-      std::string current_buffer;
+      std::shared_ptr<std::vector<char>> current_buffer;
 
       // Function for comparing bag offsets
       struct bag_offset_compare_t {
@@ -86,7 +86,8 @@ class View {
 
 
       uint32_t current_connection_id = 0;
-      char *current_message_data = nullptr;
+      std::shared_ptr<std::vector<char>> current_message_buffer;
+      size_t current_message_data_offset;
       uint32_t current_message_len = 0;
       RosValue::ros_time_t current_timestamp{};
     };

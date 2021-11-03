@@ -5,7 +5,7 @@ cp -r lib /tmp/embag
 cp -r pip_package/* README.md LICENSE /tmp/pip_build
 
 # Build embag libs and echo test binary
-bazel build //python:libembag.so //embag_echo:embag_echo && \
+bazel build -c opt //python:libembag.so //embag_echo:embag_echo && \
 bazel test //test:embag_test //test:embag_test_python3 --test_output=all
 
 # Build wheel

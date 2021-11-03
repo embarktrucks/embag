@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -12,6 +13,34 @@ namespace Embag {
 
 class RosValue {
  public:
+  struct ros_value_list_t {
+    std::shared_ptr<std::vector<RosValue>> base;
+    size_t offset;
+    size_t length;
+
+    const RosValue& at(size_t index) const {
+      return base->at(offset + index);
+    }
+  };
+
+  struct RosValuePointer {
+    std::shared_ptr<std::vector<RosValue>> base;
+    size_t index;
+
+    RosValuePointer(std::shared_ptr<std::vector<RosValue>> base, size_t index)
+    : base(base)
+    , index(index)
+    {
+    }
+
+    const RosValue *operator->() const {
+      return &base->at(index);
+    }
+
+    const RosValue& operator*() const {
+      return base->at(index);
+    }
+  };
 
   enum class Type {
     ros_bool,
@@ -32,7 +61,6 @@ class RosValue {
     // Custom types
     object,
     array,
-    blob,
   };
 
   struct ros_time_t {
@@ -75,20 +103,145 @@ class RosValue {
     }
   };
 
-  struct blob_t {
-    std::string data;
-    size_t byte_size = 0;
-    size_t size = 0;
-    Type type = Type::uint8;
-  };
-
   Type getType() const {
-    return type;
+    return type_;
   }
 
-  // Constructors
-  RosValue() = default;
-  explicit RosValue(const Type type) : type(type) {}
+ private:
+  template<class ReturnType, class IndexType, class ChildIteratorType>
+  class const_iterator_base {
+   public:
+    bool operator==(const ChildIteratorType& other) const {
+      return index_ == other.index_;
+    }
+
+    bool operator!=(const ChildIteratorType& other) const {
+      return !(*this == other);
+    }
+
+    ChildIteratorType& operator++() {
+      ++index_;
+      return *((ChildIteratorType*) this);
+    }
+
+    ChildIteratorType operator++(int) {
+      return {value_, index_++};
+    }
+   protected:
+    const_iterator_base(const RosValue& value, size_t index)
+      : value_(value)
+      , index_(index)
+    {
+    }
+
+    const RosValue& value_;
+    IndexType index_;
+  };
+
+ public:
+  // Iterator that implements an InputIterator over the children
+  // of RosValues that are of type object or array
+  template<class ReturnType, class IndexType>
+  class const_iterator;
+
+  template<class ReturnType>
+  class const_iterator<ReturnType, size_t> : public const_iterator_base<ReturnType, size_t, const_iterator<ReturnType, size_t>> {
+   public:
+    const_iterator(const RosValue& value, size_t index)
+      : const_iterator_base<ReturnType, size_t, const_iterator<ReturnType, size_t>>(value, index)
+    {
+      if (value.type_ != Type::object && value.type_ != Type::array) {
+        throw std::runtime_error("Cannot iterate a RosValue that is not an object or array");
+      }
+    }
+
+    const ReturnType operator*() const {
+      return this->value_.getChildren().at(this->index_);
+    }
+  };
+
+  template<class ReturnType>
+  class const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator> : public const_iterator_base<ReturnType, std::unordered_map<std::string, size_t>::const_iterator, const_iterator<ReturnType, std::unordered_map<std::string, size_t>::const_iterator>> {
+   public:
+    const_iterator(const RosValue& value, std::unordered_map<std::string, size_t>::const_iterator index)
+      : const_iterator_base<ReturnType, size_t, std::unordered_map<std::string, size_t>::const_iterator>(value, index)
+    {
+      if (value.type_ != Type::object) {
+        throw std::runtime_error("Cannot only iterate the keys or key/value pairs of an object");
+      }
+    }
+
+    const ReturnType operator*() const;
+  };
+
+  template<class IteratorReturnType>
+  const_iterator<IteratorReturnType, size_t> beginValues() const {
+    return RosValue::const_iterator<IteratorReturnType, size_t>(*this, 0);
+  }
+  template<class IteratorReturnType>
+  const_iterator<IteratorReturnType, size_t> endValues() const {
+    return RosValue::const_iterator<IteratorReturnType, size_t>(*this, getChildren().length);
+  }
+  template<class IteratorReturnType>
+  const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator> beginItems() const {
+    if (type_ != Type::object) {
+      throw std::runtime_error("Cannot iterate over the items of a RosValue that is not an object");
+    }
+
+    return RosValue::const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator>(*this, object_info_.field_indexes->begin());
+  }
+  template<class IteratorReturnType>
+  const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator> endItems() const {
+    if (type_ != Type::object) {
+      throw std::runtime_error("Cannot iterate over the items of a RosValue that is not an object");
+    }
+
+    return RosValue::const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator>(*this, object_info_.field_indexes->end());
+  }
+
+ private:
+  struct _array_identifier {};
+ public:
+  RosValue(const Type type)
+    : type_(type)
+    , primitive_info_()
+  {
+    if (type_ == Type::object || type_ == Type::array) {
+      throw std::runtime_error("Cannot create an object or array with this constructor");
+    }
+  }
+  RosValue(const std::shared_ptr<std::unordered_map<std::string, const size_t>>& field_indexes)
+    : type_(Type::object)
+    , object_info_()
+  {
+    object_info_.field_indexes = field_indexes;
+  }
+  RosValue(const _array_identifier &i)
+    : type_(Type::array)
+    , array_info_()
+  {
+  }
+
+  // Define custom copy constructor and destructor because of the union for the infos
+  RosValue(const RosValue &other): type_(other.type_) {
+    if (type_ == Type::object) {
+      new (&object_info_) auto(other.object_info_);
+    } else if (type_ == Type::array) {
+      new (&array_info_) auto(other.array_info_);
+    } else {
+      new (&primitive_info_) auto(other.primitive_info_);
+    }
+  }
+  ~RosValue() {
+    if (type_ == Type::object) {
+      object_info_.~object_info_t();
+    } else if (type_ == Type::array) {
+      array_info_.~array_info_t();
+    } else {
+      primitive_info_.~primitive_info_t();
+    }
+  }
+
 
   // Convenience accessors
   const RosValue &operator()(const std::string &key) const;
@@ -96,113 +249,120 @@ class RosValue {
   const RosValue &operator[](const size_t idx) const;
   const RosValue &get(const std::string &key) const;
   const RosValue &at(size_t idx) const;
+  const RosValue &at(const std::string &key) const;
 
   template<typename T>
   const T &getValue(const std::string &key) const {
-    if (type != Type::object) {
-      throw std::runtime_error("Value is not an object");
-    }
-    return objects.at(key)->getValueImpl(identity<T>());
+    return get(key).as<T>();
   }
 
   template<typename T>
-  const T &as() const {
-    if (type == Type::object) {
-      throw std::runtime_error("Value cannot be an object for as");
+  const T as() const {
+    if (type_ == Type::object || type_ == Type::array) {
+      throw std::runtime_error("Value cannot be an object or array for as");
     }
-    return getValueImpl(identity<T>());
+
+    // TODO: Add check that the underlying type aligns with T
+    return *reinterpret_cast<const T*>(getPrimitivePointer());
   }
 
   bool has(const std::string &key) const {
-    if (type != Type::object) {
+    if (type_ != Type::object) {
       throw std::runtime_error("Value is not an object");
     }
-    return objects.count(key) > 0;
+
+    return object_info_.field_indexes->count(key);
   }
 
   size_t size() const {
-    if (type != Type::array) {
-      throw std::runtime_error("Value is not an array");
+    if (type_ != Type::array && type_ != Type::object) {
+      throw std::runtime_error("Value is not an array or an object");
     }
 
-    return values.size();
+    return getChildren().length;
   }
 
-  std::unordered_map<std::string, std::shared_ptr<RosValue>> getObjects() const {
+  std::unordered_map<std::string, RosValuePointer> getObjects() const {
+    if (type_ != Type::object) {
+      throw std::runtime_error("Cannot getObjects of a non-object RosValue");
+    }
+
+    std::unordered_map<std::string, RosValuePointer> objects;
+    objects.reserve(object_info_.children.length);
+    for (const auto& field : *object_info_.field_indexes) {
+      objects.emplace(field.first, RosValuePointer(object_info_.children.base, object_info_.children.offset + field.second));
+    }
     return objects;
   }
 
-  std::vector<std::shared_ptr<RosValue>> getValues() const {
-    return values;
-  }
-
-  blob_t getBlob() const {
-    if (type != Type::blob) {
-      throw std::runtime_error("Value is not blob");
+  std::vector<RosValuePointer> getValues() const {
+    if (type_ != Type::object && type_ != Type::array) {
+      throw std::runtime_error("Cannot getValues of a non object or array RosValue");
     }
 
-    return blob_storage;
+    const ros_value_list_t& children = getChildren();
+    std::vector<RosValuePointer> values;
+    values.reserve(children.length);
+    for (size_t i = 0; i < children.length; ++i) {
+      values.emplace_back(children.base, children.offset + i);
+    }
+    return values;
   }
 
   std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
-  const nonstd::span<char> original_buffer() const {
-    return original_buffer_;
-  }
 
   // Used for accessor template resolution
   template<typename T>
   struct identity { typedef T type; };
 
  private:
-
-  // TODO: use boost::variant?
-  union {
-    bool bool_value;
-    int8_t int8_value;
-    uint8_t uint8_value;
-    int16_t int16_value;
-    uint16_t uint16_value;
-    int32_t int32_value;
-    uint32_t uint32_value;
-    int64_t int64_value;
-    uint64_t uint64_value;
-    float float32_value;
-    double float64_value;
+  struct primitive_info_t {
+    size_t offset = 0;
+    std::shared_ptr<std::vector<char>> message_buffer = nullptr;
   };
 
-  std::string string_value;
-  ros_time_t time_value;
-  ros_duration_t duration_value;
+  struct array_info_t {
+    ros_value_list_t children;
+  };
 
-  blob_t blob_storage;
+  struct object_info_t {
+    ros_value_list_t children;
+    std::shared_ptr<std::unordered_map<std::string, const size_t>> field_indexes;
+  };
 
-  // Only set when this is a message (type = object)
-  nonstd::span<char> original_buffer_;
+  Type type_;
+  union {
+    primitive_info_t primitive_info_;
+    array_info_t array_info_;
+    object_info_t object_info_;
+  };
 
-  std::unordered_map<std::string, std::shared_ptr<RosValue>> objects;
-  std::vector<std::shared_ptr<RosValue>> values;
+  const char* const getPrimitivePointer() const {
+    return &primitive_info_.message_buffer->at(primitive_info_.offset);
+  }
 
-  // Default type
-  Type type = Type::object;
-
-  // Primitive accessors
-  const bool &getValueImpl(identity<bool>) const;
-  const int8_t &getValueImpl(identity<int8_t>) const;
-  const uint8_t &getValueImpl(identity<uint8_t>) const;
-  const int16_t &getValueImpl(identity<int16_t>) const;
-  const uint16_t &getValueImpl(identity<uint16_t>) const;
-  const int32_t &getValueImpl(identity<int32_t>) const;
-  const uint32_t &getValueImpl(identity<uint32_t>) const;
-  const int64_t &getValueImpl(identity<int64_t>) const;
-  const uint64_t &getValueImpl(identity<uint64_t>) const;
-  const float &getValueImpl(identity<float>) const;
-  const double &getValueImpl(identity<double>) const;
-  const std::string &getValueImpl(identity<std::string>) const;
-  const ros_time_t &getValueImpl(identity<ros_time_t>) const;
-  const ros_duration_t &getValueImpl(identity<ros_duration_t>) const;
-  const blob_t &getValueImpl(identity<blob_t>) const;
+  const ros_value_list_t& getChildren() const {
+    switch(type_) {
+      case Type::object:
+        return object_info_.children;
+      case Type::array:
+        return array_info_.children;
+      default:
+        throw std::runtime_error("Cannot getChildren of a RosValue that is not an object or array");
+    }
+  }
 
   friend class MessageParser;
 };
+
+template<>
+const std::string RosValue::as<std::string>() const;
+
+template<>
+const std::string& RosValue::const_iterator<const std::string&, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const;
+
+template<>
+const std::pair<const std::string&, const RosValue&> RosValue::const_iterator<const std::pair<const std::string&, const RosValue&>, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const;
+
 }
