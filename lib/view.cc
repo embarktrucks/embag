@@ -200,6 +200,31 @@ View View::getMessages(std::initializer_list<std::string> topics) {
   return getMessages(std::vector<std::string>(topics.begin(), topics.end()));
 }
 
+void View::setQuery(const std::vector<std::string> &topics, std::chrono::nanoseconds start_time, std::chrono::nanoseconds end_time) {
+  bag_wrappers_.clear();
+
+  for (const auto& bag : bags_) {
+    bag_wrappers_[bag] = std::make_shared<iterator::bag_wrapper_t>();
+    bag_wrappers_[bag]->bag = bag;
+
+    for (const auto &topic : topics) {
+      if (!bag->topic_connection_map_.count(topic)) {
+        continue;
+      }
+
+      for (const auto &connection_record : bag->topic_connection_map_.at(topic)) {
+        for (const auto &block : connection_record->blocks) {
+          if (block.into_chunk->info.end_time > start_time && block.into_chunk->info.start_time < end_time) {
+            bag_wrappers_[bag]->chunks_to_parse.emplace(block.into_chunk);
+          }
+        }
+
+        bag_wrappers_[bag]->connection_ids.emplace(connection_record->id);
+      }
+    }
+  }
+}
+
 RosValue::ros_time_t View::getStartTime() {
   RosValue::ros_time_t start_time;
   start_time.secs = UINT32_MAX;
