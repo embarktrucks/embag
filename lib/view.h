@@ -163,7 +163,6 @@ class View {
   }
 
  private:
-  std::chrono::nanoseconds start_time_, end_time_;
   std::vector<std::shared_ptr<Bag>> bags_;
   std::unordered_map<std::shared_ptr<Bag>, std::shared_ptr<iterator::bag_wrapper_t>> bag_wrappers_;
 };
