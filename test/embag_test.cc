@@ -135,11 +135,11 @@ class ViewTest : public ::testing::Test {
 
 
 TEST_F(ViewTest, View) {
-  const Embag::RosValue::ros_time_t start_time_{1604515190, 231374463};
-  const Embag::RosValue::ros_time_t end_time_{1604515197, 820012098};
+  const Embag::RosValue::ros_time_t start_time{1604515190, 231374463};
+  const Embag::RosValue::ros_time_t end_time{1604515197, 820012098};
 
-  ASSERT_EQ(view_.getStartTime(), start_time_);
-  ASSERT_EQ(view_.getEndTime(), end_time_);
+  ASSERT_EQ(view_.getStartTime(), start_time);
+  ASSERT_EQ(view_.getEndTime(), end_time);
 
   const auto topics = view_.topics();
   const auto topic_set = std::unordered_set<std::string>(topics.begin(), topics.end());
