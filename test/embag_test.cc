@@ -135,11 +135,11 @@ class ViewTest : public ::testing::Test {
 
 
 TEST_F(ViewTest, View) {
-  const Embag::RosValue::ros_time_t start_time{1604515190, 231374463};
-  const Embag::RosValue::ros_time_t end_time{1604515197, 820012098};
+  const Embag::RosValue::ros_time_t start_time_{1604515190, 231374463};
+  const Embag::RosValue::ros_time_t end_time_{1604515197, 820012098};
 
-  ASSERT_EQ(view_.getStartTime(), start_time);
-  ASSERT_EQ(view_.getEndTime(), end_time);
+  ASSERT_EQ(view_.getStartTime(), start_time_);
+  ASSERT_EQ(view_.getEndTime(), end_time_);
 
   const auto topics = view_.topics();
   const auto topic_set = std::unordered_set<std::string>(topics.begin(), topics.end());
@@ -226,6 +226,31 @@ TEST_F(ViewTest, MessagesForTopic) {
     ASSERT_GT(count, 0);
   }
 }
+
+TEST_F(ViewTest, MessagesBetweenTimestamps) {
+  std::chrono::nanoseconds start_time_ns {view_.getStartTime().to_nsec()};
+  std::chrono::nanoseconds end_time_ns   {view_.getEndTime().to_nsec()};
+  start_time_ns += std::chrono::seconds{1};
+
+  std::vector<std::string> all_topics{
+      "/base_pose_ground_truth",
+      "/base_scan",
+      "/luminar_pointcloud",
+  };
+
+  int no_time_boundaries_count = 0;
+  for (const auto &message : view_.getMessages(all_topics)){
+      no_time_boundaries_count++;
+  }
+
+  int with_time_boundaries_count = 0;
+  for (const auto &message : view_.getMessages(all_topics, start_time_ns, end_time_ns)) {
+      with_time_boundaries_count++;
+  }
+
+ASSERT_GT(no_time_boundaries_count, with_time_boundaries_count);
+}
+
 
 class StreamTest : public ::testing::Test {
  protected:

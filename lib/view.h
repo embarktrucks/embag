@@ -122,6 +122,8 @@ class View {
   View getMessages(const std::string &topic);
   View getMessages(const std::vector<std::string> &topics);
   View getMessages(std::initializer_list<std::string> topics);
+  View getMessages(const std::vector<std::string> &topics, std::chrono::nanoseconds start_time, std::chrono::nanoseconds end_time);
+
   void setQuery(const std::vector<std::string> &topics, std::chrono::nanoseconds start_time, std::chrono::nanoseconds end_time);
   RosValue::ros_time_t getStartTime();
   RosValue::ros_time_t getEndTime();
