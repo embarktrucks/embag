@@ -277,7 +277,7 @@ class RosValue {
 
   template<typename T>
   const T &getValue(const std::string &key) const {
-    return get(key).as<T>();
+    return get(key)->as<T>();
   }
 
   template<typename T>
