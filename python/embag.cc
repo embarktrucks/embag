@@ -10,6 +10,8 @@
 
 namespace py = pybind11;
 
+PYBIND11_DECLARE_HOLDER_TYPE(T, Embag::VectorItemPointer<T>);
+
 PYBIND11_MODULE(libembag, m) {
   m.doc() = "Python bindings for Embag";
 
@@ -67,14 +69,14 @@ PYBIND11_MODULE(libembag, m) {
       .def_readonly("md5", &Embag::RosMessage::md5)
       .def_readonly("raw_data_len", &Embag::RosMessage::raw_data_len);
 
-  auto ros_value = py::class_<Embag::RosValue, std::shared_ptr<Embag::RosValue>>(m, "RosValue", py::dynamic_attr())
+  auto ros_value = py::class_<Embag::RosValue, Embag::RosValue::RosValuePointer>(m, "RosValue", py::dynamic_attr())
       .def("get", &Embag::RosValue::get)
       .def("getType", &Embag::RosValue::getType)
       .def("__len__", &Embag::RosValue::size)
-      .def("__str__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &path) {
+      .def("__str__", [](Embag::RosValue::RosValuePointer &v, const std::string &path) {
         return encodeStrLatin1(v->toString());
       }, py::arg("path") = "")
-      .def("__iter__", [](std::shared_ptr<Embag::RosValue> &v) {
+      .def("__iter__", [](Embag::RosValue::RosValuePointer &v) {
         switch (v->getType()) {
           // TODO: Allow object iteration
           case Embag::RosValue::Type::array: {
@@ -84,13 +86,13 @@ PYBIND11_MODULE(libembag, m) {
             throw std::runtime_error("Can only iterate array RosValues");
         }
       }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */)
-      .def("__getattr__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &attr) {
+      .def("__getattr__", [](Embag::RosValue::RosValuePointer &v, const std::string &attr) {
         return getField(v, attr);
       })
-      .def("__getitem__", [](std::shared_ptr<Embag::RosValue> &v, const std::string &key) {
+      .def("__getitem__", [](Embag::RosValue::RosValuePointer &v, const std::string &key) {
         return getField(v, key);
       })
-      .def("__getitem__", [](std::shared_ptr<Embag::RosValue> &v, const size_t index) {
+      .def("__getitem__", [](Embag::RosValue::RosValuePointer &v, const size_t index) {
         return getIndex(v, index);
       });
 

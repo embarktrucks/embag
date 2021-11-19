@@ -11,36 +11,50 @@
 
 namespace Embag {
 
+template<class T>
+class VectorItemPointer {
+  std::shared_ptr<std::vector<T>> base;
+  size_t index;
+
+ public:
+  VectorItemPointer(std::shared_ptr<std::vector<T>> base, size_t index)
+  : base(base)
+  , index(index)
+  {
+  }
+
+  VectorItemPointer(std::weak_ptr<std::vector<T>> base, size_t index)
+  : VectorItemPointer(base.lock(), index)
+  {
+  }
+
+  VectorItemPointer(T*& ref)
+  : VectorItemPointer()
+  {
+    throw std::runtime_error("This should never be called");
+  }
+
+  VectorItemPointer()
+  : index(0)
+  {
+  }
+
+  const T *operator->() const {
+    return get();
+  }
+
+  const T* get() const {
+    return &base->at(index);
+  }
+
+  const T& operator*() const {
+    return base->at(index);
+  }
+};
+
 class RosValue {
  public:
-  struct RosValuePointer {
-    std::shared_ptr<std::vector<RosValue>> base;
-    size_t index;
-
-    RosValuePointer(std::shared_ptr<std::vector<RosValue>> base, size_t index)
-    : base(base)
-    , index(index)
-    {
-    }
-
-    RosValuePointer(std::weak_ptr<std::vector<RosValue>> base, size_t index)
-    : RosValuePointer(base.lock(), index)
-    {
-    }
-
-    RosValuePointer()
-    : index(0)
-    {
-    }
-
-    const RosValue *operator->() const {
-      return &base->at(index);
-    }
-
-    const RosValue& operator*() const {
-      return base->at(index);
-    }
-  };
+  typedef VectorItemPointer<RosValue> RosValuePointer;
 
   struct ros_value_list_t {
     std::weak_ptr<std::vector<RosValue>> base;
