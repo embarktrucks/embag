@@ -13,16 +13,6 @@ namespace Embag {
 
 class RosValue {
  public:
-  struct ros_value_list_t {
-    std::shared_ptr<std::vector<RosValue>> base;
-    size_t offset;
-    size_t length;
-
-    const RosValue& at(size_t index) const {
-      return base->at(offset + index);
-    }
-  };
-
   struct RosValuePointer {
     std::shared_ptr<std::vector<RosValue>> base;
     size_t index;
@@ -33,12 +23,32 @@ class RosValue {
     {
     }
 
+    RosValuePointer(std::weak_ptr<std::vector<RosValue>> base, size_t index)
+    : RosValuePointer(base.lock(), index)
+    {
+    }
+
+    RosValuePointer()
+    : index(0)
+    {
+    }
+
     const RosValue *operator->() const {
       return &base->at(index);
     }
 
     const RosValue& operator*() const {
       return base->at(index);
+    }
+  };
+
+  struct ros_value_list_t {
+    std::weak_ptr<std::vector<RosValue>> base;
+    size_t offset;
+    size_t length;
+
+    const RosValuePointer at(size_t index) const {
+      return RosValuePointer(base, offset + index);
     }
   };
 
@@ -244,12 +254,12 @@ class RosValue {
 
 
   // Convenience accessors
-  const RosValue &operator()(const std::string &key) const;
-  const RosValue &operator[](const std::string &key) const;
-  const RosValue &operator[](const size_t idx) const;
-  const RosValue &get(const std::string &key) const;
-  const RosValue &at(size_t idx) const;
-  const RosValue &at(const std::string &key) const;
+  const RosValuePointer operator()(const std::string &key) const;
+  const RosValuePointer operator[](const std::string &key) const;
+  const RosValuePointer operator[](const size_t idx) const;
+  const RosValuePointer get(const std::string &key) const;
+  const RosValuePointer at(size_t idx) const;
+  const RosValuePointer at(const std::string &key) const;
 
   template<typename T>
   const T &getValue(const std::string &key) const {

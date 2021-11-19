@@ -56,7 +56,7 @@ PYBIND11_MODULE(libembag, m) {
       })
       .def("data", &Embag::RosMessage::data)
       .def("dict", [](std::shared_ptr<Embag::RosMessage> &m) {
-        if (m->data().getType() != Embag::RosValue::Type::object) {
+        if (m->data()->getType() != Embag::RosValue::Type::object) {
           throw std::runtime_error("Element is not an object");
         }
 

@@ -6,20 +6,20 @@
 
 namespace py = pybind11;
 
-py::dict rosValueToDict(const Embag::RosValue &ros_value);
-py::list rosValueToList(const Embag::RosValue &ros_value);
+py::dict rosValueToDict(const Embag::RosValue::RosValuePointer &ros_value);
+py::list rosValueToList(const Embag::RosValue::RosValuePointer &ros_value);
 
-py::list rosValueToList(const Embag::RosValue &ros_value) {
+py::list rosValueToList(const Embag::RosValue::RosValuePointer &ros_value) {
   using Type = Embag::RosValue::Type;
 
-  if (ros_value.getType() != Type::array) {
+  if (ros_value->getType() != Type::array) {
     throw std::runtime_error("Provided RosValue is not an array");
   }
 
   py::list list{};
 
   // TODO: Rather than creating a vector, RosValue should provide an iterator interface
-  for (const auto &value : ros_value.getValues()) {
+  for (const auto &value : ros_value->getValues()) {
     switch (value->getType()) {
       case Type::ros_bool: {
         list.append(value->as<bool>());
@@ -78,11 +78,11 @@ py::list rosValueToList(const Embag::RosValue &ros_value) {
         break;
       }
       case Type::object: {
-        list.append(rosValueToDict(*value));
+        list.append(rosValueToDict(value));
         break;
       }
       case Type::array: {
-        list.append(rosValueToList(*value));
+        list.append(rosValueToList(value));
         break;
       }
       default: {
@@ -94,17 +94,17 @@ py::list rosValueToList(const Embag::RosValue &ros_value) {
   return list;
 }
 
-py::dict rosValueToDict(const Embag::RosValue &ros_value) {
+py::dict rosValueToDict(const Embag::RosValue::RosValuePointer &ros_value) {
   using Type = Embag::RosValue::Type;
 
-  if (ros_value.getType() != Type::object) {
+  if (ros_value->getType() != Type::object) {
     throw std::runtime_error("Provided RosValue is not an object");
   }
 
   py::dict dict{};
 
   // TODO: Rather than creating an unordered_map, RosValue should provide an iterator interface
-  for (const auto &element : ros_value.getObjects()) {
+  for (const auto &element : ros_value->getObjects()) {
     const auto &key = element.first.c_str();
     const auto &value = element.second;
 
@@ -167,11 +167,11 @@ py::dict rosValueToDict(const Embag::RosValue &ros_value) {
         break;
       }
       case Type::object: {
-        dict[key] = rosValueToDict(*value);
+        dict[key] = rosValueToDict(value);
         break;
       }
       case Type::array: {
-        dict[key] = rosValueToList(*value);
+        dict[key] = rosValueToList(value);
         break;
       }
       default: {
@@ -183,40 +183,40 @@ py::dict rosValueToDict(const Embag::RosValue &ros_value) {
   return dict;
 }
 
-py::object castValue(const Embag::RosValue& value) {
-  switch (value.getType()) {
+py::object castValue(const Embag::RosValue::RosValuePointer& value) {
+  switch (value->getType()) {
     case Embag::RosValue::Type::object:
     case Embag::RosValue::Type::array:
       return py::cast(value);
     case Embag::RosValue::Type::ros_bool:
-      return py::cast(value.as<bool>());
+      return py::cast(value->as<bool>());
     case Embag::RosValue::Type::int8:
-      return py::cast(value.as<int8_t>());
+      return py::cast(value->as<int8_t>());
     case Embag::RosValue::Type::uint8:
-      return py::cast(value.as<uint8_t>());
+      return py::cast(value->as<uint8_t>());
     case Embag::RosValue::Type::int16:
-      return py::cast(value.as<int16_t>());
+      return py::cast(value->as<int16_t>());
     case Embag::RosValue::Type::uint16:
-      return py::cast(value.as<uint16_t>());
+      return py::cast(value->as<uint16_t>());
     case Embag::RosValue::Type::int32:
-      return py::cast(value.as<int32_t>());
+      return py::cast(value->as<int32_t>());
     case Embag::RosValue::Type::uint32:
-      return py::cast(value.as<uint32_t>());
+      return py::cast(value->as<uint32_t>());
     case Embag::RosValue::Type::int64:
-      return py::cast(value.as<int64_t>());
+      return py::cast(value->as<int64_t>());
     case Embag::RosValue::Type::uint64:
-      return py::cast(value.as<uint64_t>());
+      return py::cast(value->as<uint64_t>());
     case Embag::RosValue::Type::float32:
-      return py::cast(value.as<float>());
+      return py::cast(value->as<float>());
     case Embag::RosValue::Type::float64:
-      return py::cast(value.as<double>());
+      return py::cast(value->as<double>());
     case Embag::RosValue::Type::string:
-      return encodeStrLatin1(value.as<std::string>());
+      return encodeStrLatin1(value->as<std::string>());
     // TODO: Don't return floats here - the raw ros time has more precision
     case Embag::RosValue::Type::ros_time:
-      return py::cast(value.as<Embag::RosValue::ros_time_t>().to_sec());
+      return py::cast(value->as<Embag::RosValue::ros_time_t>().to_sec());
     case Embag::RosValue::Type::ros_duration:
-      return py::cast(value.as<Embag::RosValue::ros_duration_t>().to_sec());
+      return py::cast(value->as<Embag::RosValue::ros_duration_t>().to_sec());
     default:
       throw std::runtime_error("Unhandled type");
   }
