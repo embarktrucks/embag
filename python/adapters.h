@@ -6,10 +6,10 @@
 
 namespace py = pybind11;
 
-py::dict rosValueToDict(const Embag::RosValue::RosValuePointer &ros_value);
-py::list rosValueToList(const Embag::RosValue::RosValuePointer &ros_value);
+py::dict rosValueToDict(const Embag::VectorItemPointer<Embag::RosValue> &ros_value);
+py::list rosValueToList(const Embag::VectorItemPointer<Embag::RosValue> &ros_value);
 
-py::list rosValueToList(const Embag::RosValue::RosValuePointer &ros_value) {
+py::list rosValueToList(const Embag::VectorItemPointer<Embag::RosValue> &ros_value) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::array) {
@@ -94,7 +94,7 @@ py::list rosValueToList(const Embag::RosValue::RosValuePointer &ros_value) {
   return list;
 }
 
-py::dict rosValueToDict(const Embag::RosValue::RosValuePointer &ros_value) {
+py::dict rosValueToDict(const Embag::VectorItemPointer<Embag::RosValue> &ros_value) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::object) {
@@ -183,7 +183,7 @@ py::dict rosValueToDict(const Embag::RosValue::RosValuePointer &ros_value) {
   return dict;
 }
 
-py::object castValue(const Embag::RosValue::RosValuePointer& value) {
+py::object castValue(const Embag::VectorItemPointer<Embag::RosValue>& value) {
   switch (value->getType()) {
     case Embag::RosValue::Type::object:
     case Embag::RosValue::Type::array:
@@ -222,7 +222,7 @@ py::object castValue(const Embag::RosValue::RosValuePointer& value) {
   }
 }
 
-py::object getField(Embag::RosValue::RosValuePointer &v, const std::string field_name) {
+py::object getField(Embag::VectorItemPointer<Embag::RosValue> &v, const std::string field_name) {
   if (v->getType() != Embag::RosValue::Type::object) {
     throw std::runtime_error("Can only getField on an object");
   }
@@ -230,7 +230,7 @@ py::object getField(Embag::RosValue::RosValuePointer &v, const std::string field
   return castValue(v->get(field_name));
 }
 
-py::object getIndex(Embag::RosValue::RosValuePointer &v, const size_t index) {
+py::object getIndex(Embag::VectorItemPointer<Embag::RosValue> &v, const size_t index) {
   if (v->getType() != Embag::RosValue::Type::array) {
     throw std::runtime_error("Can only getIndex on an array");
   }

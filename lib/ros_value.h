@@ -8,53 +8,35 @@
 #include <vector>
 
 #include "span.hpp"
+#include "util.h"
 
 namespace Embag {
 
-template<class T>
-class VectorItemPointer {
-  std::shared_ptr<std::vector<T>> base;
-  size_t index;
-
- public:
-  VectorItemPointer(std::shared_ptr<std::vector<T>> base, size_t index)
-  : base(base)
-  , index(index)
-  {
-  }
-
-  VectorItemPointer(std::weak_ptr<std::vector<T>> base, size_t index)
-  : VectorItemPointer(base.lock(), index)
-  {
-  }
-
-  VectorItemPointer(T*& ref)
-  : VectorItemPointer()
-  {
-    throw std::runtime_error("This should never be called");
-  }
-
-  VectorItemPointer()
-  : index(0)
-  {
-  }
-
-  const T *operator->() const {
-    return get();
-  }
-
-  const T* get() const {
-    return &base->at(index);
-  }
-
-  const T& operator*() const {
-    return base->at(index);
-  }
-};
-
 class RosValue {
  public:
-  typedef VectorItemPointer<RosValue> RosValuePointer;
+  class RosValuePointer : public VectorItemPointer<RosValue> {
+   public:
+    RosValuePointer()
+    {
+    }
+
+    RosValuePointer(std::weak_ptr<std::vector<RosValue>> base, size_t index)
+      : VectorItemPointer<RosValue>(base.lock(), index)
+    {
+    }
+
+    const RosValue operator()(const std::string &key) const {
+      return (*this)(key);
+    }
+
+    const RosValue operator[](const std::string &key) const {
+      return (*this)[key];
+    }
+
+    const RosValue operator[](const size_t idx) const {
+      return (*this)[idx];
+    }
+  };
 
   struct ros_value_list_t {
     std::weak_ptr<std::vector<RosValue>> base;
