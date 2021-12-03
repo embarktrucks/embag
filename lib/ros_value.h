@@ -25,16 +25,16 @@ class RosValue {
     {
     }
 
-    const RosValue operator()(const std::string &key) const {
-      return (*this)(key);
+    const RosValuePointer operator()(const std::string &key) const {
+      return (**this)(key);
     }
 
-    const RosValue operator[](const std::string &key) const {
-      return (*this)[key];
+    const RosValuePointer operator[](const std::string &key) const {
+      return (**this)[key];
     }
 
-    const RosValue operator[](const size_t idx) const {
-      return (*this)[idx];
+    const RosValuePointer operator[](const size_t idx) const {
+      return (**this)[idx];
     }
   };
 
