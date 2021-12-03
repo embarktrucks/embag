@@ -20,7 +20,12 @@ class RosValue {
     {
     }
 
-    RosValuePointer(std::weak_ptr<std::vector<RosValue>> base, size_t index)
+    RosValuePointer(const std::weak_ptr<std::vector<RosValue>>& base)
+      : RosValuePointer(base, 0)
+    {
+    }
+
+    RosValuePointer(const std::weak_ptr<std::vector<RosValue>>& base, size_t index)
       : VectorItemPointer<RosValue>(base.lock(), index)
     {
     }

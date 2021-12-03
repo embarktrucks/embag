@@ -37,13 +37,13 @@ class VectorItemPointer {
   size_t index;
 
  public:
-  VectorItemPointer(std::shared_ptr<std::vector<T>> base, size_t index)
+  VectorItemPointer(const std::shared_ptr<std::vector<T>>& base, size_t index)
   : base(base)
   , index(index)
   {
   }
 
-  VectorItemPointer(std::weak_ptr<std::vector<T>> base, size_t index)
+  VectorItemPointer(const std::weak_ptr<std::vector<T>>& base, size_t index)
   : VectorItemPointer(base.lock(), index)
   {
   }

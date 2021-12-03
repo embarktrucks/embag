@@ -17,7 +17,7 @@ const RosValue::RosValuePointer MessageParser::parse() {
   ros_values_->emplace_back(msg_def_.fieldIndexes());
   ros_values_offset_ = 1;
   initObject(0, msg_def_);
-  return RosValue::RosValuePointer(ros_values_, 0);
+  return RosValue::RosValuePointer(ros_values_);
 }
 
 void MessageParser::initObject(size_t object_offset, const RosMsgTypes::BaseMsgDef &object_definition) {
