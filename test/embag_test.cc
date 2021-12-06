@@ -173,18 +173,18 @@ TEST_F(ViewTest, AllMessages) {
       ASSERT_GE(message->timestamp.to_sec(), last_scan_ts);
       last_scan_ts = message->timestamp.to_sec();
       ASSERT_EQ(message->md5, "90c7ef2dc6895d81024acba2ac42f369");
-      ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), scan_seq++);
-      ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "base_laser_link");
-      ASSERT_EQ(message->data()["scan_time"].as<float>(), 0.0);
+      ASSERT_EQ(message->data()["header"]["seq"]->as<uint32_t>(), scan_seq++);
+      ASSERT_EQ(message->data()["header"]["frame_id"]->as<std::string>(), "base_laser_link");
+      ASSERT_EQ(message->data()["scan_time"]->as<float>(), 0.0);
 
       // Arrays are exposed at blobs
-      ASSERT_EQ(message->data()["ranges"].getType(), Embag::RosValue::Type::array);
+      ASSERT_EQ(message->data()["ranges"]->getType(), Embag::RosValue::Type::array);
       const auto array = message->data()["ranges"];
-      ASSERT_EQ(array[0].getType(), Embag::RosValue::Type::float32);
-      ASSERT_EQ(array.size(), 90);
+      ASSERT_EQ(array[0]->getType(), Embag::RosValue::Type::float32);
+      ASSERT_EQ(array->size(), 90);
 
-      for (size_t i = 0; i < array.size(); ++i) {
-        ASSERT_NE(array[i].as<float>(), 0.0);
+      for (size_t i = 0; i < array->size(); ++i) {
+        ASSERT_NE(array[i]->as<float>(), 0.0);
       }
     }
 
@@ -192,15 +192,15 @@ TEST_F(ViewTest, AllMessages) {
       ASSERT_GE(message->timestamp.to_sec(), last_pose_ts);
       last_pose_ts = message->timestamp.to_sec();
       ASSERT_EQ(message->md5, "cd5e73d190d741a2f92e81eda573aca7");
-      ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), pose_seq++);
-      ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "odom");
-      ASSERT_NE(message->data()["pose"]["pose"]["position"]["x"].as<double>(), 0.0);
+      ASSERT_EQ(message->data()["header"]["seq"]->as<uint32_t>(), pose_seq++);
+      ASSERT_EQ(message->data()["header"]["frame_id"]->as<std::string>(), "odom");
+      ASSERT_NE(message->data()["pose"]["pose"]["position"]["x"]->as<double>(), 0.0);
 
-      ASSERT_EQ(message->data()["pose"]["covariance"].getType(), Embag::RosValue::Type::array);
+      ASSERT_EQ(message->data()["pose"]["covariance"]->getType(), Embag::RosValue::Type::array);
       const auto array = message->data()["pose"]["covariance"];
 
-      for (size_t i = 0; i < array.size(); i++) {
-        ASSERT_EQ(array[i].as<float>(), 0.0);
+      for (size_t i = 0; i < array->size(); i++) {
+        ASSERT_EQ(array[i]->as<float>(), 0.0);
       }
     }
   }

@@ -9,7 +9,7 @@
 
 namespace Embag {
 
-const RosValue* MessageParser::parse() {
+const RosValue::RosValuePointer MessageParser::parse() {
   // The lowest number of RosValues occurs when we have a message with only doubles in a single type.
   // The number of RosValues in this case is the number of doubles that can fit in our buffer,
   // plus one for the RosValue object that will point to all the doubles.
@@ -17,7 +17,7 @@ const RosValue* MessageParser::parse() {
   ros_values_->emplace_back(msg_def_.fieldIndexes());
   ros_values_offset_ = 1;
   initObject(0, msg_def_);
-  return &ros_values_->front();
+  return RosValue::RosValuePointer(ros_values_);
 }
 
 void MessageParser::initObject(size_t object_offset, const RosMsgTypes::BaseMsgDef &object_definition) {
