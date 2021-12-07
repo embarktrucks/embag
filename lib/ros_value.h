@@ -330,9 +330,8 @@ class RosValue {
     }
 
     const Embag::RosValue::Type type_of_elements = at(0)->getType();
-    // TODO: Can we support 2D arrays?
-    if (type_of_elements == Embag::RosValue::Type::array || type_of_elements == Embag::RosValue::Type::object || type_of_elements == Embag::RosValue::Type::array) {
-      throw std::runtime_error("In order to be represented as a buffer, an arrays elements must not be arrays, objects, or strings!");
+    if (type_of_elements == Embag::RosValue::Type::object || type_of_elements == Embag::RosValue::Type::string) {
+      throw std::runtime_error("In order to be represented as a buffer, an array's elements must not be objects or strings!");
     }
 
     const size_t size_of_elements = Embag::RosValue::primitiveTypeToSize(type_of_elements);
