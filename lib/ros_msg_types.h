@@ -16,6 +16,7 @@ class RosMsgTypes{
   class FieldDef {
    public:
     const static primitive_type_map_t primitive_type_map;
+    static size_t typeToSize(const RosValue::Type type);
 
     struct parseable_info_t {
       std::string type_name;
