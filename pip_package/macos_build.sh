@@ -10,7 +10,7 @@ bazel test //test:embag_test //test:embag_test_python3 --test_output=all
 
 # Build wheel
 cp bazel-bin/python/libembag.so /tmp/pip_build/embag
-python -m pip install wheel
+python -m pip install cython wheel
 (cd /tmp/pip_build && python setup.py bdist_wheel && \
  # FIXME
  #python -m pip install dist/embag*.whl && \
