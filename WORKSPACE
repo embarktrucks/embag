@@ -54,14 +54,16 @@ git_repository(
     shallow_since = "1593046824 -0700",
 )
 
-load("@rules_python//python:repositories.bzl", "py_repositories")
-
-py_repositories()
-
-# Only needed if using the packaging rules.
-load("@rules_python//python:pip.bzl", "pip_repositories")
+load("@rules_python//python:pip.bzl", "pip_repositories", "pip_import")
 
 pip_repositories()
+
+pip_import(
+    name = "test_python_requirements",
+    requirements = "//test:requirements.txt",
+)
+load("@test_python_requirements//:requirements.bzl", pip_install_test_requirements = "pip_install")
+pip_install_test_requirements()
 
 # GTest
 git_repository(

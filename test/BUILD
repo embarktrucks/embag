@@ -10,6 +10,8 @@ cc_test(
     ],
 )
 
+load("@test_python_requirements//:requirements.bzl", "requirement")
+
 py_test(
     name = "embag_test_python3",
     main = "embag_test_python.py",
@@ -17,6 +19,9 @@ py_test(
     data = [
         "test.bag",
         "//python:libembag.so",
+    ],
+    deps = [
+        requirement("numpy"),
     ],
     python_version = "PY3",
 )
@@ -28,6 +33,9 @@ py_test(
     data = [
         "test.bag",
         "//python:libembag.so",
+    ],
+    deps = [
+        requirement("numpy"),
     ],
     python_version = "PY2",
 )
