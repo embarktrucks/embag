@@ -342,7 +342,7 @@ class RosValue {
       1,
       { size() },
       { size_of_elements },
-      false
+      true
     );
   }
 
