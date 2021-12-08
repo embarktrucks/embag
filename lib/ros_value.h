@@ -277,7 +277,7 @@ class RosValue {
     }
 
     // TODO: Add check that the underlying type aligns with T
-    return *getPrimitivePointer<T>();
+    return getPrimitive<T>();
   }
 
   bool has(const std::string &key) const {
@@ -339,7 +339,7 @@ class RosValue {
 
     const size_t size_of_elements = Embag::RosValue::primitiveTypeToSize(type_of_elements);
     return pybind11::buffer_info(
-      (void*) at(0)->getPrimitivePointer<void>(),
+      (void*) &at(0)->getPrimitive<uint8_t>(),
       size_of_elements,
       Embag::RosValue::primitiveTypeToFormat(type_of_elements),
       1,
@@ -379,8 +379,8 @@ class RosValue {
   };
 
   template<typename T>
-  const T* const getPrimitivePointer() const {
-    return reinterpret_cast<const T* const>(&primitive_info_.message_buffer->at(primitive_info_.offset));
+  const T& getPrimitive() const {
+    return reinterpret_cast<const T&>(primitive_info_.message_buffer->at(primitive_info_.offset));
   }
 
   const ros_value_list_t& getChildren() const {

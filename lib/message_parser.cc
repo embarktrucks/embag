@@ -111,7 +111,7 @@ void MessageParser::initPrimitive(size_t primitive_offset, const RosMsgTypes::Fi
   primitive.primitive_info_.offset = message_buffer_offset_;
 
   if (field.type() == RosValue::Type::string) {
-    message_buffer_offset_ += *primitive.getPrimitivePointer<uint32_t>() + sizeof(uint32_t);
+    message_buffer_offset_ += primitive.getPrimitive<uint32_t>() + sizeof(uint32_t);
   } else {
     message_buffer_offset_ += field.typeSize();
   }

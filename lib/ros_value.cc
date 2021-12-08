@@ -35,8 +35,8 @@ const std::string RosValue::as<std::string>() const {
     throw std::runtime_error("Cannot call as<std::string> for a non string");
   }
 
-  const uint32_t string_length = *getPrimitivePointer<uint32_t>();
-  const char* const string_loc = getPrimitivePointer<char>() + sizeof(uint32_t);
+  const uint32_t string_length = getPrimitive<uint32_t>();
+  const char* const string_loc = &getPrimitive<char>() + sizeof(uint32_t);
   return std::string(string_loc, string_loc + string_length);
 }
 
