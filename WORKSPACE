@@ -58,6 +58,7 @@ load("@rules_python//python:pip.bzl", "pip_repositories", "pip_import")
 
 pip_repositories()
 
+# Setup and install the pip requirements for our tests
 pip_import(
     name = "test_python_requirements",
     requirements = "//test:requirements.txt",

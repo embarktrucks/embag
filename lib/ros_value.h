@@ -323,7 +323,10 @@ class RosValue {
     return values;
   }
 
-  // Used for python bindings
+  // This interface is used to provide a buffer_info interface to python bindings.
+  // The buffer_info object essentially provides the python runtime with a way
+  // to directly access the underlying memory that an object contains, and thus
+  // operate on it in a much more optimized fashion.
   pybind11::buffer_info getPrimitiveArrayBufferInfo() {
     if (getType() != Embag::RosValue::Type::array) {
       throw std::runtime_error("Only arrays can be represented as buffers!");

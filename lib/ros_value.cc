@@ -154,16 +154,15 @@ size_t RosValue::primitiveTypeToSize(const Type type) {
       return sizeof(float);
     case (Type::float64):
       return sizeof(double);
-    case (Type::string):
-      return 0; // The size of string is unknown!
     case (Type::ros_time):
       return sizeof(ros_time_t);
     case (Type::ros_duration):
       return sizeof(ros_duration_t);
+    case (Type::string):
     case (Type::array):
     case (Type::object):
     default:
-      throw std::runtime_error("Provided type is not a primitive!");
+      throw std::runtime_error("Provided type is a string or a non-primitive!");
   }
 }
 
