@@ -4,7 +4,7 @@ mkdir -p /tmp/embag /tmp/pip_build /tmp/out
 cp -r lib /tmp/embag
 cp -r pip_package/* README.md LICENSE /tmp/pip_build
 
-python -m pip install cython wheel
+python -m pip install -r /tmp/pip_build/requirements.txt
 
 # Build embag libs and echo test binary
 bazel build -c opt //python:libembag.so //embag_echo:embag_echo && \

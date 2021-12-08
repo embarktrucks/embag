@@ -4,6 +4,9 @@ function build() {
   PYTHON_PATH=$1
   PYTHON_VERSION=$2
 
+  # Install necessary dependencies
+  "$PYTHON_PATH/pip" install /tmp/pip_build/requirements.txt
+
   # Build embag libs and echo test binary
   (cd /tmp/embag &&
     PYTHON_BIN_PATH="$PYTHON_PATH/python" bazel build -c opt //python:libembag.so //embag_echo:embag_echo &&

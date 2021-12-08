@@ -174,7 +174,7 @@ class EmbagTest(unittest.TestCase):
     def testBufferInfo(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
             covariance_array = msg.data()['pose']['covariance']
-            memoryview(covariance_array)
+            self.assertTrue(memoryview(covariance_array).readonly)
             for covariance in np.array(covariance_array, copy=False):
                 self.assertEqual(covariance, 0)
 
