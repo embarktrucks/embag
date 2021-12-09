@@ -2,6 +2,7 @@ import python.libembag as embag
 from collections import OrderedDict
 import struct
 import unittest
+import numpy as np
 
 
 class EmbagTest(unittest.TestCase):
@@ -169,6 +170,13 @@ class EmbagTest(unittest.TestCase):
         self.testTopicsInView()
         self.testConnectionsInView()
         bag_stream.close()
+
+    def testBufferInfo(self):
+        for msg in self.view.getMessages('/base_pose_ground_truth'):
+            covariance_array = msg.data()['pose']['covariance']
+            self.assertTrue(memoryview(covariance_array).readonly)
+            for covariance in np.array(covariance_array, copy=False):
+                self.assertEqual(covariance, 0)
 
 if __name__ == "__main__":
     unittest.main()

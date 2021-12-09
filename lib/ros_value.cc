@@ -35,8 +35,8 @@ const std::string RosValue::as<std::string>() const {
     throw std::runtime_error("Cannot call as<std::string> for a non string");
   }
 
-  const uint32_t string_length = *reinterpret_cast<const uint32_t* const>(getPrimitivePointer());
-  const char* const string_loc = reinterpret_cast<const char* const>(getPrimitivePointer() + sizeof(uint32_t));
+  const uint32_t string_length = getPrimitive<uint32_t>();
+  const char* const string_loc = &getPrimitive<char>() + sizeof(uint32_t);
   return std::string(string_loc, string_loc + string_length);
 }
 
@@ -128,6 +128,79 @@ std::string RosValue::toString(const std::string &path) const {
 
 void RosValue::print(const std::string &path) const {
   std::cout << toString(path);
+}
+
+size_t RosValue::primitiveTypeToSize(const Type type) {
+  switch (type) {
+    case (Type::ros_bool):
+      return sizeof(bool);
+    case (Type::int8):
+      return sizeof(int8_t);
+    case (Type::uint8):
+      return sizeof(uint8_t);
+    case (Type::int16):
+      return sizeof(int16_t);
+    case (Type::uint16):
+      return sizeof(uint16_t);
+    case (Type::int32):
+      return sizeof(int32_t);
+    case (Type::uint32):
+      return sizeof(uint32_t);
+    case (Type::int64):
+      return sizeof(int64_t);
+    case (Type::uint64):
+      return sizeof(uint64_t);
+    case (Type::float32):
+      return sizeof(float);
+    case (Type::float64):
+      return sizeof(double);
+    case (Type::ros_time):
+      return sizeof(ros_time_t);
+    case (Type::ros_duration):
+      return sizeof(ros_duration_t);
+    case (Type::string):
+    case (Type::array):
+    case (Type::object):
+    default:
+      throw std::runtime_error("Provided type is a string or a non-primitive!");
+  }
+}
+
+std::string RosValue::primitiveTypeToFormat(const Type type) {
+  switch (type) {
+    case (Type::ros_bool):
+      return "?";
+    case (Type::int8):
+      return "b";
+    case (Type::uint8):
+      return "B";
+    case (Type::int16):
+      return "h";
+    case (Type::uint16):
+      return "H";
+    case (Type::int32):
+      return "i";
+    case (Type::uint32):
+      return "I";
+    case (Type::int64):
+      return "q";
+    case (Type::uint64):
+      return "Q";
+    case (Type::float32):
+      return "f";
+    case (Type::float64):
+      return "d";
+    case (Type::ros_time):
+      return "II";
+    case (Type::ros_duration):
+      return "II";
+    case (Type::string):
+      throw std::runtime_error("Strings do not have a struct format!");
+    case (Type::array):
+    case (Type::object):
+    default:
+      throw std::runtime_error("Provided type is not a primitive!");
+  }
 }
 
 /*

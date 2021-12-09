@@ -71,7 +71,8 @@ PYBIND11_MODULE(libembag, m) {
       .def_readonly("md5", &Embag::RosMessage::md5)
       .def_readonly("raw_data_len", &Embag::RosMessage::raw_data_len);
 
-  auto ros_value = py::class_<Embag::RosValue, Embag::VectorItemPointer<Embag::RosValue>>(m, "RosValue", py::dynamic_attr())
+  auto ros_value = py::class_<Embag::RosValue, Embag::VectorItemPointer<Embag::RosValue>>(m, "RosValue", py::dynamic_attr(), py::buffer_protocol())
+      .def_buffer(&Embag::RosValue::getPrimitiveArrayBufferInfo)
       .def("get", &Embag::RosValue::get)
       .def("getType", &Embag::RosValue::getType)
       .def("__len__", &Embag::RosValue::size)

@@ -3,6 +3,7 @@
 #include <memory>
 #include <cstdint>
 #include <cstring>
+#include <pybind11/buffer_info.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -73,6 +74,8 @@ class RosValue {
     object,
     array,
   };
+  static size_t primitiveTypeToSize(const Type type);
+  static std::string primitiveTypeToFormat(const Type type);
 
   struct ros_time_t {
     uint32_t secs = 0;
@@ -274,7 +277,7 @@ class RosValue {
     }
 
     // TODO: Add check that the underlying type aligns with T
-    return *reinterpret_cast<const T*>(getPrimitivePointer());
+    return getPrimitive<T>();
   }
 
   bool has(const std::string &key) const {
@@ -320,6 +323,32 @@ class RosValue {
     return values;
   }
 
+  // This interface is used to provide a buffer_info interface to python bindings.
+  // The buffer_info object essentially provides the python runtime with a way
+  // to directly access the underlying memory that an object contains, and thus
+  // operate on it in a much more optimized fashion.
+  pybind11::buffer_info getPrimitiveArrayBufferInfo() {
+    if (getType() != Embag::RosValue::Type::array) {
+      throw std::runtime_error("Only arrays can be represented as buffers!");
+    }
+
+    const Embag::RosValue::Type type_of_elements = at(0)->getType();
+    if (type_of_elements == Embag::RosValue::Type::object || type_of_elements == Embag::RosValue::Type::string) {
+      throw std::runtime_error("In order to be represented as a buffer, an array's elements must not be objects or strings!");
+    }
+
+    const size_t size_of_elements = Embag::RosValue::primitiveTypeToSize(type_of_elements);
+    return pybind11::buffer_info(
+      (void*) &at(0)->getPrimitive<uint8_t>(),
+      size_of_elements,
+      Embag::RosValue::primitiveTypeToFormat(type_of_elements),
+      1,
+      { size() },
+      { size_of_elements },
+      true
+    );
+  }
+
   std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
 
@@ -349,8 +378,9 @@ class RosValue {
     object_info_t object_info_;
   };
 
-  const char* const getPrimitivePointer() const {
-    return &primitive_info_.message_buffer->at(primitive_info_.offset);
+  template<typename T>
+  const T& getPrimitive() const {
+    return reinterpret_cast<const T&>(primitive_info_.message_buffer->at(primitive_info_.offset));
   }
 
   const ros_value_list_t& getChildren() const {

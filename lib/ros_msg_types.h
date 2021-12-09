@@ -12,10 +12,11 @@ class RosMsgTypes{
 
   // Schema stuff
   // TODO: move this stuff elsewhere?
-  typedef std::unordered_map<std::string, const std::pair<const RosValue::Type, const size_t>> primitive_type_map_t;
+  typedef std::unordered_map<std::string, const RosValue::Type> primitive_type_map_t;
   class FieldDef {
    public:
     const static primitive_type_map_t primitive_type_map;
+    static size_t typeToSize(const RosValue::Type type);
 
     struct parseable_info_t {
       std::string type_name;
@@ -28,12 +29,13 @@ class RosMsgTypes{
       , type_definition_(nullptr)
     {
       if (primitive_type_map.count(parsed_info_.type_name)) {
-        const std::pair<RosValue::Type, size_t>& type_info = primitive_type_map.at(parsed_info_.type_name);
-        type_ = type_info.first;
-        type_size_ = type_info.second;
+        type_ = primitive_type_map.at(parsed_info_.type_name);
+        if (type_ != RosValue::Type::string) {
+          // Cache the size of the type for quicker access.
+          type_size_ = RosValue::primitiveTypeToSize(type_);
+        }
       } else {
         type_ = RosValue::Type::object;
-        type_size_ = 0;
       }
     }
 
@@ -54,6 +56,10 @@ class RosMsgTypes{
     }
 
     size_t typeSize() const {
+      if (type_ == RosValue::Type::object || type_ == RosValue::Type::string) {
+        throw std::runtime_error("The size of an object or string is not statically known!");
+      }
+
       return type_size_;
     }
 
@@ -91,8 +97,8 @@ class RosMsgTypes{
     // To maintain performance, we cache this information in each instance of the class.
     // If this field is an array, holds the type of the items within the array.
     RosValue::Type type_;
-    // If this field is an object, the size will be 0.
-    size_t type_size_;
+    // If this field is an object or a string, the size will be 0.
+    size_t type_size_ = 0;
 
     // TODO: This can be stored in union with the size_t to reduce space
     // If this is an object, cache the associated ros_embedded_msg_def

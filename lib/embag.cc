@@ -7,24 +7,24 @@
 namespace Embag {
 
 const RosMsgTypes::primitive_type_map_t RosMsgTypes::FieldDef::primitive_type_map = {
-    {"bool", {RosValue::Type::ros_bool, sizeof(bool)}},
-    {"int8", {RosValue::Type::int8, sizeof(int8_t)}},
-    {"uint8", {RosValue::Type::uint8, sizeof(uint8_t)}},
-    {"int16", {RosValue::Type::int16, sizeof(int16_t)}},
-    {"uint16", {RosValue::Type::uint16, sizeof(uint16_t)}},
-    {"int32", {RosValue::Type::int32, sizeof(int32_t)}},
-    {"uint32", {RosValue::Type::uint32, sizeof(uint32_t)}},
-    {"int64", {RosValue::Type::int64, sizeof(int64_t)}},
-    {"uint64", {RosValue::Type::uint64, sizeof(uint64_t)}},
-    {"float32", {RosValue::Type::float32, sizeof(float)}},
-    {"float64", {RosValue::Type::float64, sizeof(double)}},
-    {"string", {RosValue::Type::string, 0}}, // The size of string is unknown!
-    {"time", {RosValue::Type::ros_time, sizeof(RosValue::ros_time_t)}},
-    {"duration", {RosValue::Type::ros_duration, sizeof(RosValue::ros_duration_t)}},
+    {"bool", RosValue::Type::ros_bool},
+    {"int8", RosValue::Type::int8},
+    {"uint8", RosValue::Type::uint8},
+    {"int16", RosValue::Type::int16},
+    {"uint16", RosValue::Type::uint16},
+    {"int32", RosValue::Type::int32},
+    {"uint32", RosValue::Type::uint32},
+    {"int64", RosValue::Type::int64},
+    {"uint64", RosValue::Type::uint64},
+    {"float32", RosValue::Type::float32},
+    {"float64", RosValue::Type::float64},
+    {"string", RosValue::Type::string},
+    {"time", RosValue::Type::ros_time},
+    {"duration", RosValue::Type::ros_duration},
 
     // Deprecated types
-    {"byte", {RosValue::Type::int8, sizeof(int8_t)}},
-    {"char", {RosValue::Type::uint8, sizeof(uint8_t)}},
+    {"byte", RosValue::Type::int8},
+    {"char", RosValue::Type::uint8},
 };
 
 void Bag::BagFromFile::open(const std::string &path) {
