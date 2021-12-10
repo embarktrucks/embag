@@ -172,6 +172,12 @@ View View::getMessages(const std::string &topic) {
 }
 
 View View::getMessages(const std::vector<std::string> &topics) {
+  std::chrono::nanoseconds start_time_ns {getStartTime().to_nsec()};
+  std::chrono::nanoseconds end_time_ns   {getEndTime().to_nsec()};
+  return getMessages(topics, start_time_ns, end_time_ns);
+}
+
+View View::getMessages(const std::vector<std::string> &topics, std::chrono::nanoseconds start_time, std::chrono::nanoseconds end_time) {
   bag_wrappers_.clear();
 
   for (const auto& bag : bags_) {
@@ -185,9 +191,10 @@ View View::getMessages(const std::vector<std::string> &topics) {
 
       for (const auto &connection_record : bag->topic_connection_map_.at(topic)) {
         for (const auto &block : connection_record->blocks) {
-          bag_wrappers_[bag]->chunks_to_parse.emplace(block.into_chunk);
+          if (block.into_chunk->info.end_time > start_time && block.into_chunk->info.start_time < end_time) {
+            bag_wrappers_[bag]->chunks_to_parse.emplace(block.into_chunk);
+          }
         }
-
         bag_wrappers_[bag]->connection_ids.emplace(connection_record->id);
       }
     }

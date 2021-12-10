@@ -227,6 +227,31 @@ TEST_F(ViewTest, MessagesForTopic) {
   }
 }
 
+TEST_F(ViewTest, MessagesBetweenTimestamps) {
+  std::chrono::nanoseconds start_time_ns {view_.getStartTime().to_nsec()};
+  std::chrono::nanoseconds end_time_ns   {view_.getEndTime().to_nsec()};
+  start_time_ns += std::chrono::seconds{1};
+
+  std::vector<std::string> all_topics{
+      "/base_pose_ground_truth",
+      "/base_scan",
+      "/luminar_pointcloud",
+  };
+
+  int no_time_boundaries_count = 0;
+  for (const auto &message : view_.getMessages(all_topics)){
+      no_time_boundaries_count++;
+  }
+
+  int with_time_boundaries_count = 0;
+  for (const auto &message : view_.getMessages(all_topics, start_time_ns, end_time_ns)) {
+      with_time_boundaries_count++;
+  }
+
+ASSERT_GT(no_time_boundaries_count, with_time_boundaries_count);
+}
+
+
 class StreamTest : public ::testing::Test {
  protected:
   std::string bag_path_ = "test/test.bag";

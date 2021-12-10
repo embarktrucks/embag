@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <memory>
 #include <cstdint>
 #include <cstring>
@@ -396,6 +397,16 @@ class RosValue {
 
   friend class MessageParser;
 };
+
+template <typename Rep, typename Period>
+bool operator<(const RosValue::ros_time_t& lhs, const std::chrono::duration<Rep, Period>& rhs) {
+  return std::chrono::nanoseconds{lhs.to_nsec()} < rhs;
+}
+
+template <typename Rep, typename Period>
+bool operator>(const RosValue::ros_time_t& lhs, const std::chrono::duration<Rep, Period>& rhs) {
+  return std::chrono::nanoseconds{lhs.to_nsec()} > rhs;
+}
 
 template<>
 const std::string RosValue::as<std::string>() const;
