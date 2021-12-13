@@ -229,7 +229,7 @@ class RosValue {
     } else if (type_ == Type::array) {
       new (&array_info_) auto(other.array_info_);
     } else if (type_ == Type::primitive_array) {
-      new (&primitive_info_) auto(other.primitive_array_info_);
+      new (&primitive_array_info_) auto(other.primitive_array_info_);
     } else {
       new (&primitive_info_) auto(other.primitive_info_);
     }
