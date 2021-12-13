@@ -65,7 +65,7 @@ void MessageParser::emplaceField(const RosMsgTypes::FieldDef &field) {
       auto& object_definition = field.typeDefinition();
       ros_values_->emplace_back(object_definition.fieldIndexes());
     }
-  } else if (field.type() == RosValue::Type::object) {
+  } else if (field.type() == RosValue::Type::object || field.type() == RosValue::Type::string) {
     ros_values_->emplace_back(RosValue::_array_identifier());
   } else {
     ros_values_->emplace_back(field.type(), message_buffer_);
