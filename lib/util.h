@@ -57,7 +57,6 @@ class PyBindPointerWrapper {
 
   // We don't want any public interface that exposes the underlying item's pointer as it may be improperly used.
   friend const ValueType* pybind11::detail::holder_helper<PyBindPointerWrapper<PointerType, ValueType>>::get(const PyBindPointerWrapper<PointerType, ValueType>& pointer_wrapper);
-  friend PointerType;
 
   const ValueType* get() const {
     return &**this;

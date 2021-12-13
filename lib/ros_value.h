@@ -411,8 +411,7 @@ class RosValue::Pointer {
   }
 
  private:
-  template<class PointerType, class ValueType>
-  friend const ValueType& PyBindPointerWrapper<PointerType, ValueType>::operator*() const;
+  friend PyBindPointerWrapper<RosValue::Pointer, RosValue>;
 
   const RosValue& operator*() const {
     if (info_.which() == 0) {
