@@ -24,7 +24,7 @@ class RosMessage {
   {
   }
 
-  const RosValue::RosValuePointer &data() {
+  const RosValue::Pointer &data() {
     if (!parsed_) {
       hydrate();
     }
@@ -58,7 +58,7 @@ class RosMessage {
 
  private:
   bool parsed_ = false;
-  RosValue::RosValuePointer data_;
+  RosValue::Pointer data_;
   std::shared_ptr<RosMsgTypes::MsgDef> msg_def_;
 
   void hydrate() {

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <memory>
+#include <boost/variant.hpp>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <pybind11/buffer_info.h>
 #include <string>
 #include <unordered_map>
@@ -15,43 +16,14 @@ namespace Embag {
 
 class RosValue {
  public:
-  class RosValuePointer : public VectorItemPointer<RosValue> {
-   public:
-    RosValuePointer()
-    {
-    }
-
-    RosValuePointer(const std::weak_ptr<std::vector<RosValue>>& base)
-      : RosValuePointer(base, 0)
-    {
-    }
-
-    RosValuePointer(const std::weak_ptr<std::vector<RosValue>>& base, size_t index)
-      : VectorItemPointer<RosValue>(base.lock(), index)
-    {
-    }
-
-    const RosValuePointer operator()(const std::string &key) const {
-      return (**this)(key);
-    }
-
-    const RosValuePointer operator[](const std::string &key) const {
-      return (**this)[key];
-    }
-
-    const RosValuePointer operator[](const size_t idx) const {
-      return (**this)[idx];
-    }
-  };
+  class Pointer;
 
   struct ros_value_list_t {
     std::weak_ptr<std::vector<RosValue>> base;
     size_t offset;
     size_t length;
 
-    const RosValuePointer at(size_t index) const {
-      return RosValuePointer(base, offset + index);
-    }
+    const Pointer at(size_t index) const;
   };
 
   enum class Type {
@@ -73,6 +45,7 @@ class RosValue {
     // Custom types
     object,
     array,
+    primitive_array,
   };
   static size_t primitiveTypeToSize(const Type type);
   static std::string primitiveTypeToFormat(const Type type);
@@ -164,13 +137,13 @@ class RosValue {
     const_iterator(const RosValue& value, size_t index)
       : const_iterator_base<ReturnType, size_t, const_iterator<ReturnType, size_t>>(value, index)
     {
-      if (value.type_ != Type::object && value.type_ != Type::array) {
-        throw std::runtime_error("Cannot iterate a RosValue that is not an object or array");
+      if (value.type_ != Type::object && value.type_ != Type::array && value.type_ != Type::primitive_array) {
+        throw std::runtime_error("Cannot iterate the values of a non-object or non-array RosValue");
       }
     }
 
     const ReturnType operator*() const {
-      return this->value_.getChildren().at(this->index_);
+      return this->value_.at(this->index_);
     }
   };
 
@@ -181,7 +154,7 @@ class RosValue {
       : const_iterator_base<ReturnType, size_t, std::unordered_map<std::string, size_t>::const_iterator>(value, index)
     {
       if (value.type_ != Type::object) {
-        throw std::runtime_error("Cannot only iterate the keys or key/value pairs of an object");
+        throw std::runtime_error("Cannot iterate the keys or key/value pairs of an non-object RosValue");
       }
     }
 
@@ -194,7 +167,7 @@ class RosValue {
   }
   template<class IteratorReturnType>
   const_iterator<IteratorReturnType, size_t> endValues() const {
-    return RosValue::const_iterator<IteratorReturnType, size_t>(*this, getChildren().length);
+    return RosValue::const_iterator<IteratorReturnType, size_t>(*this, this->size());
   }
   template<class IteratorReturnType>
   const_iterator<IteratorReturnType, std::unordered_map<std::string, size_t>::const_iterator> beginItems() const {
@@ -216,11 +189,19 @@ class RosValue {
  private:
   struct _array_identifier {};
  public:
+  RosValue(const Type type, const std::shared_ptr<std::vector<char>>& message_buffer, const size_t offset)
+    : type_(type)
+    , primitive_info_({ offset, message_buffer })
+  {
+    if (type_ == Type::object || type_ == Type::array || type_ == Type::primitive_array) {
+      throw std::runtime_error("Cannot create an object or array with this constructor");
+    }
+  }
   RosValue(const Type type)
     : type_(type)
-    , primitive_info_()
+    , primitive_info_({ 0, nullptr })
   {
-    if (type_ == Type::object || type_ == Type::array) {
+    if (type_ == Type::object || type_ == Type::array || type_ == Type::primitive_array) {
       throw std::runtime_error("Cannot create an object or array with this constructor");
     }
   }
@@ -235,6 +216,11 @@ class RosValue {
     , array_info_()
   {
   }
+  RosValue(const Type element_type, const std::shared_ptr<std::vector<char>>& message_buffer)
+    : type_(Type::primitive_array)
+    , primitive_array_info_(element_type, message_buffer)
+  {
+  }
 
   // Define custom copy constructor and destructor because of the union for the infos
   RosValue(const RosValue &other): type_(other.type_) {
@@ -242,6 +228,8 @@ class RosValue {
       new (&object_info_) auto(other.object_info_);
     } else if (type_ == Type::array) {
       new (&array_info_) auto(other.array_info_);
+    } else if (type_ == Type::primitive_array) {
+      new (&primitive_info_) auto(other.primitive_array_info_);
     } else {
       new (&primitive_info_) auto(other.primitive_info_);
     }
@@ -251,24 +239,27 @@ class RosValue {
       object_info_.~object_info_t();
     } else if (type_ == Type::array) {
       array_info_.~array_info_t();
+    } else if (type_ == Type::primitive_array) {
+      primitive_array_info_.~primitive_array_info_t();
     } else {
       primitive_info_.~primitive_info_t();
     }
   }
+  RosValue operator=(const RosValue&) {
+    throw std::runtime_error("Can't call this");
+  }
 
 
   // Convenience accessors
-  const RosValuePointer operator()(const std::string &key) const;
-  const RosValuePointer operator[](const std::string &key) const;
-  const RosValuePointer operator[](const size_t idx) const;
-  const RosValuePointer get(const std::string &key) const;
-  const RosValuePointer at(size_t idx) const;
-  const RosValuePointer at(const std::string &key) const;
+  const Pointer operator()(const std::string &key) const;
+  const Pointer operator[](const std::string &key) const;
+  const Pointer operator[](const size_t idx) const;
+  const Pointer get(const std::string &key) const;
+  const Pointer at(size_t idx) const;
+  const Pointer at(const std::string &key) const;
 
   template<typename T>
-  const T &getValue(const std::string &key) const {
-    return get(key)->as<T>();
-  }
+  const T &getValue(const std::string &key) const;
 
   template<typename T>
   const T as() const {
@@ -289,65 +280,23 @@ class RosValue {
   }
 
   size_t size() const {
-    if (type_ != Type::array && type_ != Type::object) {
+    if (type_ == Type::array || type_ == Type::object) {
+      return getChildren().length;
+    } else if (type_ == Type::primitive_array) {
+      return primitive_array_info_.length;
+    } else {
       throw std::runtime_error("Value is not an array or an object");
     }
-
-    return getChildren().length;
   }
 
-  std::unordered_map<std::string, RosValuePointer> getObjects() const {
-    if (type_ != Type::object) {
-      throw std::runtime_error("Cannot getObjects of a non-object RosValue");
-    }
-
-    std::unordered_map<std::string, RosValuePointer> objects;
-    objects.reserve(object_info_.children.length);
-    for (const auto& field : *object_info_.field_indexes) {
-      objects.emplace(field.first, RosValuePointer(object_info_.children.base, object_info_.children.offset + field.second));
-    }
-    return objects;
-  }
-
-  std::vector<RosValuePointer> getValues() const {
-    if (type_ != Type::object && type_ != Type::array) {
-      throw std::runtime_error("Cannot getValues of a non object or array RosValue");
-    }
-
-    const ros_value_list_t& children = getChildren();
-    std::vector<RosValuePointer> values;
-    values.reserve(children.length);
-    for (size_t i = 0; i < children.length; ++i) {
-      values.emplace_back(children.base, children.offset + i);
-    }
-    return values;
-  }
+  std::unordered_map<std::string, Pointer> getObjects() const;
+  std::vector<Pointer> getValues() const;
 
   // This interface is used to provide a buffer_info interface to python bindings.
   // The buffer_info object essentially provides the python runtime with a way
   // to directly access the underlying memory that an object contains, and thus
   // operate on it in a much more optimized fashion.
-  pybind11::buffer_info getPrimitiveArrayBufferInfo() {
-    if (getType() != Embag::RosValue::Type::array) {
-      throw std::runtime_error("Only arrays can be represented as buffers!");
-    }
-
-    const Embag::RosValue::Type type_of_elements = at(0)->getType();
-    if (type_of_elements == Embag::RosValue::Type::object || type_of_elements == Embag::RosValue::Type::string) {
-      throw std::runtime_error("In order to be represented as a buffer, an array's elements must not be objects or strings!");
-    }
-
-    const size_t size_of_elements = Embag::RosValue::primitiveTypeToSize(type_of_elements);
-    return pybind11::buffer_info(
-      (void*) &at(0)->getPrimitive<uint8_t>(),
-      size_of_elements,
-      Embag::RosValue::primitiveTypeToFormat(type_of_elements),
-      1,
-      { size() },
-      { size_of_elements },
-      true
-    );
-  }
+  pybind11::buffer_info getPrimitiveArrayBufferInfo();
 
   std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
@@ -358,8 +307,21 @@ class RosValue {
 
  private:
   struct primitive_info_t {
-    size_t offset = 0;
-    std::shared_ptr<std::vector<char>> message_buffer = nullptr;
+    size_t offset;
+    std::shared_ptr<std::vector<char>> message_buffer;
+  };
+
+  struct primitive_array_info_t {
+    primitive_array_info_t(const Type element_type, const std::shared_ptr<std::vector<char>>& message_buffer)
+      : element_type(element_type)
+      , message_buffer(message_buffer)
+    {
+    }
+
+    Type element_type;
+    size_t offset;
+    size_t length;
+    std::shared_ptr<std::vector<char>> message_buffer;
   };
 
   struct array_info_t {
@@ -374,6 +336,7 @@ class RosValue {
   Type type_;
   union {
     primitive_info_t primitive_info_;
+    primitive_array_info_t primitive_array_info_;
     array_info_t array_info_;
     object_info_t object_info_;
   };
@@ -395,6 +358,70 @@ class RosValue {
   }
 
   friend class MessageParser;
+};
+
+class RosValue::Pointer {
+ private:
+  struct vector_based_value_info_t {
+    std::shared_ptr<std::vector<RosValue>> base;
+    size_t index;
+  };
+  boost::variant<RosValue, vector_based_value_info_t> info_;
+
+ public:
+  Pointer()
+    : info_(vector_based_value_info_t({nullptr, 0}))
+  {
+  }
+
+  Pointer(const std::weak_ptr<std::vector<RosValue>>& base)
+    : Pointer(base, 0)
+  {
+  }
+
+  Pointer(const std::weak_ptr<std::vector<RosValue>>& base, size_t index)
+    : Pointer(base.lock(), index)
+  {
+  }
+
+  Pointer(const std::shared_ptr<std::vector<RosValue>>& base, size_t index)
+    : info_(vector_based_value_info_t({base, index}))
+  {
+  }
+
+  Pointer(const RosValue::Type type, const std::shared_ptr<std::vector<char>>& message_buffer, const size_t offset)
+    : info_(RosValue(type, message_buffer, offset))
+  {
+  }
+
+  const Pointer operator()(const std::string &key) const {
+    return (**this)(key);
+  }
+
+  const Pointer operator[](const std::string &key) const {
+    return (**this)[key];
+  }
+
+  const Pointer operator[](const size_t idx) const {
+    return (**this)[idx];
+  }
+
+  const RosValue* operator->() const {
+    return &**this;
+  }
+
+ private:
+  template<class PointerType, class ValueType>
+  friend const ValueType& PyBindPointerWrapper<PointerType, ValueType>::operator*() const;
+
+  const RosValue& operator*() const {
+    if (info_.which() == 0) {
+      return boost::get<RosValue>(info_);
+    } else {
+      vector_based_value_info_t info = boost::get<vector_based_value_info_t>(info_);
+      return info.base->at(info.index);
+    }
+  }
 };
 
 template<>

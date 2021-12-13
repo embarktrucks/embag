@@ -178,7 +178,7 @@ TEST_F(ViewTest, AllMessages) {
       ASSERT_EQ(message->data()["scan_time"]->as<float>(), 0.0);
 
       // Arrays are exposed at blobs
-      ASSERT_EQ(message->data()["ranges"]->getType(), Embag::RosValue::Type::array);
+      ASSERT_EQ(message->data()["ranges"]->getType(), Embag::RosValue::Type::primitive_array);
       const auto array = message->data()["ranges"];
       ASSERT_EQ(array[0]->getType(), Embag::RosValue::Type::float32);
       ASSERT_EQ(array->size(), 90);
@@ -196,7 +196,7 @@ TEST_F(ViewTest, AllMessages) {
       ASSERT_EQ(message->data()["header"]["frame_id"]->as<std::string>(), "odom");
       ASSERT_NE(message->data()["pose"]["pose"]["position"]["x"]->as<double>(), 0.0);
 
-      ASSERT_EQ(message->data()["pose"]["covariance"]->getType(), Embag::RosValue::Type::array);
+      ASSERT_EQ(message->data()["pose"]["covariance"]->getType(), Embag::RosValue::Type::primitive_array);
       const auto array = message->data()["pose"]["covariance"];
 
       for (size_t i = 0; i < array->size(); i++) {
