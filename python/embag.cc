@@ -73,7 +73,6 @@ PYBIND11_MODULE(libembag, m) {
 
   auto ros_value = py::class_<Embag::RosValue, Embag::VectorItemPointer<Embag::RosValue>>(m, "RosValue", py::dynamic_attr(), py::buffer_protocol())
       .def_buffer(&Embag::RosValue::getPrimitiveArrayBufferInfo)
-      .def("get", &Embag::RosValue::get)
       .def("getType", &Embag::RosValue::getType)
       .def("__len__", &Embag::RosValue::size)
       .def("__str__", [](Embag::VectorItemPointer<Embag::RosValue> &v, const std::string &path) {
@@ -89,9 +88,8 @@ PYBIND11_MODULE(libembag, m) {
             throw std::runtime_error("Can only iterate array RosValues");
         }
       }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */)
-      .def("__getattr__", [](Embag::VectorItemPointer<Embag::RosValue> &v, const std::string &attr) {
-        return getField(v, attr);
-      })
+      .def("get", getField)
+      .def("__getattr__", getField)
       .def("__getitem__", [](Embag::VectorItemPointer<Embag::RosValue> &v, const std::string &key) {
         return getField(v, key);
       })
