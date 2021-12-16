@@ -222,7 +222,7 @@ class RosValue {
   {
   }
 
-  // Define custom copy constructor and destructor because of the union for the infos
+  // Define custom copy constructor, destructor, and assignment operator because of the union for the infos
   RosValue(const RosValue &other): type_(other.type_) {
     if (type_ == Type::object) {
       new (&object_info_) auto(other.object_info_);
@@ -234,7 +234,29 @@ class RosValue {
       new (&primitive_info_) auto(other.primitive_info_);
     }
   }
+
   ~RosValue() {
+    destroy_object_info();
+  }
+
+  RosValue operator=(const RosValue& other) {
+    if (type_ != other.type_) {
+      destroy_object_info();
+    }
+
+    type_ = other.type_;
+    if (type_ == Type::object) {
+      object_info_ = other.object_info_;
+    } else if (type_ == Type::array) {
+      array_info_ = other.array_info_;
+    } else if (type_ == Type::primitive_array) {
+      primitive_array_info_ = other.primitive_array_info_;
+    } else {
+      primitive_info_ = other.primitive_info_;
+    }
+  }
+
+  void destroy_object_info() {
     if (type_ == Type::object) {
       object_info_.~object_info_t();
     } else if (type_ == Type::array) {
@@ -245,10 +267,6 @@ class RosValue {
       primitive_info_.~primitive_info_t();
     }
   }
-  RosValue operator=(const RosValue&) {
-    throw std::runtime_error("Can't call this");
-  }
-
 
   // Convenience accessors
   const Pointer operator()(const std::string &key) const;
