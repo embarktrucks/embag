@@ -5,28 +5,41 @@
 
 namespace Embag {
 
-const RosValue::RosValuePointer RosValue::operator()(const std::string &key) const {
+const RosValue::Pointer RosValue::ros_value_list_t::at(size_t index) const {
+  if (index >= length) {
+    throw std::out_of_range("Provided index is out of range!");
+  }
+
+  return RosValue::Pointer(base, offset + index);
+}
+
+const RosValue::Pointer RosValue::operator()(const std::string &key) const {
   return get(key);
 }
 
-const RosValue::RosValuePointer RosValue::operator[](const std::string &key) const {
+const RosValue::Pointer RosValue::operator[](const std::string &key) const {
   return get(key);
 }
 
-const RosValue::RosValuePointer RosValue::operator[](const size_t idx) const {
+const RosValue::Pointer RosValue::operator[](const size_t idx) const {
   return at(idx);
 }
 
-const RosValue::RosValuePointer RosValue::at(const std::string &key) const {
+const RosValue::Pointer RosValue::at(const std::string &key) const {
   return get(key);
 }
 
-const RosValue::RosValuePointer RosValue::get(const std::string &key) const {
+template<typename T>
+const T &RosValue::getValue(const std::string &key) const {
+  return get(key)->as<T>();
+}
+
+const RosValue::Pointer RosValue::get(const std::string &key) const {
   if (type_ != Type::object) {
     throw std::runtime_error("Value is not an object");
   }
 
-  return object_info_.children.at(object_info_.field_indexes->at(key));
+  return at(object_info_.field_indexes->at(key));
 }
 
 template<>
@@ -40,12 +53,69 @@ const std::string RosValue::as<std::string>() const {
   return std::string(string_loc, string_loc + string_length);
 }
 
-const RosValue::RosValuePointer RosValue::at(const size_t idx) const {
-  if (type_ != Type::array) {
-    throw std::runtime_error("Value is not an array");
+const RosValue::Pointer RosValue::at(const size_t idx) const {
+  if (type_ == Type::object) {
+    return object_info_.children.at(idx);
+  } else if (type_ == Type::array) {
+    return array_info_.children.at(idx);
+  } else if (type_ == Type::primitive_array) {
+    return RosValue::Pointer(
+      primitive_array_info_.element_type,
+      primitive_array_info_.message_buffer,
+      primitive_array_info_.offset + idx
+    );
+  } else {
+    throw std::runtime_error("Value is not an array or object");
+  }
+}
+
+std::unordered_map<std::string, RosValue::Pointer> RosValue::getObjects() const {
+  if (type_ != Type::object) {
+    throw std::runtime_error("Cannot getObjects of a non-object RosValue");
   }
 
-  return array_info_.children.at(idx);
+  std::unordered_map<std::string, RosValue::Pointer> objects;
+  objects.reserve(object_info_.children.length);
+  for (const auto& field : *object_info_.field_indexes) {
+    objects.emplace(field.first, at(field.second));
+  }
+  return objects;
+}
+
+std::vector<RosValue::Pointer> RosValue::getValues() const {
+  if (type_ != Type::object && type_ != Type::array && type_ != Type::primitive_array) {
+    throw std::runtime_error("Cannot getValues of a non object or array RosValue");
+  }
+
+  std::vector<RosValue::Pointer> ros_value_pointers;
+  const size_t size = this->size();
+  ros_value_pointers.reserve(size);
+  for (size_t i = 0; i < size; i++) {
+    ros_value_pointers.push_back(at(i));
+  }
+
+  return ros_value_pointers;
+}
+
+pybind11::buffer_info RosValue::getPrimitiveArrayBufferInfo() {
+  if (type_ != Embag::RosValue::Type::primitive_array) {
+    throw std::runtime_error("Only primitive arrays can be represented as buffers!");
+  }
+
+  if (primitive_array_info_.element_type == Embag::RosValue::Type::string) {
+    throw std::runtime_error("In order to be represented as a buffer, an array's elements must not be strings!");
+  }
+
+  const size_t size_of_elements = Embag::RosValue::primitiveTypeToSize(primitive_array_info_.element_type);
+  return pybind11::buffer_info(
+    (void*) &at(0)->getPrimitive<uint8_t>(),
+    size_of_elements,
+    Embag::RosValue::primitiveTypeToFormat(primitive_array_info_.element_type),
+    1,
+    { size() },
+    { size_of_elements },
+    true
+  );
 }
 
 std::string RosValue::toString(const std::string &path) const {
@@ -214,7 +284,7 @@ const std::string& RosValue::const_iterator<const std::string&, std::unordered_m
 }
 
 template<>
-const std::pair<const std::string&, const RosValue::RosValuePointer> RosValue::const_iterator<const std::pair<const std::string&, const RosValue::RosValuePointer>, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
+const std::pair<const std::string&, const RosValue::Pointer> RosValue::const_iterator<const std::pair<const std::string&, const RosValue::Pointer>, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
   return std::make_pair(index_->first, value_.object_info_.children.at(index_->second));
 }
 

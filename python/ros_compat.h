@@ -14,7 +14,7 @@ struct IteratorCompat {
     const auto msg = *iterator_;
     return py::make_tuple(
       msg->topic,
-      (Embag::VectorItemPointer<Embag::RosValue>&) msg->data(),
+      (Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue>&) msg->data(),
       // TODO: Change the timestamp to a rostime - they have more precision!
       msg->timestamp.to_sec()
     );

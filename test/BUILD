@@ -2,7 +2,7 @@ cc_test(
     name = "embag_test",
     srcs = ["embag_test.cc"],
     copts = ["-Iexternal/gtest/include"],
-    data = ["test.bag", "test_2.bag"],
+    data = ["test.bag", "test_2.bag", "array_test.bag"],
     deps = [
         "//lib:embag",
         "@gtest",
