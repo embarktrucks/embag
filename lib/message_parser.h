@@ -24,7 +24,7 @@ class MessageParser {
   {
   };
 
-  const RosValue::RosValuePointer parse();
+  const RosValue::Pointer parse();
 
  private:
   static std::unordered_map<std::string, size_t> primitive_size_map_;

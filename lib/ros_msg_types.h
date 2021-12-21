@@ -1,7 +1,6 @@
 #pragma once
 
 #include <unordered_map>
-#include <boost/variant.hpp>
 
 #include "ros_value.h"
 

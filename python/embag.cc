@@ -10,7 +10,9 @@
 
 namespace py = pybind11;
 
-PYBIND11_DECLARE_HOLDER_TYPE(T, Embag::VectorItemPointer<T>);
+template <typename ValueType>
+using PyBindHolderType = Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, ValueType>;
+PYBIND11_DECLARE_HOLDER_TYPE(ValueType, PyBindHolderType<ValueType>);
 
 PYBIND11_MODULE(libembag, m) {
   m.doc() = "Python bindings for Embag";
@@ -56,8 +58,8 @@ PYBIND11_MODULE(libembag, m) {
       .def("__str__", [](std::shared_ptr<Embag::RosMessage> &m) {
         return encodeStrLatin1(m->toString());
       })
-      .def("data", [](std::shared_ptr<Embag::RosMessage> &m) {
-        return (Embag::VectorItemPointer<Embag::RosValue>&) m->data();
+      .def("data", [](std::shared_ptr<Embag::RosMessage> &m) -> Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue>& {
+        return (Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue>&) m->data();
       })
       .def("dict", [](std::shared_ptr<Embag::RosMessage> &m) {
         if (m->data()->getType() != Embag::RosValue::Type::object) {
@@ -71,17 +73,19 @@ PYBIND11_MODULE(libembag, m) {
       .def_readonly("md5", &Embag::RosMessage::md5)
       .def_readonly("raw_data_len", &Embag::RosMessage::raw_data_len);
 
-  auto ros_value = py::class_<Embag::RosValue, Embag::VectorItemPointer<Embag::RosValue>>(m, "RosValue", py::dynamic_attr(), py::buffer_protocol())
+  auto ros_value = py::class_<Embag::RosValue, Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue>>(m, "RosValue", py::dynamic_attr(), py::buffer_protocol())
       .def_buffer(&Embag::RosValue::getPrimitiveArrayBufferInfo)
       .def("getType", &Embag::RosValue::getType)
       .def("__len__", &Embag::RosValue::size)
-      .def("__str__", [](Embag::VectorItemPointer<Embag::RosValue> &v, const std::string &path) {
+      .def("__str__", [](Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &v, const std::string &path) {
         return encodeStrLatin1(v->toString());
       }, py::arg("path") = "")
-      .def("__iter__", [](Embag::VectorItemPointer<Embag::RosValue> &v) {
+      .def("__iter__", [](Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &v) {
         switch (v->getType()) {
           // TODO: Allow object iteration
-          case Embag::RosValue::Type::array: {
+          case Embag::RosValue::Type::array:
+          case Embag::RosValue::Type::primitive_array:
+          {
             return py::make_iterator(v->beginValues<py::object>(), v->endValues<py::object>());
           }
           default:
@@ -90,10 +94,10 @@ PYBIND11_MODULE(libembag, m) {
       }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */)
       .def("get", getField)
       .def("__getattr__", getField)
-      .def("__getitem__", [](Embag::VectorItemPointer<Embag::RosValue> &v, const std::string &key) {
+      .def("__getitem__", [](Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &v, const std::string &key) {
         return getField(v, key);
       })
-      .def("__getitem__", [](Embag::VectorItemPointer<Embag::RosValue> &v, const size_t index) {
+      .def("__getitem__", [](Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &v, const size_t index) {
         return getIndex(v, index);
       });
 

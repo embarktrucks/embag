@@ -6,13 +6,13 @@
 
 namespace py = pybind11;
 
-py::dict rosValueToDict(const Embag::VectorItemPointer<Embag::RosValue> &ros_value);
-py::list rosValueToList(const Embag::VectorItemPointer<Embag::RosValue> &ros_value);
+py::dict rosValueToDict(const Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &ros_value);
+py::list rosValueToList(const Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &ros_value);
 
-py::list rosValueToList(const Embag::VectorItemPointer<Embag::RosValue> &ros_value) {
+py::list rosValueToList(const Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &ros_value) {
   using Type = Embag::RosValue::Type;
 
-  if (ros_value->getType() != Type::array) {
+  if (ros_value->getType() != Type::array && ros_value->getType() != Type::primitive_array) {
     throw std::runtime_error("Provided RosValue is not an array");
   }
 
@@ -81,7 +81,9 @@ py::list rosValueToList(const Embag::VectorItemPointer<Embag::RosValue> &ros_val
         list.append(rosValueToDict(value));
         break;
       }
-      case Type::array: {
+      case Type::array:
+      case Type::primitive_array:
+      {
         list.append(rosValueToList(value));
         break;
       }
@@ -94,7 +96,7 @@ py::list rosValueToList(const Embag::VectorItemPointer<Embag::RosValue> &ros_val
   return list;
 }
 
-py::dict rosValueToDict(const Embag::VectorItemPointer<Embag::RosValue> &ros_value) {
+py::dict rosValueToDict(const Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &ros_value) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::object) {
@@ -170,7 +172,9 @@ py::dict rosValueToDict(const Embag::VectorItemPointer<Embag::RosValue> &ros_val
         dict[key] = rosValueToDict(value);
         break;
       }
-      case Type::array: {
+      case Type::array: 
+      case Type::primitive_array:
+      {
         dict[key] = rosValueToList(value);
         break;
       }
@@ -183,10 +187,11 @@ py::dict rosValueToDict(const Embag::VectorItemPointer<Embag::RosValue> &ros_val
   return dict;
 }
 
-py::object castValue(const Embag::VectorItemPointer<Embag::RosValue>& value) {
+py::object castValue(const Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue>& value) {
   switch (value->getType()) {
     case Embag::RosValue::Type::object:
     case Embag::RosValue::Type::array:
+    case Embag::RosValue::Type::primitive_array:
       return py::cast(value);
     case Embag::RosValue::Type::ros_bool:
       return py::cast(value->as<bool>());
@@ -222,7 +227,7 @@ py::object castValue(const Embag::VectorItemPointer<Embag::RosValue>& value) {
   }
 }
 
-py::object getField(Embag::VectorItemPointer<Embag::RosValue> &v, const std::string field_name) {
+py::object getField(Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &v, const std::string field_name) {
   if (v->getType() != Embag::RosValue::Type::object) {
     throw std::runtime_error("Can only getField on an object");
   }
@@ -230,7 +235,7 @@ py::object getField(Embag::VectorItemPointer<Embag::RosValue> &v, const std::str
   return castValue(v->get(field_name));
 }
 
-py::object getIndex(Embag::VectorItemPointer<Embag::RosValue> &v, const size_t index) {
+py::object getIndex(Embag::PyBindPointerWrapper<Embag::RosValue::Pointer, Embag::RosValue> &v, const size_t index) {
   if (v->getType() != Embag::RosValue::Type::array) {
     throw std::runtime_error("Can only getIndex on an array");
   }
@@ -241,6 +246,6 @@ py::object getIndex(Embag::VectorItemPointer<Embag::RosValue> &v, const size_t i
 namespace Embag {
 template<>
 const py::object RosValue::const_iterator<py::object, size_t>::operator*() const {
-  return castValue(value_.getChildren().at(index_));
+  return castValue(value_.at(index_));
 }
 }

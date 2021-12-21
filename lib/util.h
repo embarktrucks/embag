@@ -12,8 +12,8 @@ std::unique_ptr<T> make_unique(Args &&... args) {
 
 using message_stream = boost::iostreams::stream<boost::iostreams::array_source>;
 
-template<class T>
-class VectorItemPointer;
+template<class PointerType, class ValueType>
+class PyBindPointerWrapper;
 
 }
 
@@ -21,59 +21,49 @@ namespace pybind11 { namespace detail {
   template<class Holder>
   struct holder_helper;
   
-  template <class T>
-  struct holder_helper<Embag::VectorItemPointer<T>> {
-    static const T* get(const Embag::VectorItemPointer<T> &vip) {
-      return vip.get();
+  template <class PointerType, class ValueType>
+  struct holder_helper<Embag::PyBindPointerWrapper<PointerType, ValueType>> {
+    static const ValueType* get(const Embag::PyBindPointerWrapper<PointerType, ValueType> &pointer_wrapper) {
+      return pointer_wrapper.get();
     }
   };
 }}
 
 namespace Embag {
 
-template<class T>
-class VectorItemPointer {
-  std::shared_ptr<std::vector<T>> base;
-  size_t index;
-
+template<class PointerType, class ValueType>
+class PyBindPointerWrapper {
  public:
-  VectorItemPointer(const std::shared_ptr<std::vector<T>>& base, size_t index)
-  : base(base)
-  , index(index)
+  PyBindPointerWrapper()
   {
   }
 
-  VectorItemPointer(const std::weak_ptr<std::vector<T>>& base, size_t index)
-  : VectorItemPointer(base.lock(), index)
-  {
-  }
-
-  VectorItemPointer(T*& ref)
-  : VectorItemPointer()
+  PyBindPointerWrapper(ValueType*& ref)
   {
     throw std::runtime_error("This should never be called");
   }
 
-  VectorItemPointer()
-  : index(0)
+  PyBindPointerWrapper(const PointerType& pointer_to_wrap)
+    : wrapped_pointer_(pointer_to_wrap)
   {
   }
 
-  const T* operator->() const {
+  const ValueType* operator->() const {
     return get();
   }
 
- protected:
-  // We don't want any public interface that exposes the underlying item as without
-  // a shared_ptr to the vector that contains the item, the memory may be freed.
-  friend const T* pybind11::detail::holder_helper<VectorItemPointer<T>>::get(const VectorItemPointer<T>& vip);
+ private:
+  PointerType wrapped_pointer_;
 
-  const T* get() const {
+  // We don't want any public interface that exposes the underlying item's pointer as it may be improperly used.
+  friend const ValueType* pybind11::detail::holder_helper<PyBindPointerWrapper<PointerType, ValueType>>::get(const PyBindPointerWrapper<PointerType, ValueType>& pointer_wrapper);
+
+  const ValueType* get() const {
     return &**this;
   }
 
-  const T& operator*() const {
-    return base->at(index);
+  const ValueType& operator*() const {
+    return *wrapped_pointer_;
   }
 };
 
