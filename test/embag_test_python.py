@@ -97,12 +97,12 @@ class EmbagTest(unittest.TestCase):
                     self.assertNotEqual(v, 0)
 
             if topic == '/base_pose_ground_truth':
-                self.assertEqual(msg.header.seq, base_pose_seq)
+                self.assertEqual(msg.get('header').get('seq'), base_pose_seq)
                 base_pose_seq += 1
-                self.assertEqual(msg.header.frame_id, "odom")
-                self.assertNotEqual(msg.pose.pose.position.x, 0.0)
+                self.assertEqual(msg.get('header').get('frame_id'), "odom")
+                self.assertNotEqual(msg.get('pose').get('pose').get('position').get('x'), 0.0)
 
-                for v in msg.pose.covariance:
+                for v in msg.get('pose').get('covariance'):
                     self.assertEqual(v, 0)
 
         self.assertEqual(len(unseen_topics), 0)
