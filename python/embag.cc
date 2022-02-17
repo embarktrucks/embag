@@ -132,6 +132,7 @@ PYBIND11_MODULE(libembag, m) {
     .value("float32", Embag::RosValue::Type::float32)
     .value("float64", Embag::RosValue::Type::float64)
     .value("array", Embag::RosValue::Type::array)
+    .value("primitive_array", Embag::RosValue::Type::primitive_array)
     .value("object", Embag::RosValue::Type::object)
     .value("string", Embag::RosValue::Type::string)
     .value("time", Embag::RosValue::Type::ros_time)
