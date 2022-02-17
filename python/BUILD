@@ -34,4 +34,7 @@ py_wheel(
     deps = [
         ":libembag.so",
     ],
+    requires = [
+        "numpy;python_version<\"3.3\""
+    ],
 )

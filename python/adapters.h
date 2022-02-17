@@ -45,7 +45,19 @@ py::list rosValueToList(const Embag::RosValue::Pointer &ros_value) {
         break;
       }
       case Type::primitive_array: {
-        list.append(py::memoryview(py::cast(value)));
+        if (value->at(0)->getType() == Type::ros_time or value->at(0)->getType() == Type::ros_duration) {
+          // It doesn't make much sense to return a memoryview to a non-python primitive type
+          list.append(rosValueToList(value));
+        } else {
+          #if PY_VERSION_HEX >= 0x03030000
+            // In python 3.3 and above, memoryview provides good support for converting
+            // to a list for all single character datatypes
+            list.append(py::memoryview(py::cast(value)));
+          #else
+            // In other versions, we rely on numpy to provide that interface to users
+            list.append(py::array(py::cast(value)));
+          #endif
+        }
         break;
       }
       case Type::array:
@@ -99,7 +111,19 @@ py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value) {
         break;
       }
       case Type::primitive_array: {
-        dict[key] = py::memoryview(py::cast(value));
+        if (value->at(0)->getType() == Type::ros_time or value->at(0)->getType() == Type::ros_duration) {
+          // It doesn't make much sense to return a memoryview to a non-python primitive type
+          dict[key] = rosValueToList(value);
+        } else {
+          #if PY_VERSION_HEX >= 0x03030000
+            // In python 3.3 and above, memoryview provides good support for converting
+            // to a list for all single character datatypes
+            dict[key] = py::memoryview(py::cast(value));
+          #else
+            // In other versions, we rely on numpy to provide that interface to users
+            dict[key] = py::array(py::cast(value));
+          #endif
+        }
         break;
       }
       case Type::array: 
