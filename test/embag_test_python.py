@@ -26,12 +26,7 @@ class EmbagTest(unittest.TestCase):
                                     'scope': 'sensor_msgs', 'md5sum': '1158d486dd51d683ce2f1be655c3c181',
                                     'callerid': '/play_1604515189845695821', 'latching': False, 'message_count': 5},
         }
-
-    def tearDown(self):
-        self.bag.close()
-
-    def testSchema(self):
-        known_schema = OrderedDict([
+        self.known_pointcloud_schema = OrderedDict([
             ('header',
              {'type': 'object',
               'children': OrderedDict([('seq', {'type': 'uint32'}),
@@ -52,8 +47,12 @@ class EmbagTest(unittest.TestCase):
             ('is_dense', {'type': 'bool'})
         ])
 
+    def tearDown(self):
+        self.bag.close()
+
+    def testSchema(self):
         schema = self.bag.getSchema('/luminar_pointcloud')
-        self.assertDictEqual(schema, known_schema)
+        self.assertDictEqual(schema, self.known_pointcloud_schema)
 
     def testTopicsInBag(self):
         topics = set(self.bag.topics())
@@ -152,6 +151,15 @@ class EmbagTest(unittest.TestCase):
 
                 for v in msg_data['pose']['covariance']:
                     self.assertEqual(v, 0)
+
+    def testObjectIterators(self):
+        for topic, msg, t in self.bag.read_messages(topics=['/luminar_pointcloud']):
+            assert {field_name for field_name in msg} == {field_name for field_name in self.known_pointcloud_schema}
+            for field_name, value in msg.items():
+                assert msg[field_name] == value
+            for field_name in msg.keys():
+                assert field_name in self.known_pointcloud_schema
+            assert set(msg.values()) == {msg[field_name] for field_name in msg}
 
     def testTopicsInView(self):
         topics = set(self.view.topics())

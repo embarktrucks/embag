@@ -130,7 +130,7 @@ class RosMsgTypes{
       }
 
       members_.reserve(parsed_info.members.size());
-      field_indexes_ = std::make_shared<std::unordered_map<std::string, const size_t>>();
+      field_indexes_ = std::make_shared<std::unordered_map<std::string, size_t>>();
       field_indexes_->reserve(num_fields);
       size_t field_num = 0;
       for (const auto& member : parsed_info.members) {
@@ -160,7 +160,7 @@ class RosMsgTypes{
       }
     }
 
-    const std::shared_ptr<std::unordered_map<std::string, const size_t>>& fieldIndexes() const {
+    const std::shared_ptr<std::unordered_map<std::string, size_t>>& fieldIndexes() const {
       return field_indexes_;
     }
 
@@ -188,7 +188,7 @@ class RosMsgTypes{
     }
 
    private:
-    std::shared_ptr<std::unordered_map<std::string, const size_t>> field_indexes_;
+    std::shared_ptr<std::unordered_map<std::string, size_t>> field_indexes_;
     std::vector<MemberDef> members_;
     const std::string name_;
     std::string scope_;

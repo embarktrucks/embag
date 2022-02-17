@@ -249,4 +249,13 @@ const py::object RosValue::const_iterator<py::object, size_t>::operator*() const
   return castValue(value_.at(index_));
 }
 
+template<>
+const py::str RosValue::const_iterator<py::str, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
+  return index_->first;
+}
+
+template<>
+const py::tuple RosValue::const_iterator<py::tuple, std::unordered_map<std::string, size_t>::const_iterator>::operator*() const {
+  return py::make_tuple(index_->first, castValue(value_.object_info_.children.at(index_->second)));
+}
 }
