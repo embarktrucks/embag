@@ -248,4 +248,26 @@ template<>
 const py::object RosValue::const_iterator<py::object, size_t>::operator*() const {
   return castValue(value_.at(index_));
 }
+
+pybind11::buffer_info RosValue::getPrimitiveArrayBufferInfo() {
+  if (type_ != Embag::RosValue::Type::primitive_array) {
+    throw std::runtime_error("Only primitive arrays can be represented as buffers!");
+  }
+
+  if (primitive_array_info_.element_type == Embag::RosValue::Type::string) {
+    throw std::runtime_error("In order to be represented as a buffer, an array's elements must not be strings!");
+  }
+
+  const size_t size_of_elements = Embag::RosValue::primitiveTypeToSize(primitive_array_info_.element_type);
+  return pybind11::buffer_info(
+    (void*) &at(0)->getPrimitive<uint8_t>(),
+    size_of_elements,
+    Embag::RosValue::primitiveTypeToFormat(primitive_array_info_.element_type),
+    1,
+    { size() },
+    { size_of_elements },
+    true
+  );
+}
+
 }

@@ -4,13 +4,16 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <pybind11/buffer_info.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "span.hpp"
 #include "util.h"
+
+namespace pybind11 {
+  struct buffer_info;
+}
 
 namespace Embag {
 
