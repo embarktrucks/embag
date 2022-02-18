@@ -181,11 +181,8 @@ class EmbagTest(unittest.TestCase):
     def testToDictMemoryView(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
             dict_list = msg.dict()['pose']['covariance'].tolist()
-            assert (
-                msg.dict()['pose']['covariance'].tolist()
-                ==
-                [v for v in msg.data()['pose']['covariance']]
-            )
+            data_list = [v for v in msg.data()['pose']['covariance']]
+            assert dict_list == data_list
 
 if __name__ == "__main__":
     unittest.main()
