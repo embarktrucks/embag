@@ -11,15 +11,22 @@
 #include "span.hpp"
 #include "util.h"
 
-namespace pybind11 {
-  struct buffer_info;
-}
-
 namespace Embag {
 
 class RosValue {
  public:
   class Pointer;
+
+  // A class following the Attorney-Client pattern that provides access to 
+  // the underlying buffer for a RosValue of type primitive_array
+  // This is needed to provide pybind11 with the ability to create a buffer interface
+  class PrimitiveArrayBufferAccessor {
+   public:
+    static void* getPrimitiveArrayRosValueBuffer(const Pointer& primitive_array_ros_value);
+   private:
+    PrimitiveArrayBufferAccessor() {}
+  };
+  friend class PrimitiveArrayBufferAccessor;
 
   struct ros_value_list_t {
     std::weak_ptr<std::vector<RosValue>> base;
@@ -96,6 +103,8 @@ class RosValue {
   Type getType() const {
     return type_;
   }
+
+  Type getElementType() const;
 
  private:
   template<class ReturnType, class IndexType, class ChildIteratorType>
@@ -313,12 +322,6 @@ class RosValue {
   std::unordered_map<std::string, Pointer> getObjects() const;
   std::vector<Pointer> getValues() const;
 
-  // This interface is used to provide a buffer_info interface to python bindings.
-  // The buffer_info object essentially provides the python runtime with a way
-  // to directly access the underlying memory that an object contains, and thus
-  // operate on it in a much more optimized fashion.
-  pybind11::buffer_info getPrimitiveArrayBufferInfo();
-
   std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
 
@@ -432,8 +435,6 @@ class RosValue::Pointer {
   }
 
  private:
-  friend PyBindPointerWrapper<RosValue::Pointer, RosValue>;
-
   const RosValue& operator*() const {
     if (info_.which() == 0) {
       return boost::get<RosValue>(info_);

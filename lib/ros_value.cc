@@ -29,6 +29,24 @@ const RosValue::Pointer RosValue::at(const std::string &key) const {
   return get(key);
 }
 
+RosValue::Type RosValue::getElementType() const {
+  if (type_ == Type::primitive_array) {
+    return primitive_array_info_.element_type;
+  } else if (type_ == Type::array) {
+    return at(0)->getType();
+  } else {
+    throw std::runtime_error("Cannot get element type of a non-array RosValue");
+  }
+}
+
+void* RosValue::PrimitiveArrayBufferAccessor::getPrimitiveArrayRosValueBuffer(const RosValue::Pointer& primitive_array_ros_value) {
+  if (primitive_array_ros_value->getType() != Embag::RosValue::Type::primitive_array) {
+    throw std::runtime_error("Cannot access the buffer of a non primitive_array RosValue");
+  }
+
+  return (void *) &primitive_array_ros_value->at(0)->getPrimitive<uint8_t>();
+}
+
 template<typename T>
 const T &RosValue::getValue(const std::string &key) const {
   return get(key)->as<T>();
