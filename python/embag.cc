@@ -77,7 +77,7 @@ PYBIND11_MODULE(libembag, m) {
 
         const size_t size_of_elements = Embag::RosValue::primitiveTypeToSize(v->getElementType());
         return pybind11::buffer_info(
-          Embag::RosValue::PrimitiveArrayBufferAccessor::getPrimitiveArrayRosValueBuffer(v),
+          (void *) v->getPrimitiveArrayRosValueBuffer(),
           size_of_elements,
           Embag::RosValue::primitiveTypeToFormat(v->getElementType()),
           1,

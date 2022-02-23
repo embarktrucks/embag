@@ -39,12 +39,12 @@ RosValue::Type RosValue::getElementType() const {
   }
 }
 
-void* RosValue::PrimitiveArrayBufferAccessor::getPrimitiveArrayRosValueBuffer(const RosValue::Pointer& primitive_array_ros_value) {
-  if (primitive_array_ros_value->getType() != Embag::RosValue::Type::primitive_array) {
+const void* RosValue::getPrimitiveArrayRosValueBuffer() const {
+  if (getType() != Embag::RosValue::Type::primitive_array) {
     throw std::runtime_error("Cannot access the buffer of a non primitive_array RosValue");
   }
 
-  return (void *) &primitive_array_ros_value->at(0)->getPrimitive<uint8_t>();
+  return static_cast<const void *>(&at(0)->getPrimitive<uint8_t>());
 }
 
 template<typename T>

@@ -17,17 +17,6 @@ class RosValue {
  public:
   class Pointer;
 
-  // A class following the Attorney-Client pattern that provides access to 
-  // the underlying buffer for a RosValue of type primitive_array
-  // This is needed to provide pybind11 with the ability to create a buffer interface
-  class PrimitiveArrayBufferAccessor {
-   public:
-    static void* getPrimitiveArrayRosValueBuffer(const Pointer& primitive_array_ros_value);
-   private:
-    PrimitiveArrayBufferAccessor() {}
-  };
-  friend class PrimitiveArrayBufferAccessor;
-
   struct ros_value_list_t {
     std::weak_ptr<std::vector<RosValue>> base;
     size_t offset;
@@ -318,6 +307,11 @@ class RosValue {
       throw std::runtime_error("Value is not an array or an object");
     }
   }
+
+  // Provides access to the underlying buffer for a RosValue of type primitive_array
+  // The life of the buffer is only guaranteed to live as long as the RosValuePointer does,
+  // and as a result this should be used with great caution.
+  const void* getPrimitiveArrayRosValueBuffer() const;
 
   std::unordered_map<std::string, Pointer> getObjects() const;
   std::vector<Pointer> getValues() const;
