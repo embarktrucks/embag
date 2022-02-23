@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <pybind11/buffer_info.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -93,6 +92,8 @@ class RosValue {
   Type getType() const {
     return type_;
   }
+
+  Type getElementType() const;
 
  private:
   template<class ReturnType, class IndexType, class ChildIteratorType>
@@ -307,14 +308,13 @@ class RosValue {
     }
   }
 
+  // Provides access to the underlying buffer for a RosValue of type primitive_array
+  // The life of the buffer is only guaranteed to live as long as the RosValuePointer does,
+  // and as a result this should be used with great caution.
+  const void* getPrimitiveArrayRosValueBuffer() const;
+
   std::unordered_map<std::string, Pointer> getObjects() const;
   std::vector<Pointer> getValues() const;
-
-  // This interface is used to provide a buffer_info interface to python bindings.
-  // The buffer_info object essentially provides the python runtime with a way
-  // to directly access the underlying memory that an object contains, and thus
-  // operate on it in a much more optimized fashion.
-  pybind11::buffer_info getPrimitiveArrayBufferInfo();
 
   std::string toString(const std::string &path = "") const;
   void print(const std::string &path = "") const;
@@ -429,8 +429,6 @@ class RosValue::Pointer {
   }
 
  private:
-  friend PyBindPointerWrapper<RosValue::Pointer, RosValue>;
-
   const RosValue& operator*() const {
     if (info_.which() == 0) {
       return boost::get<RosValue>(info_);
