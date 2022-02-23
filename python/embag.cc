@@ -100,15 +100,35 @@ PYBIND11_MODULE(libembag, m) {
       }, py::arg("path") = "")
       .def("__iter__", [](Embag::RosValue::Pointer &v) {
         switch (v->getType()) {
-          // TODO: Allow object iteration
           case Embag::RosValue::Type::array:
           case Embag::RosValue::Type::primitive_array:
-          {
             return py::make_iterator(v->beginValues<py::object>(), v->endValues<py::object>());
-          }
+          case Embag::RosValue::Type::object:
+            return py::make_iterator(v->beginItems<py::str>(), v->endItems<py::str>());
           default:
             throw std::runtime_error("Can only iterate array RosValues");
         }
+      }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */)
+      .def("items", [](Embag::RosValue::Pointer &v) {
+        if (v->getType() != Embag::RosValue::Type::object) {
+          throw std::runtime_error("Cannot get items of a non-object RosValue");
+        }
+
+        return py::make_iterator(v->beginItems<py::tuple>(), v->endItems<py::tuple>());
+      }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */)
+      .def("keys", [](Embag::RosValue::Pointer &v) {
+        if (v->getType() != Embag::RosValue::Type::object) {
+          throw std::runtime_error("Cannot get keys of a non-object RosValue");
+        }
+
+        return py::make_iterator(v->beginItems<py::str>(), v->endItems<py::str>());
+      }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */)
+      .def("values", [](Embag::RosValue::Pointer &v) {
+        if (v->getType() != Embag::RosValue::Type::object) {
+          throw std::runtime_error("Cannot get values of a non-object RosValue");
+        }
+
+        return py::make_iterator(v->beginValues<py::object>(), v->endValues<py::object>());
       }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */)
       .def("get", getField)
       .def("__getattr__", getField)
