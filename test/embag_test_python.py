@@ -156,10 +156,13 @@ class EmbagTest(unittest.TestCase):
         for topic, msg, t in self.bag.read_messages(topics=['/luminar_pointcloud']):
             assert {field_name for field_name in msg} == {field_name for field_name in self.known_pointcloud_schema}
             for field_name, value in msg.items():
-                assert msg[field_name] == value
+                if isinstance(value, embag.RosValue):
+                    assert str(msg[field_name]) == str(value)
+                else:
+                    assert msg[field_name] == value
             for field_name in msg.keys():
                 assert field_name in self.known_pointcloud_schema
-            assert set(msg.values()) == {msg[field_name] for field_name in msg}
+            assert set(str(v) for v in msg.values()) == {str(msg[field_name]) for field_name in msg}
 
     def testTopicsInView(self):
         topics = set(self.view.topics())
