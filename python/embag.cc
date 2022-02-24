@@ -50,6 +50,26 @@ PYBIND11_MODULE(libembag, m) {
       .def("topics", &Embag::View::topics)
       .def("connectionsByTopic", &Embag::View::connectionsByTopicMap);
 
+  py::enum_<Embag::RosValue::Type>(m, "RosValueType")
+    .value("bool", Embag::RosValue::Type::ros_bool)
+    .value("uint8", Embag::RosValue::Type::uint8)
+    .value("int8", Embag::RosValue::Type::int8)
+    .value("uint16", Embag::RosValue::Type::uint16)
+    .value("int16", Embag::RosValue::Type::int16)
+    .value("uint32", Embag::RosValue::Type::uint32)
+    .value("int32", Embag::RosValue::Type::int32)
+    .value("uint64", Embag::RosValue::Type::uint64)
+    .value("int64", Embag::RosValue::Type::int64)
+    .value("float32", Embag::RosValue::Type::float32)
+    .value("float64", Embag::RosValue::Type::float64)
+    .value("array", Embag::RosValue::Type::array)
+    .value("primitive_array", Embag::RosValue::Type::primitive_array)
+    .value("object", Embag::RosValue::Type::object)
+    .value("string", Embag::RosValue::Type::string)
+    .value("time", Embag::RosValue::Type::ros_time)
+    .value("duration", Embag::RosValue::Type::ros_duration)
+    .export_values();
+
   py::class_<Embag::RosMessage, std::shared_ptr<Embag::RosMessage>>(m, "RosMessage", py::dynamic_attr())
       .def("__str__", [](std::shared_ptr<Embag::RosMessage> &m) {
         return encodeStrLatin1(m->toString());
@@ -57,13 +77,13 @@ PYBIND11_MODULE(libembag, m) {
       .def("data", [](std::shared_ptr<Embag::RosMessage> &m) {
         return m->data();
       })
-      .def("dict", [](std::shared_ptr<Embag::RosMessage> &m, bool always_list_primitive_array) {
+      .def("dict", [](std::shared_ptr<Embag::RosMessage> &m, const RosValueTypeSet &unpackable_primitive_array_types=default_unpackable_primitive_array_types) {
         if (m->data()->getType() != Embag::RosValue::Type::object) {
           throw std::runtime_error("Element is not an object");
         }
 
-        return rosValueToDict(m->data(), always_list_primitive_array);
-      }, py::arg("always_list_primitive_array") = false)
+        return rosValueToDict(m->data(), unpackable_primitive_array_types);
+      }, py::arg("always_list_primitive_array") = default_unpackable_primitive_array_types)
       .def_readonly("topic", &Embag::RosMessage::topic)
       .def_readonly("timestamp", &Embag::RosMessage::timestamp)
       .def_readonly("md5", &Embag::RosMessage::md5)
@@ -118,26 +138,6 @@ PYBIND11_MODULE(libembag, m) {
       .def("__getitem__", [](Embag::RosValue::Pointer &v, const size_t index) {
         return getIndex(v, index);
       });
-
-  py::enum_<Embag::RosValue::Type>(m, "RosValueType")
-    .value("bool", Embag::RosValue::Type::ros_bool)
-    .value("uint8", Embag::RosValue::Type::uint8)
-    .value("int8", Embag::RosValue::Type::int8)
-    .value("uint16", Embag::RosValue::Type::uint16)
-    .value("int16", Embag::RosValue::Type::int16)
-    .value("uint32", Embag::RosValue::Type::uint32)
-    .value("int32", Embag::RosValue::Type::int32)
-    .value("uint64", Embag::RosValue::Type::uint64)
-    .value("int64", Embag::RosValue::Type::int64)
-    .value("float32", Embag::RosValue::Type::float32)
-    .value("float64", Embag::RosValue::Type::float64)
-    .value("array", Embag::RosValue::Type::array)
-    .value("primitive_array", Embag::RosValue::Type::primitive_array)
-    .value("object", Embag::RosValue::Type::object)
-    .value("string", Embag::RosValue::Type::string)
-    .value("time", Embag::RosValue::Type::ros_time)
-    .value("duration", Embag::RosValue::Type::ros_duration)
-    .export_values();
 
   py::class_<Embag::RosValue::ros_time_t>(m, "RosTime")
       .def_readonly("secs", &Embag::RosValue::ros_time_t::secs)

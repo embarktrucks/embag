@@ -7,15 +7,35 @@
 
 namespace py = pybind11;
 
-py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, bool always_list_primitive_array);
-py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, bool always_list_primitive_array);
+#if __cplusplus < 201402L
+struct EnumClassHash
+{
+    template <typename T>
+    std::size_t operator()(T t) const
+    {
+        return static_cast<std::size_t>(t);
+    }
+};
+typedef std::unordered_set<Embag::RosValue::Type, EnumClassHash> RosValueTypeSet;
+#else
+typedef std::unordered_set<Embag::RosValue::Type> RosValueTypeSet;
+#endif
+
+py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &unpackable_primitive_array_types);
+py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &unpackable_primitive_array_types);
 py::object castValue(const Embag::RosValue::Pointer &value);
 
-py::object primitiveArrayToPyObject(const Embag::RosValue::Pointer &primitive_array, bool always_list) {
+// By default, it doesn't make sense to return a memoryview for python non-primitive types
+const RosValueTypeSet default_unpackable_primitive_array_types = {
+  Embag::RosValue::Type::ros_duration,
+  Embag::RosValue::Type::ros_time
+};
+
+py::object primitiveArrayToPyObject(const Embag::RosValue::Pointer &primitive_array, const RosValueTypeSet &unpackable_primitive_array_types=default_unpackable_primitive_array_types) {
   const Embag::RosValue::Type item_type = primitive_array->getElementType();
-  if (always_list || item_type == Embag::RosValue::Type::ros_time || item_type == Embag::RosValue::Type::ros_duration) {
-    // Don't return primitive for non python primitive types
-    return rosValueToList(primitive_array, always_list);
+
+  if (unpackable_primitive_array_types.find(item_type) != unpackable_primitive_array_types.end()) {
+    return rosValueToList(primitive_array, default_unpackable_primitive_array_types);
   } else {
     #if PY_VERSION_HEX >= 0x03030000
       // In python 3.3 and above, memoryview provides good support for converting to a list via tolist
@@ -27,7 +47,7 @@ py::object primitiveArrayToPyObject(const Embag::RosValue::Pointer &primitive_ar
   }
 }
 
-py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, bool always_list_primitive_array) {
+py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &unpackable_primitive_array_types=default_unpackable_primitive_array_types) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::array && ros_value->getType() != Type::primitive_array) {
@@ -57,16 +77,16 @@ py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, bool always_l
         break;
       }
       case Type::object: {
-        list.append(rosValueToDict(value, always_list_primitive_array));
+        list.append(rosValueToDict(value, unpackable_primitive_array_types));
         break;
       }
       case Type::primitive_array: {
-        list.append(primitiveArrayToPyObject(value, always_list_primitive_array));
+        list.append(primitiveArrayToPyObject(value, unpackable_primitive_array_types));
         break;
       }
       case Type::array:
       {
-        list.append(rosValueToList(value, always_list_primitive_array));
+        list.append(rosValueToList(value, unpackable_primitive_array_types));
         break;
       }
       default: {
@@ -78,7 +98,7 @@ py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, bool always_l
   return list;
 }
 
-py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, bool always_list_primitive_array) {
+py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &unpackable_primitive_array_types=default_unpackable_primitive_array_types) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::object) {
@@ -111,16 +131,16 @@ py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, bool always_l
         break;
       }
       case Type::object: {
-        dict[key] = rosValueToDict(value, always_list_primitive_array);
+        dict[key] = rosValueToDict(value, unpackable_primitive_array_types);
         break;
       }
       case Type::primitive_array: {
-        dict[key] = primitiveArrayToPyObject(value, always_list_primitive_array);
+        dict[key] = primitiveArrayToPyObject(value, unpackable_primitive_array_types);
         break;
       }
       case Type::array: 
       {
-        dict[key] = rosValueToList(value, always_list_primitive_array);
+        dict[key] = rosValueToList(value, unpackable_primitive_array_types);
         break;
       }
       default: {
