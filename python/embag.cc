@@ -174,6 +174,7 @@ PYBIND11_MODULE(libembag, m) {
       .def_readonly("secs", &Embag::RosValue::ros_time_t::secs)
       .def_readonly("nsecs", &Embag::RosValue::ros_time_t::nsecs)
       .def("to_sec", &Embag::RosValue::ros_time_t::to_sec)
+      .def("to_nsec", &Embag::RosValue::ros_time_t::to_nsec)
       .def("__str__", [](Embag::RosValue::ros_time_t &v) {
         return std::to_string(v.to_nsec());
       });
@@ -181,6 +182,8 @@ PYBIND11_MODULE(libembag, m) {
   py::class_<Embag::RosValue::ros_duration_t>(m, "RosDuration")
       .def_readonly("secs", &Embag::RosValue::ros_duration_t::secs)
       .def_readonly("nsecs", &Embag::RosValue::ros_duration_t::nsecs)
+      .def("to_sec", &Embag::RosValue::ros_duration_t::to_sec)
+      .def("to_nsec", &Embag::RosValue::ros_duration_t::to_nsec)
       .def("__str__", [](Embag::RosValue::ros_duration_t &v) {
         return std::to_string(v.to_nsec());
       });

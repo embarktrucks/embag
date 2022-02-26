@@ -184,9 +184,9 @@ py::object castValue(const Embag::RosValue::Pointer& value) {
       return encodeStrLatin1(value->as<std::string>());
     // TODO: Don't return floats here - the raw ros time has more precision
     case Embag::RosValue::Type::ros_time:
-      return py::cast(value->as<Embag::RosValue::ros_time_t>().to_sec());
+      return py::cast(value->as<Embag::RosValue::ros_time_t>());
     case Embag::RosValue::Type::ros_duration:
-      return py::cast(value->as<Embag::RosValue::ros_duration_t>().to_sec());
+      return py::cast(value->as<Embag::RosValue::ros_duration_t>());
     default:
       throw std::runtime_error("Unhandled type");
   }
