@@ -77,13 +77,13 @@ PYBIND11_MODULE(libembag, m) {
       .def("data", [](std::shared_ptr<Embag::RosMessage> &m) {
         return m->data();
       })
-      .def("dict", [](std::shared_ptr<Embag::RosMessage> &m, const RosValueTypeSet &unpackable_primitive_array_types=default_unpackable_primitive_array_types) {
+      .def("dict", [](std::shared_ptr<Embag::RosMessage> &m, const RosValueTypeSet &types_to_unpack=default_types_to_unpack) {
         if (m->data()->getType() != Embag::RosValue::Type::object) {
           throw std::runtime_error("Element is not an object");
         }
 
-        return rosValueToDict(m->data(), unpackable_primitive_array_types);
-      }, py::arg("always_list_primitive_array") = default_unpackable_primitive_array_types)
+        return rosValueToDict(m->data(), types_to_unpack);
+      }, py::arg("types_to_unpack") = default_types_to_unpack)
       .def_readonly("topic", &Embag::RosMessage::topic)
       .def_readonly("timestamp", &Embag::RosMessage::timestamp)
       .def_readonly("md5", &Embag::RosMessage::md5)
