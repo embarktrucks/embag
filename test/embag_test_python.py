@@ -190,7 +190,7 @@ class EmbagTest(unittest.TestCase):
             for covariance in np.array(covariance_array, copy=False):
                 self.assertEqual(covariance, 0)
 
-    def testToDictMemoryView(self):
+    def testDictMemoryView(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
             dict_list = msg.dict()['pose']['covariance'].tolist()
             data_list = [v for v in msg.data()['pose']['covariance']]
@@ -200,6 +200,29 @@ class EmbagTest(unittest.TestCase):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
             assert isinstance(msg.dict()['pose']['covariance'], memoryview if sys.version_info >= (3,3) else np.ndarray)
             assert isinstance(msg.dict(types_to_unpack={embag.RosValueType.float64})['pose']['covariance'], list)
+
+    def testRosValueDict(self):
+        # Validate that dict on RosValue functions the same as on messages
+        for msg in self.view.getMessages('/luminar_pointcloud'):
+            message_dict = msg.dict()
+            # Below python3.3, primitive arrays in dict form are numpy arrays
+            # so we need to compare them with numpy's utilities.
+            # This comparison still works in python3.3 and above, so just use it no matter what
+            # Test RosValue objects
+            np.testing.assert_equal(
+                message_dict['header'],
+                msg.data()['header'].dict(),
+            )
+            # Test RosValue arrays
+            np.testing.assert_equal(
+                message_dict['fields'],
+                msg.data()['fields'].dict(),
+            )
+            # Test RosValue primitive_arrays
+            np.testing.assert_equal(
+                message_dict['data'],
+                msg.data()['data'].dict(),
+            )
 
 if __name__ == "__main__":
     unittest.main()
