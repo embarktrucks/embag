@@ -1,15 +1,53 @@
 #pragma once
 
 #include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 
 #include "utils.h"
 
 namespace py = pybind11;
 
-py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value);
-py::list rosValueToList(const Embag::RosValue::Pointer &ros_value);
+#if __cplusplus < 201402L
+struct EnumClassHash
+{
+    template <typename T>
+    std::size_t operator()(T t) const
+    {
+        return static_cast<std::size_t>(t);
+    }
+};
+typedef std::unordered_set<Embag::RosValue::Type, EnumClassHash> RosValueTypeSet;
+#else
+typedef std::unordered_set<Embag::RosValue::Type> RosValueTypeSet;
+#endif
 
-py::list rosValueToList(const Embag::RosValue::Pointer &ros_value) {
+py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &types_to_unpack);
+py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &types_to_unpack);
+py::object castValue(const Embag::RosValue::Pointer &value);
+
+// By default, it doesn't make sense to return a memoryview for python non-primitive types
+const RosValueTypeSet default_types_to_unpack = {
+  Embag::RosValue::Type::ros_duration,
+  Embag::RosValue::Type::ros_time
+};
+
+py::object primitiveArrayToPyObject(const Embag::RosValue::Pointer &primitive_array, const RosValueTypeSet &types_to_unpack=default_types_to_unpack) {
+  const Embag::RosValue::Type item_type = primitive_array->getElementType();
+
+  if (types_to_unpack.find(item_type) != types_to_unpack.end()) {
+    return rosValueToList(primitive_array, default_types_to_unpack);
+  } else {
+    #if PY_VERSION_HEX >= 0x03030000
+      // In python 3.3 and above, memoryview provides good support for converting to a list via tolist
+      return py::memoryview(py::cast(primitive_array));
+    #else
+      // In other versions, we need to rely on numpy arrays to provide a powerful tolist functionality
+      return py::array(py::cast(primitive_array));
+    #endif
+  }
+}
+
+py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &types_to_unpack=default_types_to_unpack) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::array && ros_value->getType() != Type::primitive_array) {
@@ -21,70 +59,34 @@ py::list rosValueToList(const Embag::RosValue::Pointer &ros_value) {
   // TODO: Rather than creating a vector, RosValue should provide an iterator interface
   for (const auto &value : ros_value->getValues()) {
     switch (value->getType()) {
-      case Type::ros_bool: {
-        list.append(value->as<bool>());
-        break;
-      }
-      case Type::int8: {
-        list.append(value->as<int8_t>());
-        break;
-      }
-      case Type::uint8: {
-        list.append(value->as<uint8_t>());
-        break;
-      }
-      case Type::int16: {
-        list.append(value->as<int16_t>());
-        break;
-      }
-      case Type::uint16: {
-        list.append(value->as<uint16_t>());
-        break;
-      }
-      case Type::int32: {
-        list.append(value->as<int32_t>());
-        break;
-      }
-      case Type::uint32: {
-        list.append(value->as<uint32_t>());
-        break;
-      }
-      case Type::int64: {
-        list.append(value->as<int64_t>());
-        break;
-      }
-      case Type::uint64: {
-        list.append(value->as<uint64_t>());
-        break;
-      }
-      case Type::float32: {
-        list.append(value->as<float>());
-        break;
-      }
-      case Type::float64: {
-        list.append(value->as<double>());
-        break;
-      }
-      case Type::string: {
-        list.append(encodeStrLatin1(value->as<std::string>()));
-        break;
-      }
-      case Type::ros_time: {
-        list.append(value->as<Embag::RosValue::ros_time_t>());
-        break;
-      }
+      case Type::ros_bool:
+      case Type::int8:
+      case Type::uint8:
+      case Type::int16:
+      case Type::uint16:
+      case Type::int32:
+      case Type::uint32:
+      case Type::int64:
+      case Type::uint64:
+      case Type::float32:
+      case Type::float64:
+      case Type::string:
+      case Type::ros_time:
       case Type::ros_duration: {
-        list.append(value->as<Embag::RosValue::ros_duration_t>());
+        list.append(castValue(value));
         break;
       }
       case Type::object: {
-        list.append(rosValueToDict(value));
+        list.append(rosValueToDict(value, types_to_unpack));
+        break;
+      }
+      case Type::primitive_array: {
+        list.append(primitiveArrayToPyObject(value, types_to_unpack));
         break;
       }
       case Type::array:
-      case Type::primitive_array:
       {
-        list.append(rosValueToList(value));
+        list.append(rosValueToList(value, types_to_unpack));
         break;
       }
       default: {
@@ -96,7 +98,7 @@ py::list rosValueToList(const Embag::RosValue::Pointer &ros_value) {
   return list;
 }
 
-py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value) {
+py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &types_to_unpack=default_types_to_unpack) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::object) {
@@ -111,71 +113,34 @@ py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value) {
     const auto &value = element.second;
 
     switch (value->getType()) {
-      case Type::ros_bool: {
-        dict[key] = value->as<bool>();
-        break;
-      }
-      case Type::int8: {
-        dict[key] = value->as<int8_t>();
-        break;
-      }
-      case Type::uint8: {
-        dict[key] = value->as<uint8_t>();
-        break;
-      }
-      case Type::int16: {
-        dict[key] = value->as<int16_t>();
-        break;
-      }
-      case Type::uint16: {
-        dict[key] = value->as<uint16_t>();
-        break;
-      }
-      case Type::int32: {
-        dict[key] = value->as<int32_t>();
-        break;
-      }
-      case Type::uint32: {
-        dict[key] = value->as<uint32_t>();
-        break;
-      }
-      case Type::int64: {
-        dict[key] = value->as<int64_t>();
-        break;
-      }
-      case Type::uint64: {
-        dict[key] = value->as<uint64_t>();
-        break;
-      }
-      case Type::float32: {
-        dict[key] = value->as<float>();
-        break;
-      }
-      case Type::float64: {
-        dict[key] = value->as<double>();
-        break;
-      }
-      case Type::string: {
-        dict[key] = encodeStrLatin1(value->as<std::string>());
-        break;
-      }
-      // TODO: Don't return floats here - the raw ros time has more precision
-      case Type::ros_time: {
-        dict[key] = value->as<Embag::RosValue::ros_time_t>().to_sec();
-        break;
-      }
+      case Type::ros_bool:
+      case Type::int8:
+      case Type::uint8:
+      case Type::int16:
+      case Type::uint16:
+      case Type::int32:
+      case Type::uint32:
+      case Type::int64:
+      case Type::uint64:
+      case Type::float32:
+      case Type::float64:
+      case Type::string:
+      case Type::ros_time:
       case Type::ros_duration: {
-        dict[key] = value->as<Embag::RosValue::ros_duration_t>().to_sec();
+        dict[key] = castValue(value);
         break;
       }
       case Type::object: {
-        dict[key] = rosValueToDict(value);
+        dict[key] = rosValueToDict(value, types_to_unpack);
+        break;
+      }
+      case Type::primitive_array: {
+        dict[key] = primitiveArrayToPyObject(value, types_to_unpack);
         break;
       }
       case Type::array: 
-      case Type::primitive_array:
       {
-        dict[key] = rosValueToList(value);
+        dict[key] = rosValueToList(value, types_to_unpack);
         break;
       }
       default: {

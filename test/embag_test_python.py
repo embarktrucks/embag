@@ -1,8 +1,9 @@
 import python.libembag as embag
 from collections import OrderedDict
-import struct
-import unittest
 import numpy as np
+import struct
+import sys
+import unittest
 
 
 class EmbagTest(unittest.TestCase):
@@ -188,6 +189,17 @@ class EmbagTest(unittest.TestCase):
             self.assertTrue(memoryview(covariance_array).readonly)
             for covariance in np.array(covariance_array, copy=False):
                 self.assertEqual(covariance, 0)
+
+    def testToDictMemoryView(self):
+        for msg in self.view.getMessages('/base_pose_ground_truth'):
+            dict_list = msg.dict()['pose']['covariance'].tolist()
+            data_list = [v for v in msg.data()['pose']['covariance']]
+            assert dict_list == data_list
+
+    def testDictUnpacking(self):
+        for msg in self.view.getMessages('/base_pose_ground_truth'):
+            assert isinstance(msg.dict()['pose']['covariance'], memoryview if sys.version_info >= (3,3) else np.ndarray)
+            assert isinstance(msg.dict(types_to_unpack={embag.RosValueType.float64})['pose']['covariance'], list)
 
 if __name__ == "__main__":
     unittest.main()
