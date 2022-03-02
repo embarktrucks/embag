@@ -81,7 +81,7 @@ class EmbagTest(unittest.TestCase):
         for topic, msg, t in self.bag.read_messages(topics=list(self.known_topics)):
             self.assertTrue(topic in self.known_topics)
             self.assertNotEqual(topic, "")
-            self.assertGreater(t, 0)
+            self.assertGreater(t.to_sec(), 0)
 
             if topic in unseen_topics:
                 unseen_topics.remove(topic)
@@ -223,6 +223,13 @@ class EmbagTest(unittest.TestCase):
                 message_dict['data'],
                 msg.data()['data'].dict(),
             )
+
+    def testROSTimeDicting(self):
+        for msg in self.view.getMessages('/base_pose_ground_truth'):
+            assert isinstance(msg.dict()['header']['stamp'], embag.RosTime)
+            assert isinstance(msg.dict(ros_time_py_type=None)['header']['stamp'], embag.RosTime)
+            assert isinstance(msg.dict(ros_time_py_type=int)['header']['stamp'], int)
+            assert isinstance(msg.dict(ros_time_py_type=float)['header']['stamp'], float)
 
 if __name__ == "__main__":
     unittest.main()
