@@ -126,7 +126,7 @@ PYBIND11_MODULE(libembag, m) {
         } else if (v->getType() == Embag::RosValue::Type::primitive_array) {
           return (py::object) primitiveArrayToPyObject(v, types_to_unpack);
         } else {
-          throw std::runtime_error("Somehow you have a RosValue who's type is primitive");
+          throw std::runtime_error("Somehow you have a RosValue whose type is primitive");
         }
       }, py::arg("types_to_unpack") = default_types_to_unpack)
       .def("__iter__", [](Embag::RosValue::Pointer &v) {
