@@ -171,19 +171,35 @@ PYBIND11_MODULE(libembag, m) {
       });
 
   py::class_<Embag::RosValue::ros_time_t>(m, "RosTime")
+      .def(py::init())
+      .def(py::init<uint32_t, uint32_t>())
       .def_readonly("secs", &Embag::RosValue::ros_time_t::secs)
       .def_readonly("nsecs", &Embag::RosValue::ros_time_t::nsecs)
       .def("to_sec", &Embag::RosValue::ros_time_t::to_sec)
       .def("to_nsec", &Embag::RosValue::ros_time_t::to_nsec)
+      .def("__eq__", &Embag::RosValue::ros_time_t::operator==)
+      .def("__ne__", &Embag::RosValue::ros_time_t::operator!=)
+      .def("__lt__", &Embag::RosValue::ros_time_t::operator<)
+      .def("__le__", &Embag::RosValue::ros_time_t::operator<=)
+      .def("__gt__", &Embag::RosValue::ros_time_t::operator>)
+      .def("__ge__", &Embag::RosValue::ros_time_t::operator>=)
       .def("__str__", [](Embag::RosValue::ros_time_t &v) {
         return std::to_string(v.to_nsec());
       });
 
   py::class_<Embag::RosValue::ros_duration_t>(m, "RosDuration")
+      .def(py::init())
+      .def(py::init<uint32_t, uint32_t>())
       .def_readonly("secs", &Embag::RosValue::ros_duration_t::secs)
       .def_readonly("nsecs", &Embag::RosValue::ros_duration_t::nsecs)
       .def("to_sec", &Embag::RosValue::ros_duration_t::to_sec)
       .def("to_nsec", &Embag::RosValue::ros_duration_t::to_nsec)
+      .def("__eq__", &Embag::RosValue::ros_duration_t::operator==)
+      .def("__ne__", &Embag::RosValue::ros_duration_t::operator!=)
+      .def("__lt__", &Embag::RosValue::ros_duration_t::operator<)
+      .def("__le__", &Embag::RosValue::ros_duration_t::operator<=)
+      .def("__gt__", &Embag::RosValue::ros_duration_t::operator>)
+      .def("__ge__", &Embag::RosValue::ros_duration_t::operator>=)
       .def("__str__", [](Embag::RosValue::ros_duration_t &v) {
         return std::to_string(v.to_nsec());
       });

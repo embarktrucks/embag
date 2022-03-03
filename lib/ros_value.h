@@ -49,7 +49,10 @@ class RosValue {
   static size_t primitiveTypeToSize(const Type type);
   static std::string primitiveTypeToFormat(const Type type);
 
-  struct ros_time_t {
+ private:
+  template<class ChildType>
+  class TimeValue {
+   public:
     uint32_t secs = 0;
     uint32_t nsecs = 0;
 
@@ -61,32 +64,41 @@ class RosValue {
       return long(secs) * long(1e9) + long(nsecs);
     }
 
-    ros_time_t() {};
-    ros_time_t(const uint32_t secs, const uint32_t nsecs) : secs(secs), nsecs(nsecs) {}
+    TimeValue() {};
+    TimeValue(const uint32_t secs, const uint32_t nsecs) : secs(secs), nsecs(nsecs) {}
 
-    bool operator==(const ros_time_t &other) const {
+    bool operator==(const ChildType &other) const {
       return secs == other.secs && nsecs == other.nsecs;
+    }
+
+    bool operator!=(const ChildType &other) const {
+      return secs != other.secs || nsecs != other.nsecs;
+    }
+
+    bool operator<(const ChildType &other) const {
+      return secs < other.secs || (secs == other.secs && nsecs < other.nsecs);
+    }
+
+    bool operator<=(const ChildType &other) const {
+      return secs < other.secs || (secs == other.secs && nsecs <= other.nsecs);
+    }
+
+    bool operator>(const ChildType &other) const {
+      return secs > other.secs || (secs == other.secs && nsecs > other.nsecs);
+    }
+
+    bool operator>=(const ChildType &other) const {
+      return secs > other.secs || (secs == other.secs && nsecs >= other.nsecs);
     }
   };
 
-  struct ros_duration_t {
-    int32_t secs = 0;
-    int32_t nsecs = 0;
+ public:
+  class ros_time_t : public TimeValue<ros_time_t> {
+    using TimeValue<ros_time_t>::TimeValue;
+  };
 
-    double to_sec() const {
-      return double(secs) + double(nsecs) / 1e9;
-    }
-
-    long to_nsec() const {
-      return long(secs) * long(1e9) + long(nsecs);
-    }
-
-    ros_duration_t() {};
-    ros_duration_t(const uint32_t secs, const uint32_t nsecs) : secs(secs), nsecs(nsecs) {}
-
-    bool operator==(const ros_duration_t &other) const {
-      return secs == other.secs && nsecs == other.nsecs;
-    }
+  struct ros_duration_t : public TimeValue<ros_duration_t> {
+    using TimeValue<ros_duration_t>::TimeValue;
   };
 
   Type getType() const {
