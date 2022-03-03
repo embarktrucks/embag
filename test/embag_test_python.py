@@ -227,9 +227,14 @@ class EmbagTest(unittest.TestCase):
     def testROSTimeDicting(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
             assert isinstance(msg.dict()['header']['stamp'], embag.RosTime)
-            assert isinstance(msg.dict(ros_time_py_type=None)['header']['stamp'], embag.RosTime)
-            assert isinstance(msg.dict(ros_time_py_type=int)['header']['stamp'], int)
-            assert isinstance(msg.dict(ros_time_py_type=float)['header']['stamp'], float)
+            as_ros_time = msg.dict(ros_time_py_type=None)['header']['stamp']
+            as_int = msg.dict(ros_time_py_type=int)['header']['stamp']
+            as_float = msg.dict(ros_time_py_type=float)['header']['stamp']
+            assert isinstance(as_ros_time, embag.RosTime)
+            assert isinstance(as_int, int)
+            assert isinstance(as_float, float)
+            assert as_ros_time.to_nsec() == as_int
+            assert as_ros_time.to_sec() == as_float
 
 if __name__ == "__main__":
     unittest.main()
