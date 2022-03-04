@@ -1,6 +1,8 @@
 import python.libembag as embag
 from collections import OrderedDict
+import numpy as np
 import struct
+import sys
 import unittest
 
 
@@ -25,12 +27,7 @@ class EmbagTest(unittest.TestCase):
                                     'scope': 'sensor_msgs', 'md5sum': '1158d486dd51d683ce2f1be655c3c181',
                                     'callerid': '/play_1604515189845695821', 'latching': False, 'message_count': 5},
         }
-
-    def tearDown(self):
-        self.bag.close()
-
-    def testSchema(self):
-        known_schema = OrderedDict([
+        self.known_pointcloud_schema = OrderedDict([
             ('header',
              {'type': 'object',
               'children': OrderedDict([('seq', {'type': 'uint32'}),
@@ -51,8 +48,12 @@ class EmbagTest(unittest.TestCase):
             ('is_dense', {'type': 'bool'})
         ])
 
+    def tearDown(self):
+        self.bag.close()
+
+    def testSchema(self):
         schema = self.bag.getSchema('/luminar_pointcloud')
-        self.assertDictEqual(schema, known_schema)
+        self.assertDictEqual(schema, self.known_pointcloud_schema)
 
     def testTopicsInBag(self):
         topics = set(self.bag.topics())
@@ -80,7 +81,7 @@ class EmbagTest(unittest.TestCase):
         for topic, msg, t in self.bag.read_messages(topics=list(self.known_topics)):
             self.assertTrue(topic in self.known_topics)
             self.assertNotEqual(topic, "")
-            self.assertGreater(t, 0)
+            self.assertGreater(t.to_sec(), 0)
 
             if topic in unseen_topics:
                 unseen_topics.remove(topic)
@@ -96,12 +97,12 @@ class EmbagTest(unittest.TestCase):
                     self.assertNotEqual(v, 0)
 
             if topic == '/base_pose_ground_truth':
-                self.assertEqual(msg.header.seq, base_pose_seq)
+                self.assertEqual(msg.get('header').get('seq'), base_pose_seq)
                 base_pose_seq += 1
-                self.assertEqual(msg.header.frame_id, "odom")
-                self.assertNotEqual(msg.pose.pose.position.x, 0.0)
+                self.assertEqual(msg.get('header').get('frame_id'), "odom")
+                self.assertNotEqual(msg.get('pose').get('pose').get('position').get('x'), 0.0)
 
-                for v in msg.pose.covariance:
+                for v in msg.get('pose').get('covariance'):
                     self.assertEqual(v, 0)
 
         self.assertEqual(len(unseen_topics), 0)
@@ -152,6 +153,18 @@ class EmbagTest(unittest.TestCase):
                 for v in msg_data['pose']['covariance']:
                     self.assertEqual(v, 0)
 
+    def testObjectIterators(self):
+        for topic, msg, t in self.bag.read_messages(topics=['/luminar_pointcloud']):
+            assert {field_name for field_name in msg} == {field_name for field_name in self.known_pointcloud_schema}
+            for field_name, value in msg.items():
+                if isinstance(value, embag.RosValue):
+                    assert str(msg[field_name]) == str(value)
+                else:
+                    assert msg[field_name] == value
+            for field_name in msg.keys():
+                assert field_name in self.known_pointcloud_schema
+            assert set(str(v) for v in msg.values()) == {str(msg[field_name]) for field_name in msg}
+
     def testTopicsInView(self):
         topics = set(self.view.topics())
         self.assertSetEqual(topics, self.known_topics)
@@ -169,6 +182,59 @@ class EmbagTest(unittest.TestCase):
         self.testTopicsInView()
         self.testConnectionsInView()
         bag_stream.close()
+
+    def testBufferInfo(self):
+        for msg in self.view.getMessages('/base_pose_ground_truth'):
+            covariance_array = msg.data()['pose']['covariance']
+            self.assertTrue(memoryview(covariance_array).readonly)
+            for covariance in np.array(covariance_array, copy=False):
+                self.assertEqual(covariance, 0)
+
+    def testDictMemoryView(self):
+        for msg in self.view.getMessages('/base_pose_ground_truth'):
+            dict_list = msg.dict()['pose']['covariance'].tolist()
+            data_list = [v for v in msg.data()['pose']['covariance']]
+            assert dict_list == data_list
+
+    def testDictUnpacking(self):
+        for msg in self.view.getMessages('/base_pose_ground_truth'):
+            assert isinstance(msg.dict()['pose']['covariance'], memoryview if sys.version_info >= (3,3) else np.ndarray)
+            assert isinstance(msg.dict(types_to_unpack={embag.RosValueType.float64})['pose']['covariance'], list)
+
+    def testRosValueDict(self):
+        # Validate that dict on RosValue functions the same as on messages
+        for msg in self.view.getMessages('/luminar_pointcloud'):
+            message_dict = msg.dict()
+            # Below python3.3, primitive arrays in dict form are numpy arrays
+            # so we need to compare them with numpy's utilities.
+            # This comparison still works in python3.3 and above, so just use it no matter what
+            # Test RosValue objects
+            np.testing.assert_equal(
+                message_dict['header'],
+                msg.data()['header'].dict(),
+            )
+            # Test RosValue arrays
+            np.testing.assert_equal(
+                message_dict['fields'],
+                msg.data()['fields'].dict(),
+            )
+            # Test RosValue primitive_arrays
+            np.testing.assert_equal(
+                message_dict['data'],
+                msg.data()['data'].dict(),
+            )
+
+    def testROSTimeDicting(self):
+        for msg in self.view.getMessages('/base_pose_ground_truth'):
+            assert isinstance(msg.dict()['header']['stamp'], embag.RosTime)
+            as_ros_time = msg.dict(ros_time_py_type=None)['header']['stamp']
+            as_int = msg.dict(ros_time_py_type=int)['header']['stamp']
+            as_float = msg.dict(ros_time_py_type=float)['header']['stamp']
+            assert isinstance(as_ros_time, embag.RosTime)
+            assert isinstance(as_int, int)
+            assert isinstance(as_float, float)
+            assert as_ros_time.to_nsec() == as_int
+            assert as_ros_time.to_sec() == as_float
 
 if __name__ == "__main__":
     unittest.main()

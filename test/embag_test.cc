@@ -173,18 +173,18 @@ TEST_F(ViewTest, AllMessages) {
       ASSERT_GE(message->timestamp.to_sec(), last_scan_ts);
       last_scan_ts = message->timestamp.to_sec();
       ASSERT_EQ(message->md5, "90c7ef2dc6895d81024acba2ac42f369");
-      ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), scan_seq++);
-      ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "base_laser_link");
-      ASSERT_EQ(message->data()["scan_time"].as<float>(), 0.0);
+      ASSERT_EQ(message->data()["header"]["seq"]->as<uint32_t>(), scan_seq++);
+      ASSERT_EQ(message->data()["header"]["frame_id"]->as<std::string>(), "base_laser_link");
+      ASSERT_EQ(message->data()["scan_time"]->as<float>(), 0.0);
 
       // Arrays are exposed at blobs
-      ASSERT_EQ(message->data()["ranges"].getType(), Embag::RosValue::Type::array);
+      ASSERT_EQ(message->data()["ranges"]->getType(), Embag::RosValue::Type::primitive_array);
       const auto array = message->data()["ranges"];
-      ASSERT_EQ(array[0].getType(), Embag::RosValue::Type::float32);
-      ASSERT_EQ(array.size(), 90);
+      ASSERT_EQ(array[0]->getType(), Embag::RosValue::Type::float32);
+      ASSERT_EQ(array->size(), 90);
 
-      for (size_t i = 0; i < array.size(); ++i) {
-        ASSERT_NE(array[i].as<float>(), 0.0);
+      for (size_t i = 0; i < array->size(); ++i) {
+        ASSERT_NE(array[i]->as<float>(), 0.0);
       }
     }
 
@@ -192,15 +192,15 @@ TEST_F(ViewTest, AllMessages) {
       ASSERT_GE(message->timestamp.to_sec(), last_pose_ts);
       last_pose_ts = message->timestamp.to_sec();
       ASSERT_EQ(message->md5, "cd5e73d190d741a2f92e81eda573aca7");
-      ASSERT_EQ(message->data()["header"]["seq"].as<uint32_t>(), pose_seq++);
-      ASSERT_EQ(message->data()["header"]["frame_id"].as<std::string>(), "odom");
-      ASSERT_NE(message->data()["pose"]["pose"]["position"]["x"].as<double>(), 0.0);
+      ASSERT_EQ(message->data()["header"]["seq"]->as<uint32_t>(), pose_seq++);
+      ASSERT_EQ(message->data()["header"]["frame_id"]->as<std::string>(), "odom");
+      ASSERT_NE(message->data()["pose"]["pose"]["position"]["x"]->as<double>(), 0.0);
 
-      ASSERT_EQ(message->data()["pose"]["covariance"].getType(), Embag::RosValue::Type::array);
+      ASSERT_EQ(message->data()["pose"]["covariance"]->getType(), Embag::RosValue::Type::primitive_array);
       const auto array = message->data()["pose"]["covariance"];
 
-      for (size_t i = 0; i < array.size(); i++) {
-        ASSERT_EQ(array[i].as<float>(), 0.0);
+      for (size_t i = 0; i < array->size(); i++) {
+        ASSERT_EQ(array[i]->as<float>(), 0.0);
       }
     }
   }
@@ -247,6 +247,67 @@ TEST_F(StreamTest, BagFromStream) {
   }
 
   bag->close();
+}
+
+class ArraysTest : public ::testing::Test {
+ protected:
+  Embag::View view_{"test/array_test.bag"};
+};
+
+TEST_F(ArraysTest, ArrayReading) {
+  uint32_t index = 0;
+  uint32_t inner_index = 0;
+  for (const auto &message : view_.getMessages("/array_test")) {
+    ASSERT_EQ(message->topic, "/array_test");
+    ASSERT_EQ(message->timestamp.secs, index);
+    ASSERT_EQ(message->timestamp.nsecs, 0);
+    
+    ASSERT_EQ(message->data()["index"]->as<uint32_t>(), index);
+    // ASSERT_EQ(message->data()["index_as_text"], std::format("{}", index));
+
+    // For each array type, confirm that both iteration and index access work
+    // Tests a dynamically sized array of boolean primitives
+    inner_index = 0;
+    const auto dynamic_bool_array = message->data()["index_as_dynamic_bool_array"];
+    for (auto item = dynamic_bool_array->beginValues<Embag::RosValue::Pointer>(); item != dynamic_bool_array->endValues<Embag::RosValue::Pointer>(); item++) {
+      ASSERT_EQ((*item)->as<bool>(), index == inner_index++);
+    }
+    for (inner_index = 0; inner_index < 20; inner_index++) {
+      ASSERT_EQ(dynamic_bool_array[inner_index]->as<bool>(), index == inner_index);
+    }
+
+    // Tests a statically sized array of boolean primitives
+    inner_index = 0;
+    const auto static_bool_array = message->data()["index_as_static_bool_array"];
+    for (auto item = static_bool_array->beginValues<Embag::RosValue::Pointer>(); item != static_bool_array->endValues<Embag::RosValue::Pointer>(); item++) {
+      ASSERT_EQ((*item)->as<bool>(), index == inner_index++);
+    }
+    for (inner_index = 0; inner_index < 20; inner_index++) {
+      ASSERT_EQ(static_bool_array[inner_index]->as<bool>(), index == inner_index);
+    }
+
+    // Tests an array of strings
+    inner_index = 0;
+    const auto string_array = message->data()["index_as_string_array"];
+    for (auto item = string_array->beginValues<Embag::RosValue::Pointer>(); item != string_array->endValues<Embag::RosValue::Pointer>(); item++) {
+      ASSERT_EQ((*item)->as<std::string>(), index == inner_index++ ? "true" : "false");
+    }
+    for (inner_index = 0; inner_index < 20; inner_index++) {
+      ASSERT_EQ(string_array[inner_index]->as<std::string>(), index == inner_index ? "true" : "false");
+    }
+
+    // Tests an array of std/Bool objects
+    inner_index = 0;
+    const auto bool_object_array = message->data()["index_as_bool_object_array"];
+    for (auto item = bool_object_array->beginValues<Embag::RosValue::Pointer>(); item != bool_object_array->endValues<Embag::RosValue::Pointer>(); item++) {
+      ASSERT_EQ((*item)["data"]->as<bool>(), index == inner_index++);
+    }
+    for (inner_index = 0; inner_index < 20; inner_index++) {
+      ASSERT_EQ(bool_object_array[inner_index]["data"]->as<bool>(), index == inner_index);
+    }
+
+    index++;
+  }
 }
 
 // TODO: test multi-bag message sorting

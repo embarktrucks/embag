@@ -1,7 +1,8 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@pybind11_bazel//:build_defs.bzl", "pybind_library")
 load("//lib:version.bzl", "EMBAG_VERSION")
 
-cc_library(
+pybind_library(
     name = "embag",
     srcs = [
         "embag.cc",

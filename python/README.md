@@ -14,7 +14,6 @@ bag.close()
 Unfortunately, this API comes with a few caveats:
 - It's slightly slower than the second, more native API.
 - You can't iterate over more than one bag file (something ROS's C++ API allows you to do).
-- Special ROS primitives (such as `Time` and `Duration`) haven't been built out yet.  For now, these values are provided as doubles.
 
 Embag also offers an API more like the [C++ API](http://wiki.ros.org/rosbag/Code%20API#C.2B-.2B-_API):
 ```python

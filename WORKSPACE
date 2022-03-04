@@ -35,9 +35,9 @@ http_archive(
 http_archive(
     name = "pybind11",
     build_file = "@pybind11_bazel//:pybind11.BUILD",
-    sha256 = "97504db65640570f32d3fdf701c25a340c8643037c3b69aec469c10c93dc8504",
-    strip_prefix = "pybind11-2.5.0",
-    urls = ["https://github.com/pybind/pybind11/archive/v2.5.0.tar.gz"],
+    sha256 = "c6160321dc98e6e1184cc791fbeadd2907bb4a0ce0e447f2ea4ff8ab56550913",
+    strip_prefix = "pybind11-2.9.1",
+    urls = ["https://github.com/pybind/pybind11/archive/v2.9.1.tar.gz"],
 )
 
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
@@ -53,15 +53,6 @@ git_repository(
     remote = "https://github.com/bazelbuild/rules_python.git",
     shallow_since = "1593046824 -0700",
 )
-
-load("@rules_python//python:repositories.bzl", "py_repositories")
-
-py_repositories()
-
-# Only needed if using the packaging rules.
-load("@rules_python//python:pip.bzl", "pip_repositories")
-
-pip_repositories()
 
 # GTest
 git_repository(

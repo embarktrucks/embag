@@ -12,6 +12,6 @@ std::unique_ptr<T> make_unique(Args &&... args) {
 
 using message_stream = boost::iostreams::stream<boost::iostreams::array_source>;
 #else
-  using std::make_unique;
+using std::make_unique;
 #endif
 }

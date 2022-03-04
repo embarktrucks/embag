@@ -43,6 +43,8 @@ To test, run:
     # This will run both the C++ and Python tests against a small bag file
     bazel test test:* --test_output=all
 
+NOTE: If you're testing the python2 or python3 interface, you'll need to ensure that your system has numpy installed for each respective python version.
+
 ### Usage
 To use the C++ API:
 ```c++
@@ -50,8 +52,8 @@ Embag::View view{filename};
 view.addBag("another.bag");  # Views support reading from multiple bags
 
 for (const auto &message : view.getMessages({"/fun/topic", "/another/topic"})) {
-  std::cout << message->timestamp.to_sec() << " : " << message->topic << std::endl;
-  std::cout << message->data()["fun_array"][0]["fun_field"].as<std::string>() << std::endl;
+  std::cout << message->timestamp->to_sec() << " : " << message->topic << std::endl;
+  std::cout << message->data()["fun_array"][0]["fun_field"]->as<std::string>() << std::endl;
 }
 ```
 See the [tests](https://github.com/embarktrucks/embag/tree/master/test) for more usage examples.

@@ -12,8 +12,11 @@ struct IteratorCompat {
 
   py::tuple operator*() const {
     const auto msg = *iterator_;
-    // TODO: Change the timestamp to a rostime - they have more precision!
-    return py::make_tuple(msg->topic, msg->data(), msg->timestamp.to_sec());
+    return py::make_tuple(
+      msg->topic,
+      msg->data(),
+      msg->timestamp
+    );
   }
 
   bool operator==(const IteratorCompat &other) const {
