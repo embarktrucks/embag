@@ -48,6 +48,10 @@ class RosMessage {
     data_->print();
   }
 
+  std::string getTypeName(){
+    return msg_def_->name();
+  }
+
   std::string toString() {
     if (!parsed_) {
       hydrate();
