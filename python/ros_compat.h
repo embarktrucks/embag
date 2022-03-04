@@ -15,8 +15,7 @@ struct IteratorCompat {
     return py::make_tuple(
       msg->topic,
       msg->data(),
-      // TODO: Change the timestamp to a rostime - they have more precision!
-      msg->timestamp.to_sec()
+      msg->timestamp
     );
   }
 

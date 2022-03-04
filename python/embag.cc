@@ -77,13 +77,13 @@ PYBIND11_MODULE(libembag, m) {
       .def("data", [](std::shared_ptr<Embag::RosMessage> &m) {
         return m->data();
       })
-      .def("dict", [](std::shared_ptr<Embag::RosMessage> &m, const RosValueTypeSet &types_to_unpack) {
+      .def("dict", [](std::shared_ptr<Embag::RosMessage> &m, const RosValueTypeSet &types_to_unpack, py::object ros_time_py_type) {
         if (m->data()->getType() != Embag::RosValue::Type::object) {
           throw std::runtime_error("Element is not an object");
         }
 
-        return rosValueToDict(m->data(), types_to_unpack);
-      }, py::arg("types_to_unpack") = default_types_to_unpack)
+        return rosValueToDict(m->data(), types_to_unpack, ros_time_py_type);
+      }, py::arg("types_to_unpack") = default_types_to_unpack, py::arg("ros_time_py_type") = py::none())
       .def_readonly("topic", &Embag::RosMessage::topic)
       .def_readonly("timestamp", &Embag::RosMessage::timestamp)
       .def_readonly("md5", &Embag::RosMessage::md5)
@@ -118,17 +118,17 @@ PYBIND11_MODULE(libembag, m) {
       .def("__str__", [](Embag::RosValue::Pointer &v, const std::string &path) {
         return encodeStrLatin1(v->toString());
       }, py::arg("path") = "")
-      .def("dict", [](Embag::RosValue::Pointer &v, const RosValueTypeSet &types_to_unpack) {
+      .def("dict", [](Embag::RosValue::Pointer &v, const RosValueTypeSet &types_to_unpack, py::object ros_time_py_type) {
         if (v->getType() == Embag::RosValue::Type::object) {
-          return (py::object) rosValueToDict(v, types_to_unpack);
+          return (py::object) rosValueToDict(v, types_to_unpack, ros_time_py_type);
         } else if (v->getType() == Embag::RosValue::Type::array) {
-          return (py::object) rosValueToList(v, types_to_unpack);
+          return (py::object) rosValueToList(v, types_to_unpack, ros_time_py_type);
         } else if (v->getType() == Embag::RosValue::Type::primitive_array) {
-          return (py::object) primitiveArrayToPyObject(v, types_to_unpack);
+          return (py::object) primitiveArrayToPyObject(v, types_to_unpack, ros_time_py_type);
         } else {
           throw std::runtime_error("Somehow you have a RosValue whose type is primitive");
         }
-      }, py::arg("types_to_unpack") = default_types_to_unpack)
+      }, py::arg("types_to_unpack") = default_types_to_unpack, py::arg("ros_time_py_type") = py::none())
       .def("__iter__", [](Embag::RosValue::Pointer &v) {
         switch (v->getType()) {
           case Embag::RosValue::Type::array:
@@ -171,16 +171,35 @@ PYBIND11_MODULE(libembag, m) {
       });
 
   py::class_<Embag::RosValue::ros_time_t>(m, "RosTime")
+      .def(py::init())
+      .def(py::init<uint32_t, uint32_t>())
       .def_readonly("secs", &Embag::RosValue::ros_time_t::secs)
       .def_readonly("nsecs", &Embag::RosValue::ros_time_t::nsecs)
       .def("to_sec", &Embag::RosValue::ros_time_t::to_sec)
+      .def("to_nsec", &Embag::RosValue::ros_time_t::to_nsec)
+      .def("__eq__", &Embag::RosValue::ros_time_t::operator==)
+      .def("__ne__", &Embag::RosValue::ros_time_t::operator!=)
+      .def("__lt__", &Embag::RosValue::ros_time_t::operator<)
+      .def("__le__", &Embag::RosValue::ros_time_t::operator<=)
+      .def("__gt__", &Embag::RosValue::ros_time_t::operator>)
+      .def("__ge__", &Embag::RosValue::ros_time_t::operator>=)
       .def("__str__", [](Embag::RosValue::ros_time_t &v) {
         return std::to_string(v.to_nsec());
       });
 
   py::class_<Embag::RosValue::ros_duration_t>(m, "RosDuration")
+      .def(py::init())
+      .def(py::init<uint32_t, uint32_t>())
       .def_readonly("secs", &Embag::RosValue::ros_duration_t::secs)
       .def_readonly("nsecs", &Embag::RosValue::ros_duration_t::nsecs)
+      .def("to_sec", &Embag::RosValue::ros_duration_t::to_sec)
+      .def("to_nsec", &Embag::RosValue::ros_duration_t::to_nsec)
+      .def("__eq__", &Embag::RosValue::ros_duration_t::operator==)
+      .def("__ne__", &Embag::RosValue::ros_duration_t::operator!=)
+      .def("__lt__", &Embag::RosValue::ros_duration_t::operator<)
+      .def("__le__", &Embag::RosValue::ros_duration_t::operator<=)
+      .def("__gt__", &Embag::RosValue::ros_duration_t::operator>)
+      .def("__ge__", &Embag::RosValue::ros_duration_t::operator>=)
       .def("__str__", [](Embag::RosValue::ros_duration_t &v) {
         return std::to_string(v.to_nsec());
       });

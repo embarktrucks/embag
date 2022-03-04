@@ -1,7 +1,7 @@
 #pragma once
 
-#include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
 
 #include "utils.h"
 
@@ -21,9 +21,15 @@ typedef std::unordered_set<Embag::RosValue::Type, EnumClassHash> RosValueTypeSet
 typedef std::unordered_set<Embag::RosValue::Type> RosValueTypeSet;
 #endif
 
-py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &types_to_unpack);
-py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &types_to_unpack);
-py::object castValue(const Embag::RosValue::Pointer &value);
+py::dict rosValueToDict(
+  const Embag::RosValue::Pointer &ros_value,
+  const RosValueTypeSet &types_to_unpack,
+  const py::object& ros_time_py_type);
+py::list rosValueToList(
+  const Embag::RosValue::Pointer &ros_value,
+  const RosValueTypeSet &types_to_unpack,
+  const py::object& ros_time_py_type);
+py::object castValue(const Embag::RosValue::Pointer &value, const py::object& ros_time_py_type);
 
 // By default, it doesn't make sense to return a memoryview for python non-primitive types
 const RosValueTypeSet default_types_to_unpack = {
@@ -31,11 +37,14 @@ const RosValueTypeSet default_types_to_unpack = {
   Embag::RosValue::Type::ros_time
 };
 
-py::object primitiveArrayToPyObject(const Embag::RosValue::Pointer &primitive_array, const RosValueTypeSet &types_to_unpack=default_types_to_unpack) {
+py::object primitiveArrayToPyObject(
+    const Embag::RosValue::Pointer &primitive_array,
+    const RosValueTypeSet &types_to_unpack=default_types_to_unpack,
+    const py::object& ros_time_py_type=py::none()) {
   const Embag::RosValue::Type item_type = primitive_array->getElementType();
 
   if (types_to_unpack.find(item_type) != types_to_unpack.end()) {
-    return rosValueToList(primitive_array, default_types_to_unpack);
+    return rosValueToList(primitive_array, default_types_to_unpack, ros_time_py_type);
   } else {
     #if PY_VERSION_HEX >= 0x03030000
       // In python 3.3 and above, memoryview provides good support for converting to a list via tolist
@@ -47,7 +56,10 @@ py::object primitiveArrayToPyObject(const Embag::RosValue::Pointer &primitive_ar
   }
 }
 
-py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &types_to_unpack=default_types_to_unpack) {
+py::list rosValueToList(
+    const Embag::RosValue::Pointer &ros_value,
+    const RosValueTypeSet &types_to_unpack=default_types_to_unpack,
+    const py::object& ros_time_py_type=py::none()) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::array && ros_value->getType() != Type::primitive_array) {
@@ -73,20 +85,20 @@ py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, const RosValu
       case Type::string:
       case Type::ros_time:
       case Type::ros_duration: {
-        list.append(castValue(value));
+        list.append(castValue(value, ros_time_py_type));
         break;
       }
       case Type::object: {
-        list.append(rosValueToDict(value, types_to_unpack));
+        list.append(rosValueToDict(value, types_to_unpack, ros_time_py_type));
         break;
       }
       case Type::primitive_array: {
-        list.append(primitiveArrayToPyObject(value, types_to_unpack));
+        list.append(primitiveArrayToPyObject(value, types_to_unpack, ros_time_py_type));
         break;
       }
       case Type::array:
       {
-        list.append(rosValueToList(value, types_to_unpack));
+        list.append(rosValueToList(value, types_to_unpack, ros_time_py_type));
         break;
       }
       default: {
@@ -98,7 +110,10 @@ py::list rosValueToList(const Embag::RosValue::Pointer &ros_value, const RosValu
   return list;
 }
 
-py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, const RosValueTypeSet &types_to_unpack=default_types_to_unpack) {
+py::dict rosValueToDict(
+    const Embag::RosValue::Pointer &ros_value,
+    const RosValueTypeSet &types_to_unpack=default_types_to_unpack,
+    const py::object& ros_time_py_type=py::none()) {
   using Type = Embag::RosValue::Type;
 
   if (ros_value->getType() != Type::object) {
@@ -127,20 +142,20 @@ py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, const RosValu
       case Type::string:
       case Type::ros_time:
       case Type::ros_duration: {
-        dict[key] = castValue(value);
+        dict[key] = castValue(value, ros_time_py_type);
         break;
       }
       case Type::object: {
-        dict[key] = rosValueToDict(value, types_to_unpack);
+        dict[key] = rosValueToDict(value, types_to_unpack, ros_time_py_type);
         break;
       }
       case Type::primitive_array: {
-        dict[key] = primitiveArrayToPyObject(value, types_to_unpack);
+        dict[key] = primitiveArrayToPyObject(value, types_to_unpack, ros_time_py_type);
         break;
       }
       case Type::array: 
       {
-        dict[key] = rosValueToList(value, types_to_unpack);
+        dict[key] = rosValueToList(value, types_to_unpack, ros_time_py_type);
         break;
       }
       default: {
@@ -152,7 +167,34 @@ py::dict rosValueToDict(const Embag::RosValue::Pointer &ros_value, const RosValu
   return dict;
 }
 
-py::object castValue(const Embag::RosValue::Pointer& value) {
+template<typename RosTimeType>
+py::object castRosTime(const Embag::RosValue::Pointer& ros_value, const py::object& py_type=py::none()) {
+  const RosTimeType time_value = ros_value->as<RosTimeType>();
+  if (py_type.is_none()) {
+    // Keep as a RosTime or RosDuration
+    return py::cast(time_value);
+  } else if (!py::isinstance<py::type>(py_type)) {
+    throw py::type_error("Provided python type for casting a ROS time is not a type!");
+  } else {
+    PyObject* native_py_type = py_type.ptr();
+    if (
+      native_py_type == (PyObject*) &PyLong_Type
+      // In python2, we also need to support the PyInt_Type
+      // (In python3, all `int`s are `long`s under the hood)
+      #if PY_VERSION_HEX < 0x03000000
+      || native_py_type == (PyObject*) &PyInt_Type
+      #endif
+    ) {
+      return py::cast(time_value.to_nsec());
+    } else if (native_py_type == (PyObject*) &PyFloat_Type) {
+      return py::cast(time_value.to_sec());
+    } else {
+      throw py::value_error("Can only cast ROS times and durations to int or float!");
+    }
+  }
+}
+
+py::object castValue(const Embag::RosValue::Pointer& value, const py::object& ros_time_py_type=py::none()) {
   switch (value->getType()) {
     case Embag::RosValue::Type::object:
     case Embag::RosValue::Type::array:
@@ -182,11 +224,10 @@ py::object castValue(const Embag::RosValue::Pointer& value) {
       return py::cast(value->as<double>());
     case Embag::RosValue::Type::string:
       return encodeStrLatin1(value->as<std::string>());
-    // TODO: Don't return floats here - the raw ros time has more precision
     case Embag::RosValue::Type::ros_time:
-      return py::cast(value->as<Embag::RosValue::ros_time_t>().to_sec());
+      return castRosTime<Embag::RosValue::ros_time_t>(value, ros_time_py_type);
     case Embag::RosValue::Type::ros_duration:
-      return py::cast(value->as<Embag::RosValue::ros_duration_t>().to_sec());
+      return castRosTime<Embag::RosValue::ros_duration_t>(value, ros_time_py_type);
     default:
       throw std::runtime_error("Unhandled type");
   }
