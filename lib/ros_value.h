@@ -326,6 +326,7 @@ class RosValue {
   // The life of the buffer is only guaranteed to live as long as the RosValuePointer does,
   // and as a result this should be used with great caution.
   const void* getPrimitiveArrayRosValueBuffer() const;
+  size_t getPrimitiveArrayRosValueBufferSize() const;
 
   std::unordered_map<std::string, Pointer> getObjects() const;
   std::vector<Pointer> getValues() const;
