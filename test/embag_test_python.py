@@ -196,7 +196,7 @@ class EmbagTest(unittest.TestCase):
             assert isinstance(dict_memoryview, memoryview if sys.version_info >= (3,3) else np.ndarray)
             dict_list = dict_memoryview.tolist()
             data_list = [v for v in msg.data()['pose']['covariance']]
-            assert len(dict_list) == len(data_list)
+            assert dict_list == data_list
 
     def testDictUnpacking(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
