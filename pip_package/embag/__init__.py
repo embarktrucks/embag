@@ -1,1 +1,1 @@
-from embag.libembag import View, Bag
+from embag.libembag import *
