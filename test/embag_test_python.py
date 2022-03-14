@@ -133,7 +133,7 @@ class EmbagTest(unittest.TestCase):
             self.assertGreater(msg.timestamp.to_sec(), 0)
 
             if msg.topic == '/base_scan':
-                msg_dict = msg.dict()
+                msg_dict = msg.dict(types_to_unpack={embag.RosValueType.float32})
                 self.assertEqual(msg_dict['header']['seq'], base_scan_seq)
                 base_scan_seq += 1
                 self.assertEqual(msg_dict['header']['frame_id'], "base_laser_link")
@@ -194,6 +194,8 @@ class EmbagTest(unittest.TestCase):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
             dict_memoryview = msg.dict(packed_types_as_memoryview=True)['pose']['covariance']
             assert isinstance(dict_memoryview, memoryview if sys.version_info >= (3,3) else np.ndarray)
+            dict_bytes = msg.dict()['pose']['covariance']
+            assert bytes(bytearray(dict_memoryview)) == dict_bytes
             dict_list = dict_memoryview.tolist()
             data_list = [v for v in msg.data()['pose']['covariance']]
             assert dict_list == data_list
