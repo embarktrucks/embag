@@ -47,6 +47,14 @@ const void* RosValue::getPrimitiveArrayRosValueBuffer() const {
   return static_cast<const void *>(&at(0)->getPrimitive<uint8_t>());
 }
 
+size_t RosValue::getPrimitiveArrayRosValueBufferSize() const {
+  if (getType() != Embag::RosValue::Type::primitive_array) {
+    throw std::runtime_error("Cannot access the buffer of a non primitive_array RosValue");
+  }
+
+  return primitive_array_info_.length * primitiveTypeToSize(getElementType());
+}
+
 template<typename T>
 const T &RosValue::getValue(const std::string &key) const {
   return get(key)->as<T>();

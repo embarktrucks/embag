@@ -192,14 +192,21 @@ class EmbagTest(unittest.TestCase):
 
     def testDictMemoryView(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
-            dict_list = msg.dict()['pose']['covariance'].tolist()
+            dict_memoryview = msg.dict(
+                array_blob_types={embag.RosValueType.float64},
+                blob_types_as_memoryview=True,
+            )['pose']['covariance']
+            assert isinstance(dict_memoryview, memoryview if sys.version_info >= (3,3) else np.ndarray)
+            dict_bytes = msg.dict(array_blob_types={embag.RosValueType.float64})['pose']['covariance']
+            assert bytes(bytearray(dict_memoryview)) == dict_bytes
+            dict_list = dict_memoryview.tolist()
             data_list = [v for v in msg.data()['pose']['covariance']]
             assert dict_list == data_list
 
     def testDictUnpacking(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
-            assert isinstance(msg.dict()['pose']['covariance'], memoryview if sys.version_info >= (3,3) else np.ndarray)
-            assert isinstance(msg.dict(types_to_unpack={embag.RosValueType.float64})['pose']['covariance'], list)
+            assert isinstance(msg.dict(array_blob_types={embag.RosValueType.float64})['pose']['covariance'], bytes)
+            assert isinstance(msg.dict()['pose']['covariance'], list)
 
     def testRosValueDict(self):
         # Validate that dict on RosValue functions the same as on messages
