@@ -133,7 +133,7 @@ class EmbagTest(unittest.TestCase):
             self.assertGreater(msg.timestamp.to_sec(), 0)
 
             if msg.topic == '/base_scan':
-                msg_dict = msg.dict(types_to_unpack={embag.RosValueType.float32})
+                msg_dict = msg.dict()
                 self.assertEqual(msg_dict['header']['seq'], base_scan_seq)
                 base_scan_seq += 1
                 self.assertEqual(msg_dict['header']['frame_id'], "base_laser_link")
@@ -192,9 +192,12 @@ class EmbagTest(unittest.TestCase):
 
     def testDictMemoryView(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
-            dict_memoryview = msg.dict(packed_types_as_memoryview=True)['pose']['covariance']
+            dict_memoryview = msg.dict(
+                array_blob_types={embag.RosValueType.float64},
+                blob_types_as_memoryview=True,
+            )['pose']['covariance']
             assert isinstance(dict_memoryview, memoryview if sys.version_info >= (3,3) else np.ndarray)
-            dict_bytes = msg.dict()['pose']['covariance']
+            dict_bytes = msg.dict(array_blob_types={embag.RosValueType.float64})['pose']['covariance']
             assert bytes(bytearray(dict_memoryview)) == dict_bytes
             dict_list = dict_memoryview.tolist()
             data_list = [v for v in msg.data()['pose']['covariance']]
@@ -202,8 +205,8 @@ class EmbagTest(unittest.TestCase):
 
     def testDictUnpacking(self):
         for msg in self.view.getMessages('/base_pose_ground_truth'):
-            assert isinstance(msg.dict()['pose']['covariance'], bytes)
-            assert isinstance(msg.dict(types_to_unpack={embag.RosValueType.float64})['pose']['covariance'], list)
+            assert isinstance(msg.dict(array_blob_types={embag.RosValueType.float64})['pose']['covariance'], bytes)
+            assert isinstance(msg.dict()['pose']['covariance'], list)
 
     def testRosValueDict(self):
         # Validate that dict on RosValue functions the same as on messages

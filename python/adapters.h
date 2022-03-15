@@ -23,50 +23,51 @@ typedef std::unordered_set<Embag::RosValue::Type> RosValueTypeSet;
 
 py::dict rosValueToDict(
   const Embag::RosValue::Pointer &ros_value,
-  const RosValueTypeSet &types_to_unpack,
-  bool packed_types_as_memoryview,
+  const RosValueTypeSet &array_blob_types,
+  bool blob_types_as_memoryview,
   const py::object& ros_time_py_type);
 py::list rosValueToList(
   const Embag::RosValue::Pointer &ros_value,
-  const RosValueTypeSet &types_to_unpack,
-  bool packed_types_as_memoryview,
+  const RosValueTypeSet &array_blob_types,
+  bool blob_types_as_memoryview,
   const py::object& ros_time_py_type);
 py::object castValue(const Embag::RosValue::Pointer &value, const py::object& ros_time_py_type);
 
-// By default, it doesn't make sense to return a memoryview for python non-primitive types
-const RosValueTypeSet default_types_to_unpack = {
-  Embag::RosValue::Type::ros_duration,
-  Embag::RosValue::Type::ros_time
+// By default, assume that uint8 arrays are to be treated as binary blobs
+const RosValueTypeSet default_array_blob_types = {
+  Embag::RosValue::Type::uint8,
 };
 
 py::object primitiveArrayToPyObject(
     const Embag::RosValue::Pointer &primitive_array,
-    const RosValueTypeSet &types_to_unpack=default_types_to_unpack,
-    bool packed_types_as_memoryview=false,
+    const RosValueTypeSet &array_blob_types=default_array_blob_types,
+    bool blob_types_as_memoryview=false,
     const py::object& ros_time_py_type=py::none()) {
   const Embag::RosValue::Type item_type = primitive_array->getElementType();
 
-  if (types_to_unpack.find(item_type) != types_to_unpack.end()) {
-    return rosValueToList(primitive_array, default_types_to_unpack, packed_types_as_memoryview, ros_time_py_type);
-  } else if (packed_types_as_memoryview) {
-    #if PY_VERSION_HEX >= 0x03030000
-      // In python 3.3 and above, memoryview provides good support for converting to a list via tolist
-      return py::memoryview(py::cast(primitive_array));
-    #else
-      // In other versions, we need to rely on numpy arrays to provide a powerful tolist functionality
-      return py::array(py::cast(primitive_array));
-    #endif
+  if (array_blob_types.find(item_type) != array_blob_types.end()) {
+    if (blob_types_as_memoryview) {
+      #if PY_VERSION_HEX >= 0x03030000
+        // In python 3.3 and above, memoryview provides good support for converting to a list via tolist
+        return py::memoryview(py::cast(primitive_array));
+      #else
+        // In other versions, we need to rely on numpy arrays to provide a powerful tolist functionality
+        return py::array(py::cast(primitive_array));
+      #endif
+    } else {
+      return py::bytes(
+        static_cast<const char *>(primitive_array->getPrimitiveArrayRosValueBuffer()),
+        primitive_array->getPrimitiveArrayRosValueBufferSize());
+    }
   } else {
-    return py::bytes(
-      static_cast<const char *>(primitive_array->getPrimitiveArrayRosValueBuffer()),
-      primitive_array->getPrimitiveArrayRosValueBufferSize());
+    return rosValueToList(primitive_array, default_array_blob_types, blob_types_as_memoryview, ros_time_py_type);
   }
 }
 
 py::list rosValueToList(
     const Embag::RosValue::Pointer &ros_value,
-    const RosValueTypeSet &types_to_unpack=default_types_to_unpack,
-    bool packed_types_as_memoryview=false,
+    const RosValueTypeSet &array_blob_types=default_array_blob_types,
+    bool blob_types_as_memoryview=false,
     const py::object& ros_time_py_type=py::none()) {
   using Type = Embag::RosValue::Type;
 
@@ -97,16 +98,16 @@ py::list rosValueToList(
         break;
       }
       case Type::object: {
-        list.append(rosValueToDict(value, types_to_unpack, packed_types_as_memoryview, ros_time_py_type));
+        list.append(rosValueToDict(value, array_blob_types, blob_types_as_memoryview, ros_time_py_type));
         break;
       }
       case Type::primitive_array: {
-        list.append(primitiveArrayToPyObject(value, types_to_unpack, packed_types_as_memoryview, ros_time_py_type));
+        list.append(primitiveArrayToPyObject(value, array_blob_types, blob_types_as_memoryview, ros_time_py_type));
         break;
       }
       case Type::array:
       {
-        list.append(rosValueToList(value, types_to_unpack, packed_types_as_memoryview, ros_time_py_type));
+        list.append(rosValueToList(value, array_blob_types, blob_types_as_memoryview, ros_time_py_type));
         break;
       }
       default: {
@@ -120,8 +121,8 @@ py::list rosValueToList(
 
 py::dict rosValueToDict(
     const Embag::RosValue::Pointer &ros_value,
-    const RosValueTypeSet &types_to_unpack=default_types_to_unpack,
-    bool packed_types_as_memoryview=false,
+    const RosValueTypeSet &array_blob_types=default_array_blob_types,
+    bool blob_types_as_memoryview=false,
     const py::object& ros_time_py_type=py::none()) {
   using Type = Embag::RosValue::Type;
 
@@ -155,16 +156,16 @@ py::dict rosValueToDict(
         break;
       }
       case Type::object: {
-        dict[key] = rosValueToDict(value, types_to_unpack, packed_types_as_memoryview, ros_time_py_type);
+        dict[key] = rosValueToDict(value, array_blob_types, blob_types_as_memoryview, ros_time_py_type);
         break;
       }
       case Type::primitive_array: {
-        dict[key] = primitiveArrayToPyObject(value, types_to_unpack, packed_types_as_memoryview, ros_time_py_type);
+        dict[key] = primitiveArrayToPyObject(value, array_blob_types, blob_types_as_memoryview, ros_time_py_type);
         break;
       }
       case Type::array: 
       {
-        dict[key] = rosValueToList(value, types_to_unpack, packed_types_as_memoryview, ros_time_py_type);
+        dict[key] = rosValueToList(value, array_blob_types, blob_types_as_memoryview, ros_time_py_type);
         break;
       }
       default: {

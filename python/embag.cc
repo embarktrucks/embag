@@ -81,17 +81,17 @@ PYBIND11_MODULE(libembag, m) {
         "dict",
         [](
             std::shared_ptr<Embag::RosMessage> &m,
-            const RosValueTypeSet &types_to_unpack,
-            bool packed_types_as_memoryview,
+            const RosValueTypeSet &array_blob_types,
+            bool blob_types_as_memoryview,
             py::object ros_time_py_type) {
           if (m->data()->getType() != Embag::RosValue::Type::object) {
             throw std::runtime_error("Element is not an object");
           }
 
-          return rosValueToDict(m->data(), types_to_unpack, packed_types_as_memoryview, ros_time_py_type);
+          return rosValueToDict(m->data(), array_blob_types, blob_types_as_memoryview, ros_time_py_type);
         },
-        py::arg("types_to_unpack") = default_types_to_unpack,
-        py::arg("packed_types_as_memoryview") = false,
+        py::arg("array_blob_types") = default_array_blob_types,
+        py::arg("blob_types_as_memoryview") = false,
         py::arg("ros_time_py_type") = py::none())
       .def_readonly("topic", &Embag::RosMessage::topic)
       .def_readonly("timestamp", &Embag::RosMessage::timestamp)
@@ -131,31 +131,31 @@ PYBIND11_MODULE(libembag, m) {
         "dict",
         [](
             Embag::RosValue::Pointer &v,
-            const RosValueTypeSet &types_to_unpack,
-            bool packed_types_as_memoryview,
+            const RosValueTypeSet &array_blob_types,
+            bool blob_types_as_memoryview,
             py::object ros_time_py_type) {
           if (v->getType() == Embag::RosValue::Type::object) {
             return (py::object) rosValueToDict(
               v,
-              types_to_unpack,
-              packed_types_as_memoryview,
+              array_blob_types,
+              blob_types_as_memoryview,
               ros_time_py_type);
           } else if (v->getType() == Embag::RosValue::Type::array) {
             return (py::object) rosValueToList(v,
-              types_to_unpack,
-              packed_types_as_memoryview,
+              array_blob_types,
+              blob_types_as_memoryview,
               ros_time_py_type);
           } else if (v->getType() == Embag::RosValue::Type::primitive_array) {
             return (py::object) primitiveArrayToPyObject(v,
-              types_to_unpack,
-              packed_types_as_memoryview,
+              array_blob_types,
+              blob_types_as_memoryview,
               ros_time_py_type);
           } else {
             throw std::runtime_error("Somehow you have a RosValue whose type is primitive");
           }
         },
-        py::arg("types_to_unpack") = default_types_to_unpack,
-        py::arg("packed_types_as_memoryview") = false,
+        py::arg("array_blob_types") = default_array_blob_types,
+        py::arg("blob_types_as_memoryview") = false,
         py::arg("ros_time_py_type") = py::none())
       .def("__iter__", [](Embag::RosValue::Pointer &v) {
         switch (v->getType()) {
