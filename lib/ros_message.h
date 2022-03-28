@@ -11,10 +11,10 @@
 namespace Embag {
 
 struct RosMessageRawBufferData { 
-  const std::vector<char> raw_buffer;
+  const std::shared_ptr<std::vector<char>> raw_buffer;
   const size_t raw_buffer_offset;
   const uint32_t raw_data_len = 0;
-  RosMessageRawBufferData(const std::vector<char> raw_buffer_, const size_t raw_buffer_offset_, const uint32_t raw_data_len_)
+  RosMessageRawBufferData(const std::shared_ptr<std::vector<char>> raw_buffer_, const size_t raw_buffer_offset_, const uint32_t raw_data_len_)
     : raw_buffer(raw_buffer_)
     , raw_buffer_offset(raw_buffer_offset_)
     , raw_data_len(raw_data_len_)
@@ -41,8 +41,7 @@ class RosMessage {
     if (!parsed_) {
       hydrate();
     }
-    const std::vector<char> raw_buffer_ = *raw_buffer; 
-    return RosMessageRawBufferData(raw_buffer_, raw_buffer_offset, raw_data_len); 
+    return RosMessageRawBufferData(raw_buffer, raw_buffer_offset, raw_data_len); 
   } 
 
   const RosValue::Pointer &data() {
