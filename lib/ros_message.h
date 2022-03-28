@@ -37,7 +37,10 @@ class RosMessage {
   {
   }
 
-  RosMessageRawBufferData raw_data() const {
+  RosMessageRawBufferData raw_data() {
+    if (!parsed_) {
+      hydrate();
+    }
     const std::vector<char> raw_buffer_ = *raw_buffer; 
     return RosMessageRawBufferData(raw_buffer_, raw_buffer_offset, raw_data_len); 
   } 
