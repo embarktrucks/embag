@@ -26,7 +26,7 @@ class RosMessage {
   }
 
   template<class T>
-  void deserialize_data(T& ros_msg){
+  void deserialize_data(T& ros_msg) const {
     ros::serialization::IStream s(reinterpret_cast<uint8_t*>(raw_buffer->at(raw_buffer_offset)), raw_data_len);
     ros::serialization::deserialize(s, ros_msg);
   }
