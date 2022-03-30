@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-
+#include "ros_serialization.h"
 #include "ros_value.h"
 #include "message_parser.h"
 #include "ros_msg_types.h"
@@ -37,14 +37,20 @@ class RosMessage {
   {
   }
 
-  RosMessageRawBufferData raw_data() {
+  RosMessageRawBufferData raw_data() const {
     if (!parsed_) {
       hydrate();
     }
     return RosMessageRawBufferData(raw_buffer, raw_buffer_offset, raw_data_len); 
   } 
 
-  const RosValue::Pointer &data() {
+  template<class T>
+  void deserialize_data(T& ros_msg){
+]    ros::serialization::IStream s(reinterpret_cast<uint8_t*>(raw_buffer->at(raw_buffer_offset)), raw_data_len);
+    ros::serialization::deserialize(s, ros_msg);
+  }
+
+  const RosValue::Pointer &data() const {
     if (!parsed_) {
       hydrate();
     }
@@ -52,7 +58,7 @@ class RosMessage {
     return data_;
   }
 
-  bool has(const std::string &key) {
+  bool has(const std::string &key) const {
     if (!parsed_) {
       hydrate();
     }
@@ -60,7 +66,7 @@ class RosMessage {
     return data_->has(key);
   }
 
-  void print() {
+  void print() const {
     if (!parsed_) {
       hydrate();
     }
@@ -68,11 +74,11 @@ class RosMessage {
     data_->print();
   }
 
-  std::string getTypeName(){
+  std::string getTypeName() const {
     return msg_def_->name();
   }
 
-  std::string toString() {
+  std::string toString() const {
     if (!parsed_) {
       hydrate();
     }
@@ -81,11 +87,11 @@ class RosMessage {
   }
 
  private:
-  bool parsed_ = false;
-  RosValue::Pointer data_;
+  mutable bool parsed_ = false;
+  mutable RosValue::Pointer data_;
   std::shared_ptr<RosMsgTypes::MsgDef> msg_def_;
 
-  void hydrate() {
+  void hydrate() const {
     MessageParser msg(raw_buffer, raw_buffer_offset, *msg_def_);
 
     data_ = msg.parse();
