@@ -1,7 +1,8 @@
 #pragma once
 
 #include <string>
-#include "ros_serialization.h"
+// #include "ros_serialization.h"
+#include <ros/serialization.h>
 #include "ros_value.h"
 #include "message_parser.h"
 #include "ros_msg_types.h"

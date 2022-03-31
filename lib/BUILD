@@ -12,7 +12,7 @@ pybind_library(
         "view.cc",
     ],
     hdrs = [
-        "ros_serialization.h",
+        -- "ros_serialization.h",
         "decompression.h",
         "embag.h",
         "message_def_parser.h",
@@ -53,7 +53,7 @@ pkg_tar(
 pkg_tar(
     name = "embag-headers",
     srcs = [
-        "ros_serialization.h",
+        -- "ros_serialization.h",
         "decompression.h",
         "embag.h",
         "message_def_parser.h",
