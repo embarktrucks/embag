@@ -286,6 +286,26 @@ TEST_F(ArraysTest, ArrayReading) {
       ASSERT_EQ(static_bool_array[inner_index]->as<bool>(), index == inner_index);
     }
 
+    // Tests a dynamically sized array of doubles
+    inner_index = 0;
+    const auto dynamic_uint64_array = message->data()["index_multiples_as_dynamic_uint64_array"];
+    for (auto item = dynamic_uint64_array->beginValues<Embag::RosValue::Pointer>(); item != dynamic_uint64_array->endValues<Embag::RosValue::Pointer>(); item++) {
+      ASSERT_EQ((*item)->as<uint64_t>(), (uint64_t) index * inner_index++);
+    }
+    for (inner_index = 0; inner_index < 20; inner_index++) {
+      ASSERT_EQ(dynamic_uint64_array[inner_index]->as<uint64_t>(), (uint64_t) index * inner_index);
+    }
+
+    // Tests a statically sized array of doubles
+    inner_index = 0;
+    const auto static_uint64_array = message->data()["index_multiples_as_static_uint64_array"];
+    for (auto item = static_uint64_array->beginValues<Embag::RosValue::Pointer>(); item != static_uint64_array->endValues<Embag::RosValue::Pointer>(); item++) {
+      ASSERT_EQ((*item)->as<uint64_t>(), (uint64_t) index * inner_index++);
+    }
+    for (inner_index = 0; inner_index < 20; inner_index++) {
+      ASSERT_EQ(static_uint64_array[inner_index]->as<uint64_t>(), (uint64_t) index * inner_index);
+    }
+
     // Tests an array of strings
     inner_index = 0;
     const auto string_array = message->data()["index_as_string_array"];
@@ -296,7 +316,7 @@ TEST_F(ArraysTest, ArrayReading) {
       ASSERT_EQ(string_array[inner_index]->as<std::string>(), index == inner_index ? "true" : "false");
     }
 
-    // Tests an array of std/Bool objects
+    // Tests an array of std_msgs/Bool objects
     inner_index = 0;
     const auto bool_object_array = message->data()["index_as_bool_object_array"];
     for (auto item = bool_object_array->beginValues<Embag::RosValue::Pointer>(); item != bool_object_array->endValues<Embag::RosValue::Pointer>(); item++) {
@@ -308,6 +328,8 @@ TEST_F(ArraysTest, ArrayReading) {
 
     index++;
   }
+
+  ASSERT_EQ(index, 20);
 }
 
 // TODO: test multi-bag message sorting
