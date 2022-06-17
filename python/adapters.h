@@ -252,7 +252,7 @@ py::object getField(Embag::RosValue::Pointer &v, const std::string field_name) {
 }
 
 py::object getIndex(Embag::RosValue::Pointer &v, const size_t index) {
-  if (v->getType() != Embag::RosValue::Type::array) {
+  if (v->getType() != Embag::RosValue::Type::array && v->getType() != Embag::RosValue::Type::primitive_array) {
     throw std::runtime_error("Can only getIndex on an array");
   }
 
