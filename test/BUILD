@@ -16,6 +16,7 @@ py_test(
     srcs = ["embag_test_python.py"],
     data = [
         "test.bag",
+        "test_bag_raw_messages.P",
         "//python:libembag.so",
     ],
     python_version = "PY3",
@@ -27,6 +28,7 @@ py_test(
     srcs = ["embag_test_python.py"],
     data = [
         "test.bag",
+        "test_bag_raw_messages.P",
         "//python:libembag.so",
     ],
     python_version = "PY2",
