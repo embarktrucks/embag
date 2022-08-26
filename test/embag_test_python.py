@@ -1,6 +1,7 @@
 import python.libembag as embag
 from collections import OrderedDict
 import numpy as np
+import pickle
 import struct
 import sys
 import unittest
@@ -242,6 +243,16 @@ class EmbagTest(unittest.TestCase):
             assert isinstance(as_float, float)
             assert as_ros_time.to_nsec() == as_int
             assert as_ros_time.to_sec() == as_float
+
+    def testMessageRawData(self):
+        """
+        Tests that the raw_data property of a RosMessage returns the same data as rospy
+        """
+        with open('test/test_bag_raw_messages.P', 'rb') as raw_messages_file:
+            raw_messages = pickle.load(raw_messages_file)
+
+        for index, msg in enumerate(self.view.getMessages()):
+            assert raw_messages[index] == msg.raw_data
 
 if __name__ == "__main__":
     unittest.main()

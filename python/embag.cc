@@ -19,13 +19,26 @@ PYBIND11_MODULE(libembag, m) {
         return std::make_shared<Embag::Bag>(std::make_shared<const std::string>(bytes));
       }))
       .def("topics", &Embag::Bag::topics)
-      .def("read_messages", [](std::shared_ptr<Embag::Bag> &bag, const std::vector<std::string>& topics) {
-        Embag::View view{};
-        view.addBag(bag);
-        view.getMessages(topics);
+      .def(
+        "read_messages",
+        [](std::shared_ptr<Embag::Bag> &bag, py::object topics) {
+          Embag::View view{};
+          view.addBag(bag);
+          if (topics.is_none()) {
+            view.getMessages();
+          } else if (py::isinstance<py::str>(topics)) {
+            view.getMessages(topics.cast<std::string>());
+          } else if (py::isinstance<py::list>(topics)) {
+            view.getMessages(topics.cast<std::vector<std::string>>());
+          } else {
+            throw std::runtime_error("topics must be None, a string, or a list!");
+          }
 
-        return py::make_iterator(IteratorCompat{view.begin()}, IteratorCompat{view.end()});
-      }, py::keep_alive<0, 1>() /* Essential: keep object alive while iterator exists */, py::arg("topics"))
+          return py::make_iterator(IteratorCompat{view.begin()}, IteratorCompat{view.end()});
+        },
+        py::keep_alive<0, 1>(), /* Essential: keep object alive while iterator exists */
+        py::arg("topics") = py::none()
+      )
       .def("getSchema", [](std::shared_ptr<Embag::Bag> &bag, const std::string &topic) {
         auto builder = SchemaBuilder{bag};
         return builder.generateSchema(topic);
@@ -76,6 +89,9 @@ PYBIND11_MODULE(libembag, m) {
       })
       .def("data", [](std::shared_ptr<Embag::RosMessage> &m) {
         return m->data();
+      })
+      .def_property_readonly("raw_data", [](std::shared_ptr<Embag::RosMessage> &m) {
+        return py::bytes(&m->raw_buffer->at(m->raw_buffer_offset), m->raw_data_len);
       })
       .def(
         "dict",
