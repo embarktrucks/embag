@@ -28,10 +28,8 @@ PYBIND11_MODULE(libembag, m) {
             view.getMessages();
           } else if (py::isinstance<py::str>(topics)) {
             view.getMessages(topics.cast<std::string>());
-          } else if (py::isinstance<py::list>(topics)) {
-            view.getMessages(topics.cast<std::vector<std::string>>());
           } else {
-            throw std::runtime_error("topics must be None, a string, or a list!");
+            view.getMessages(topics.cast<std::vector<std::string>>());
           }
 
           return py::make_iterator(IteratorCompat{view.begin()}, IteratorCompat{view.end()});
