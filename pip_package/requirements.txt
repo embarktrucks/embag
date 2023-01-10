@@ -1,4 +1,3 @@
 cython
 numpy
 wheel
-python3-distutils
