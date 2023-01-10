@@ -1,6 +1,6 @@
 FROM quay.io/pypa/manylinux2014_x86_64
 
-RUN yum install npm git python-devel python2-pip gdb python-distutils -y -q && \
+RUN yum install npm git python-devel python2-pip gdb python-distutils-extra -y -q && \
     npm install -g @bazel/bazelisk && \
     pip install wheel && \
     pip install --upgrade "pip < 21.0"
