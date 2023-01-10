@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build manylinux image
         run: |
+
           docker build -t embag .
           docker run -v $PWD:/tmp/cp --rm -t embag bash -c "cp /tmp/out/*.whl /tmp/cp"
 
@@ -23,7 +24,7 @@ jobs:
         with:
           name: python_wheels
           path: embag-*.whl
-  
+
   debian_package_build:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +41,7 @@ jobs:
         with:
           name: debian_packages
           path: bazel-bin/lib/embag_*.deb
-  
+
   macos_build:
     runs-on: macos-10.15
     strategy:
@@ -66,5 +67,5 @@ jobs:
         with:
           name: python_wheels
           path: /tmp/out/embag-*.whl
-          
-      
+
+
