@@ -24,11 +24,11 @@ function build() {
 }
 
 # Build embag for Python 2 (soon to be deprecated)
-build "/usr/bin" 2
+# build "/usr/bin" 2
 
 # Build embag for various version of Python 3
 for version in \
-  # cp36-cp36m \
+  cp36-cp36m \
   cp37-cp37m \
   cp38-cp38 \
   cp39-cp39; do
