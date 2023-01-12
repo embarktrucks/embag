@@ -24,7 +24,7 @@ function build() {
 }
 
 # Build embag for Python 2 (soon to be deprecated)
-# build "/usr/bin" 2
+build "/usr/bin" 2
 
 # Build embag for various version of Python 3
 for version in \

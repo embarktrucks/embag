@@ -1,10 +1,10 @@
 FROM quay.io/pypa/manylinux2014_x86_64
 
-RUN yum install npm git python-devel python3-pip gdb -y -q && \
+RUN yum install npm git python-devel python-pip gdb -y -q && \
     npm install -g npm@9.2.0 \
     npm install -g @bazel/bazelisk && \
-    pip3 install wheel && \
-    pip3 install --upgrade "pip < 21.0"
+    pip install wheel && \
+    pip install --upgrade "pip < 21.0"
 
 RUN mkdir -p /tmp/embag /tmp/pip_build /tmp/out
 COPY WORKSPACE /tmp/embag

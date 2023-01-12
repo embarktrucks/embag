@@ -34,8 +34,7 @@ jobs:
           path: "/home/runner/.cache/bazel"
           key: ${{ runner.os }}-bazel
       - name: Build Debian package
-        run: |
-          sudo apt-get install python3-distutils
+        run:
           bazel build -c opt //lib:embag-debian
       - name: Upload .deb artifacts
         uses: actions/upload-artifact@v2.1.4
