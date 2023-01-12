@@ -2,8 +2,8 @@ FROM quay.io/pypa/manylinux2014_x86_64
 
 RUN yum install npm git python-devel python2-pip gdb -y -q && \
     npm install -g @bazel/bazelisk && \
-    pip install wheel && \
-    pip install --upgrade "pip < 21.0"
+    pip install --upgrade "pip < 21.0" && \
+    pip install wheel
 
 RUN mkdir -p /tmp/embag /tmp/pip_build /tmp/out
 COPY WORKSPACE /tmp/embag
