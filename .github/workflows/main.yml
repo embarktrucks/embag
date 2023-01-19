@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build manylinux image
         run: |
-          docker build -t embag .
+          docker build -t embag . --build-arg	BAZEL_VERSION=$(cat .bazelversion)
           docker run -v $PWD:/tmp/cp --rm -t embag bash -c "cp /tmp/out/*.whl /tmp/cp"
 
       - name: Upload .whl artifacts
