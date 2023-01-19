@@ -6,7 +6,7 @@ function build() {
 
   # Install necessary dependencies
   # "$PYTHON_PATH/pip3" install --user -r /tmp/pip_build/requirements.txt
-  "$PYTHON_PATH" -m pip install --user -r /tmp/pip_build/requirements.txt
+  "$PYTHON_PATH/python" -m pip install --user -r /tmp/pip_build/requirements.txt
 
   # Build embag libs and echo test binary
   (cd /tmp/embag &&
@@ -18,7 +18,7 @@ function build() {
   (cd /tmp/pip_build && "$PYTHON_PATH/python" setup.py bdist_wheel &&
     auditwheel repair /tmp/pip_build/dist/embag*.whl --plat manylinux2014_x86_64 &&
     # "$PYTHON_PATH/pip" install wheelhouse/embag*.whl &&
-    "$PYTHON_PATH" -m pip install wheelhouse/embag*.whl &&
+    "$PYTHON_PATH/python" -m pip install wheelhouse/embag*.whl &&
     "$PYTHON_PATH/python" -c 'import embag; embag.View(); print("Successfully loaded embag!")' &&
     cp wheelhouse/* /tmp/out &&
     rm wheelhouse/* &&
