@@ -3,7 +3,7 @@ FROM quay.io/pypa/manylinux2014_x86_64
 RUN yum install npm git python-devel python3-pip gdb -y -q && \
     npm install -g npm@9.2.0 \
     npm install -g @bazel/bazelisk && \
-    python -m pip install --user --upgrade "pip < 21.0" && \
+    python -m pip install --user --upgrade && \
     python -m pip install --user wheel
 
 RUN mkdir -p /tmp/embag /tmp/pip_build /tmp/out
