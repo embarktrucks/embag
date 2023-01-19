@@ -1,9 +1,8 @@
 FROM quay.io/pypa/manylinux2014_x86_64
 
-COPY .bazelversion /tmp/.bazelversion
-RUN cat /tmp/.bazelversion
+ARG BAZEL_VERSION
 
-ENV USE_BAZEL_VERSION=5.4.0
+ENV USE_BAZEL_VERSION=$BAZEL_VERSION
 
 RUN yum install npm git python-devel python3-pip gdb -y -q && \
     npm install -g npm@9.2.0 \
