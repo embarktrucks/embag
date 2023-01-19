@@ -5,7 +5,7 @@ function build() {
   PYTHON_VERSION=$2
 
   # Install necessary dependencies
-  "$PYTHON_PATH/pip" install -r /tmp/pip_build/requirements.txt
+  "$PYTHON_PATH/pip3" install -r /tmp/pip_build/requirements.txt
 
   # Build embag libs and echo test binary
   (cd /tmp/embag &&
