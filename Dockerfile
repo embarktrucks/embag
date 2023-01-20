@@ -7,7 +7,7 @@ ENV USE_BAZEL_VERSION=$BAZEL_VERSION
 RUN yum install npm git python-devel python3-pip gdb -y -q && \
     npm install -g npm@9.2.0 \
     npm install -g @bazel/bazelisk && \
-    python3 -m pip install --upgrade --user && \
+    python3 -m pip install --upgrade "pip < 21.0" --user && \
     python3 -m pip install wheel --user
 
 RUN mkdir -p /tmp/embag /tmp/pip_build /tmp/out
