@@ -7,7 +7,6 @@ function build() {
   PYTHON_PATH="$PYTHON_PARENT_FOLDER/python$PYTHON_VERSION"
 
   # Install necessary dependencies
-  # "$PYTHON_PARENT_FOLDER/pip3" install --user -r /tmp/pip_build/requirements.txt
   "$PYTHON_PATH" -m pip install -r /tmp/pip_build/requirements.txt --user
 
   # Build embag libs and echo test binary
@@ -19,16 +18,12 @@ function build() {
   cp /tmp/embag/bazel-bin/python/libembag.so /tmp/pip_build/embag
   (cd /tmp/pip_build && "$PYTHON_PATH" setup.py bdist_wheel &&
     auditwheel repair /tmp/pip_build/dist/embag*.whl --plat manylinux2014_x86_64 &&
-    # "$PYTHON_PARENT_FOLDER/pip" install wheelhouse/embag*.whl &&
     "$PYTHON_PATH" -m pip install wheelhouse/embag*.whl --user &&
     "$PYTHON_PATH" -c 'import embag; embag.View(); print("Successfully loaded embag!")' &&
     cp wheelhouse/* /tmp/out &&
     rm wheelhouse/* &&
     rm -rf build dist)
 }
-
-# Build embag for Python 2 (soon to be deprecated)
-# build "/usr/bin" 2
 
 # Build embag for various version of Python 3
 for version in \

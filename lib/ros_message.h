@@ -24,24 +24,24 @@ class RosMessage {
   {
   }
 
-  // RosMessage(
-  //   const std::string& topic,
-  //   const RosValue::ros_time_t& timestamp,
-  //   const std::string& md5,
-  //   const std::shared_ptr<std::vector<char>>& raw_buffer,
-  //   size_t offset,
-  //   uint32_t raw_data_len,
-  //   const std::shared_ptr<RosMsgTypes::MsgDef>& msg_def
-  // )
-  //   : topic(topic)
-  //   , timestamp(timestamp)
-  //   , md5(md5)
-  //   , raw_buffer(raw_buffer)
-  //   , raw_buffer_offset(offset)
-  //   , raw_data_len(raw_data_len)
-  //   , msg_def_(msg_def)
-  // {
-  // }
+  RosMessage(
+    const std::string& topic,
+    const RosValue::ros_time_t& timestamp,
+    const std::string& md5,
+    const std::shared_ptr<std::vector<char>>& raw_buffer,
+    size_t offset,
+    uint32_t raw_data_len,
+    const std::shared_ptr<RosMsgTypes::MsgDef>& msg_def
+  )
+    : topic(topic)
+    , timestamp(timestamp)
+    , md5(md5)
+    , raw_buffer(raw_buffer)
+    , raw_buffer_offset(offset)
+    , raw_data_len(raw_data_len)
+    , msg_def_(msg_def)
+  {
+  }
 
   const RosValue::Pointer &data() {
     if (!parsed_) {

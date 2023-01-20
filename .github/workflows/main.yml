@@ -25,14 +25,14 @@ jobs:
           path: embag-*.whl
 
   debian_package_build:
-    runs-on: ubuntu-20.04 # Test to see if this image has py3.8 for pybind
+    runs-on: ubuntu-20.04 # Need to use Python3.8 for pybind11 (Ubuntu 22.04 uses Python3.10)
     steps:
       - uses: actions/checkout@v2
-      # - name: Mount bazel cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: "/home/runner/.cache/bazel"
-      #     key: ${{ runner.os }}-bazel
+      - name: Mount bazel cache
+        uses: actions/cache@v2
+        with:
+          path: "/home/runner/.cache/bazel"
+          key: ${{ runner.os }}-bazel
       - name: Build Debian package
         run: bazel build -c opt //lib:embag-debian
       - name: Upload .deb artifacts
@@ -54,11 +54,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      # - name: Mount bazel cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: "/Users/runner/.cache/bazel"
-      #     key: ${{ runner.os }}-${{ matrix.python-version }}-bazel
+      - name: Mount bazel cache
+        uses: actions/cache@v2
+        with:
+          path: "/Users/runner/.cache/bazel"
+          key: ${{ runner.os }}-${{ matrix.python-version }}-bazel
       - run: pip_package/macos_build.sh
 
       - name: Upload .whl artifacts
