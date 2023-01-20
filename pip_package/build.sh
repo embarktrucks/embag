@@ -25,6 +25,9 @@ function build() {
     rm -rf build dist)
 }
 
+# Build embag for Python 2 (soon to be deprecated)
+build "/usr/bin" 2
+
 # Build embag for various version of Python 3
 for version in \
   cp36-cp36m \
