@@ -1,14 +1,12 @@
-FROM quay.io/pypa/manylinux2014_x86_64
+FROM quay.io/pypa/manylinux_2_28_x86_64
 
 ARG BAZEL_VERSION
 
 ENV USE_BAZEL_VERSION=$BAZEL_VERSION
 
-RUN yum install npm git python-devel python2-pip python3-pip gdb -y -q && \
+RUN yum install npm git python3-pip gdb -y -q && \
     npm install -g npm@9.2.0 \
     npm install -g @bazel/bazelisk && \
-    python -m pip install --upgrade "pip < 21.0" --user && \
-    python -m pip install wheel --user && \
     python3 -m pip install --upgrade "pip < 21.0" --user && \
     python3 -m pip install wheel --user
 
