@@ -17,16 +17,13 @@ function build() {
   # Build wheel
   cp /tmp/embag/bazel-bin/python/libembag.so /tmp/pip_build/embag
   (cd /tmp/pip_build && "$PYTHON_PATH" setup.py bdist_wheel &&
-    auditwheel repair /tmp/pip_build/dist/embag*.whl --plat manylinux2014_x86_64 &&
+    auditwheel repair /tmp/pip_build/dist/embag*.whl --plat manylinux_2_28_x86_64 &&
     "$PYTHON_PATH" -m pip install wheelhouse/embag*.whl --user &&
     "$PYTHON_PATH" -c 'import embag; embag.View(); print("Successfully loaded embag!")' &&
     cp wheelhouse/* /tmp/out &&
     rm wheelhouse/* &&
     rm -rf build dist)
 }
-
-# Build embag for Python 2 (soon to be deprecated)
-build "/usr/bin" 2
 
 # Build embag for various version of Python 3
 for version in \
